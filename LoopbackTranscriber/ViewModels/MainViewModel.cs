@@ -18,6 +18,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly TargetProcessWatcher _watcher = new();
     private readonly ProcessLoopbackRecorder _recorder = new();
+    private readonly DeviceLoopbackRecorder _deviceRecorder = new();
     private readonly WhisperTranscriptionService _whisper = new();
     private readonly SettingsService _settingsService = new();
     private readonly DispatcherTimer _elapsedTimer;
@@ -274,6 +275,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await _recorder.StartAsync(SelectedTarget.ProcessId, wavPath);
             _currentRawWavPath = wavPath;
 
+            try
+            {
+                var deviceDir = Path.GetDirectoryName(wavPath)!;
+                var deviceBaseName = Path.GetFileNameWithoutExtension(wavPath);
+                _deviceRecorder.Start(deviceDir, deviceBaseName);
+            }
+            catch
+            {
+            }
+
             IsRecording = true;
             StatusText = $"Escuchando {SelectedTarget.DisplayName}...";
             _recordingStartedAt = DateTime.Now;
@@ -304,10 +315,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         string? rawWavPath = null;
         string? whisperWavPath = null;
+        var deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
 
         try
         {
             rawWavPath = await _recorder.StopAsync();
+
+            try
+            {
+                deviceTracks = await Task.Run(() => _deviceRecorder.Stop());
+            }
+            catch
+            {
+                deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
+            }
+
+            const double deviceSignalThreshold = 0.01;
+            var bestDeviceTrack = deviceTracks
+                .Where(t => t.PeakAbs >= deviceSignalThreshold)
+                .OrderByDescending(t => t.PeakAbs)
+                .FirstOrDefault();
+
+            var transcriptionSourceWavPath = bestDeviceTrack is not null
+                ? bestDeviceTrack.WavPath
+                : rawWavPath;
 
             var settings = _settingsService.Load();
             var modelPath = settings.GetModelFilePath();
@@ -318,11 +349,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await _whisper.EnsureModelDownloadedAsync(settings.ModelSize, modelPath, progress);
 
             StatusText = "Transcribiendo...";
-            whisperWavPath = Path.Combine(Path.GetDirectoryName(rawWavPath)!,
-                Path.GetFileNameWithoutExtension(rawWavPath) + ".16k.wav");
-            AudioConverter.ConvertToWhisperFormat(rawWavPath, whisperWavPath);
+            whisperWavPath = Path.Combine(Path.GetDirectoryName(transcriptionSourceWavPath)!,
+                Path.GetFileNameWithoutExtension(transcriptionSourceWavPath) + ".16k.wav");
+            AudioConverter.ConvertToWhisperFormat(transcriptionSourceWavPath, whisperWavPath);
 
-            var text = await _whisper.TranscribeAsync(whisperWavPath, modelPath, settings.Language, progress);
+            var transcriptProgress = new Progress<string>(text => TranscriptText = text);
+            var text = await _whisper.TranscribeAsync(whisperWavPath, modelPath, settings.Language, transcriptProgress);
             TranscriptText = string.IsNullOrWhiteSpace(text)
                 ? "(No se detecto ningun texto en el audio)"
                 : text;
@@ -330,9 +362,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (settings.AutoSaveTranscripts && !string.IsNullOrWhiteSpace(text))
             {
                 Directory.CreateDirectory(settings.TranscriptsFolder);
-                var fileName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
-                File.WriteAllText(Path.Combine(settings.TranscriptsFolder, fileName), text);
-                StatusText = $"Transcripcion lista y guardada en {settings.TranscriptsFolder}.";
+                var baseName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                File.WriteAllText(Path.Combine(settings.TranscriptsFolder, baseName + ".txt"), text);
+
+                if (whisperWavPath is not null && File.Exists(whisperWavPath))
+                {
+                    File.Copy(whisperWavPath, Path.Combine(settings.TranscriptsFolder, baseName + ".wav"), overwrite: true);
+                }
+
+                StatusText = "Transcripcion lista y guardada";
                 LoadTranscriptHistoryFromDisk();
             }
             else
@@ -353,6 +391,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             TryDelete(rawWavPath);
             TryDelete(whisperWavPath);
+            foreach (var track in deviceTracks)
+            {
+                TryDelete(track.WavPath);
+            }
         }
     }
 
@@ -398,5 +440,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _watcher.StatusesChanged -= OnWatcherStatusesChanged;
         _watcher.Dispose();
         _recorder.Dispose();
+        _deviceRecorder.Dispose();
     }
 }

@@ -16,11 +16,11 @@ internal struct WAVEFORMATEX
 
     public const ushort WAVE_FORMAT_PCM = 1;
 
-    public static WAVEFORMATEX CreatePcm(int sampleRate, int channels, int bitsPerSample)
+    public static WAVEFORMATEX CreatePlain(ushort formatTag, int sampleRate, int channels, int bitsPerSample)
     {
         var wf = new WAVEFORMATEX
         {
-            wFormatTag = WAVE_FORMAT_PCM,
+            wFormatTag = formatTag,
             nChannels = (ushort)channels,
             nSamplesPerSec = (uint)sampleRate,
             wBitsPerSample = (ushort)bitsPerSample,

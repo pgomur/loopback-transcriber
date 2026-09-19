@@ -21,6 +21,13 @@ public sealed class ProcessLoopbackRecorder : IDisposable
     private WAVEFORMATEX _format;
     private Exception? _captureError;
 
+    private long _packetCount;
+    private long _silentPacketCount;
+    private long _framesCaptured;
+    private int _peakSampleAbs;
+
+    public string LastCaptureStats { get; private set; } = string.Empty;
+
     public bool IsRecording { get; private set; }
 
     public async Task StartAsync(uint processId, string outputWavPath, bool includeProcessTree = true)
@@ -33,7 +40,7 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         _audioClient = await Wasapi.ActivateProcessLoopbackAsync(processId, includeProcessTree)
             .ConfigureAwait(false);
 
-        _format = WAVEFORMATEX.CreatePcm(44100, 2, 16);
+        _format = WAVEFORMATEX.CreatePlain(WAVEFORMATEX.WAVE_FORMAT_PCM, 44100, 2, 16);
 
         const AUDCLNT_STREAMFLAGS flags = AUDCLNT_STREAMFLAGS.LOOPBACK
             | AUDCLNT_STREAMFLAGS.EVENTCALLBACK
@@ -63,6 +70,11 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         _writer = new BinaryWriter(_fileStream);
         WriteWavHeaderPlaceholder(_writer, _format);
         _dataBytesWritten = 0;
+        _packetCount = 0;
+        _silentPacketCount = 0;
+        _framesCaptured = 0;
+        _peakSampleAbs = 0;
+        LastCaptureStats = string.Empty;
         _captureError = null;
         _stopEvent = new ManualResetEvent(false);
 
@@ -108,6 +120,9 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         _stopEvent?.Dispose();
         _sampleEvent = null;
         _stopEvent = null;
+
+        LastCaptureStats =
+            $"paquetes={_packetCount}, en_silencio={_silentPacketCount}, frames={_framesCaptured}, pico_senal={_peakSampleAbs}/32768";
 
         var error = _captureError;
         _captureError = null;
@@ -165,8 +180,12 @@ public sealed class ProcessLoopbackRecorder : IDisposable
             var bytesToCapture = (int)(numFrames * _format.nBlockAlign);
             if (bytesToCapture > 0)
             {
+                _packetCount++;
+                _framesCaptured += numFrames;
+
                 if ((bufferFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0 || dataPtr == IntPtr.Zero)
                 {
+                    _silentPacketCount++;
                     _writer!.Write(new byte[bytesToCapture]);
                 }
                 else
@@ -174,6 +193,16 @@ public sealed class ProcessLoopbackRecorder : IDisposable
                     var buffer = new byte[bytesToCapture];
                     Marshal.Copy(dataPtr, buffer, 0, bytesToCapture);
                     _writer!.Write(buffer);
+
+                    for (var i = 0; i + 1 < buffer.Length; i += 2)
+                    {
+                        var sample = (short)(buffer[i] | (buffer[i + 1] << 8));
+                        var abs = Math.Abs((int)sample);
+                        if (abs > _peakSampleAbs)
+                        {
+                            _peakSampleAbs = abs;
+                        }
+                    }
                 }
 
                 _dataBytesWritten += bytesToCapture;

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows.Threading;
 using LoopbackTranscriber.Models;
+using LoopbackTranscriber.Interop;
 using System.Linq;
 
 namespace LoopbackTranscriber.Services;
@@ -55,7 +56,8 @@ public sealed class TargetProcessWatcher : IDisposable
                     continue;
                 }
 
-                foundPid = (uint)processes[0].Id;
+                var pids = processes.Select(p => p.Id).ToArray();
+                foundPid = ProcessTree.FindRootProcessId(pids);
                 foundName = candidateName;
 
                 foreach (var p in processes)
@@ -64,6 +66,15 @@ public sealed class TargetProcessWatcher : IDisposable
                 }
 
                 break;
+            }
+
+            if (foundPid != 0)
+            {
+                var activePid = AudioSessionFinder.FindActiveProcessId(status.App.ProcessNames);
+                if (activePid != 0)
+                {
+                    foundPid = activePid;
+                }
             }
 
             var isRunning = foundPid != 0;
