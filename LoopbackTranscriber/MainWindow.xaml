@@ -56,7 +56,6 @@
                 </ListBox>
 
                 <StackPanel Grid.Row="1">
-                    <Separator Margin="0,4,0,10" />
                     <ui:Button x:Name="TranscriptsButton" Content="Transcripciones" HorizontalAlignment="Stretch"
                                HorizontalContentAlignment="Left" Margin="0,0,0,10"
                                Command="{Binding ShowHistoryCommand}"

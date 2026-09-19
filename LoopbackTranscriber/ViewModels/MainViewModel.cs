@@ -9,6 +9,8 @@ using LoopbackTranscriber.Services;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace LoopbackTranscriber.ViewModels;
 
@@ -25,27 +27,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<TargetItemViewModel> Targets { get; } = [];
 
-    public ObservableCollection<TranscriptHistoryItem> TranscriptHistory { get; } =
-    [
-        new TranscriptHistoryItem
-        {
-            AppName = "Teams",
-            Timestamp = DateTime.Now.AddHours(-2),
-            Preview = "Repasamos el estado del sprint y quedamos en revisar el backlog el viernes..."
-        },
-        new TranscriptHistoryItem
-        {
-            AppName = "Zoom",
-            Timestamp = DateTime.Now.AddDays(-1),
-            Preview = "Llamada con el cliente sobre los requisitos de la nueva funcionalidad..."
-        },
-        new TranscriptHistoryItem
-        {
-            AppName = "Discord",
-            Timestamp = DateTime.Now.AddDays(-2),
-            Preview = "Sesion rapida para coordinar el despliegue de la version 1.2..."
-        }
-    ];
+    public ObservableCollection<TranscriptHistoryItem> TranscriptHistory { get; } = [];
 
     public ObservableCollection<TranscriptHistoryItem> AppTranscriptHistory { get; } = [];
 
@@ -111,6 +93,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _watcher.Start();
         SyncTargetsFromWatcher();
+        LoadTranscriptHistoryFromDisk();
     }
 
     private void OnWatcherStatusesChanged(object? sender, EventArgs e) => SyncTargetsFromWatcher();
@@ -160,6 +143,79 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    private static readonly Regex TranscriptFileNamePattern =
+        new(@"^(?<app>.+)_(?<date>\d{8})_(?<time>\d{6})$", RegexOptions.Compiled);
+
+    private void LoadTranscriptHistoryFromDisk()
+    {
+        TranscriptHistory.Clear();
+
+        var settings = _settingsService.Load();
+        if (Directory.Exists(settings.TranscriptsFolder))
+        {
+            var items = new List<TranscriptHistoryItem>();
+
+            foreach (var path in Directory.GetFiles(settings.TranscriptsFolder, "*.txt"))
+            {
+                var item = TryReadTranscriptFile(path);
+                if (item is not null)
+                {
+                    items.Add(item);
+                }
+            }
+
+            foreach (var item in items.OrderByDescending(i => i.Timestamp))
+            {
+                TranscriptHistory.Add(item);
+            }
+        }
+
+        RefreshAppTranscriptHistory();
+    }
+
+    private static TranscriptHistoryItem? TryReadTranscriptFile(string path)
+    {
+        try
+        {
+            var fileName = Path.GetFileNameWithoutExtension(path);
+            var match = TranscriptFileNamePattern.Match(fileName);
+
+            string appName;
+            DateTime timestamp;
+
+            if (match.Success && DateTime.TryParseExact(
+                    match.Groups["date"].Value + match.Groups["time"].Value,
+                    "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            {
+                appName = match.Groups["app"].Value;
+                timestamp = parsed;
+            }
+            else
+            {
+                appName = fileName;
+                timestamp = File.GetLastWriteTime(path);
+            }
+
+            var content = File.ReadAllText(path).Trim();
+            var preview = content.Length > 160 ? content[..160].TrimEnd() + "..." : content;
+            if (string.IsNullOrWhiteSpace(preview))
+            {
+                preview = "(Transcripcion vacia)";
+            }
+
+            return new TranscriptHistoryItem
+            {
+                AppName = appName,
+                Timestamp = timestamp,
+                Preview = preview
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     [RelayCommand]
     private void ShowHistory()
     {
@@ -185,6 +241,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             configViewModel.CancelRequested -= OnConfigClosed;
         }
 
+        LoadTranscriptHistoryFromDisk();
         CurrentView = MainViewMode.AppView;
     }
 
@@ -276,6 +333,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 var fileName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
                 File.WriteAllText(Path.Combine(settings.TranscriptsFolder, fileName), text);
                 StatusText = $"Transcripcion lista y guardada en {settings.TranscriptsFolder}.";
+                LoadTranscriptHistoryFromDisk();
             }
             else
             {
