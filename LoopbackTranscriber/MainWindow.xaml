@@ -1,0 +1,209 @@
+<ui:FluentWindow x:Class="LoopbackTranscriber.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:conv="clr-namespace:LoopbackTranscriber.Converters"
+        xmlns:local="clr-namespace:LoopbackTranscriber"
+        mc:Ignorable="d"
+        Title="LoopbackTranscriber" Height="620" Width="920" MinHeight="480" MinWidth="720"
+        WindowStartupLocation="CenterScreen">
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
+        <conv:InverseBooleanConverter x:Key="InverseBoolConverter" />
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+    </ui:FluentWindow.Resources>
+
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="210" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" CornerRadius="14" Padding="12"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <ListBox Grid.Row="0"
+                         ItemsSource="{Binding Targets}"
+                         SelectedItem="{Binding SelectedTarget, Mode=TwoWay}"
+                         IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}"
+                         Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="6,10">
+                                <Ellipse Width="8" Height="8" Margin="0,0,10,0" VerticalAlignment="Center"
+                                         Fill="{Binding IsRunning, Converter={StaticResource BoolToStatusBrush}}" />
+                                <TextBlock Text="{Binding DisplayName}" FontSize="16" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="4" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+
+                <StackPanel Grid.Row="1">
+                    <Separator Margin="0,4,0,10" />
+                    <ui:Button x:Name="TranscriptsButton" Content="Transcripciones" HorizontalAlignment="Stretch"
+                               HorizontalContentAlignment="Left" Margin="0,0,0,10"
+                               Command="{Binding ShowHistoryCommand}"
+                               IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsHistoryViewActive}" Value="True">
+                                        <Setter Property="Appearance" Value="Primary" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                    <Separator Margin="0,0,0,10" />
+                    <ui:Button x:Name="ConfigButton" Content="Config" HorizontalAlignment="Stretch"
+                               HorizontalContentAlignment="Left" Click="ConfigButton_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Column="2" CornerRadius="14" Padding="20"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid>
+                <Grid Visibility="{Binding IsHistoryViewActive, Converter={StaticResource InverseBoolToVis}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Informacion" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding StatusText}" Opacity="0.75" Margin="0,6,0,0"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,18,0,0" VerticalAlignment="Center">
+                        <ui:Button Content="{Binding RecordButtonText}"
+                                   Command="{Binding ToggleRecordingCommand}"
+                                   Appearance="Primary" Width="190" Height="36" />
+                        <TextBlock Text="{Binding ElapsedText}" FontSize="16" VerticalAlignment="Center"
+                                   Margin="16,0,0,0"
+                                   Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
+
+                    <Border Grid.Row="2" Height="230" Margin="0,18,0,0" CornerRadius="10" Padding="14"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
+                                     IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                                     BorderThickness="0" Background="Transparent"
+                                     IsReadOnlyCaretVisible="True" VerticalScrollBarVisibility="Disabled" />
+                        </ScrollViewer>
+                    </Border>
+
+                    <Grid Grid.Row="3" Margin="0,16,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Historial de esta app" FontWeight="SemiBold"
+                                       Opacity="0.85" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ui:Button Content="Copiar" Command="{Binding CopyTranscriptCommand}" Margin="0,0,8,0" />
+                                <ui:Button Content="Ver carpeta" Command="{Binding OpenTranscriptsFolderCommand}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <ScrollViewer Grid.Row="1" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding AppTranscriptHistory}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
+                                                Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding AppName}"
+                                                               FontWeight="SemiBold" FontSize="13" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding TimestampText}"
+                                                               Opacity="0.55" FontSize="12" />
+                                                </Grid>
+                                                <TextBlock Text="{Binding Preview}" Opacity="0.7" FontSize="12"
+                                                           Margin="0,3,0,0" TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+
+                <Grid Visibility="{Binding IsHistoryViewActive, Converter={StaticResource BoolToVis}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Transcripciones" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Text="Todas las transcripciones guardadas, de cualquier aplicacion."
+                                   Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding TranscriptHistory}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding AppName}"
+                                                           FontWeight="SemiBold" FontSize="13" />
+                                                <TextBlock Grid.Column="1" Text="{Binding TimestampText}"
+                                                           Opacity="0.55" FontSize="12" />
+                                            </Grid>
+                                            <TextBlock Text="{Binding Preview}" Opacity="0.7" FontSize="12"
+                                                       Margin="0,3,0,0" TextWrapping="NoWrap"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>
