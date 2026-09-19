@@ -88,6 +88,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var elapsed = DateTime.Now - _recordingStartedAt;
             ElapsedText = elapsed.ToString(@"mm\:ss");
         };
+
+        ShowConfig();
     }
 
     public void Start()
