@@ -1,6 +1,4 @@
-using System.Windows;
 using LoopbackTranscriber.ViewModels;
-using LoopbackTranscriber.Views;
 
 namespace LoopbackTranscriber
 {
@@ -15,12 +13,6 @@ namespace LoopbackTranscriber
             DataContext = _viewModel;
             _viewModel.Start();
             Closed += (_, _) => _viewModel.Dispose();
-        }
-
-        private void ConfigButton_Click(object sender, RoutedEventArgs e)
-        {
-            var configWindow = new ConfigWindow { Owner = this };
-            configWindow.ShowDialog();
         }
     }
 }

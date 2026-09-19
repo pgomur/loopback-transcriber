@@ -46,6 +46,7 @@ public partial class ConfigViewModel : ObservableObject
     private string _modelStatusText = string.Empty;
 
     public event EventHandler? SettingsSaved;
+    public event EventHandler? CancelRequested;
 
     public ConfigViewModel()
     {
@@ -92,6 +93,12 @@ public partial class ConfigViewModel : ObservableObject
 
         _settingsService.Save(settings);
         SettingsSaved?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void Cancel()
+    {
+        CancelRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]

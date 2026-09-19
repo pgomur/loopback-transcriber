@@ -53,7 +53,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private TargetItemViewModel? _selectedTarget;
 
     [ObservableProperty]
-    private bool _isHistoryViewActive;
+    private MainViewMode _currentView = MainViewMode.AppView;
+
+    [ObservableProperty]
+    private ConfigViewModel? _configViewModel;
+
+    public bool IsAppViewActive => CurrentView == MainViewMode.AppView;
+
+    public bool IsHistoryViewActive => CurrentView == MainViewMode.History;
+
+    public bool IsConfigViewActive => CurrentView == MainViewMode.Config;
+
+    partial void OnCurrentViewChanged(MainViewMode value)
+    {
+        OnPropertyChanged(nameof(IsAppViewActive));
+        OnPropertyChanged(nameof(IsHistoryViewActive));
+        OnPropertyChanged(nameof(IsConfigViewActive));
+    }
 
     [ObservableProperty]
     private bool _isRecording;
@@ -113,7 +129,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedTargetChanged(TargetItemViewModel? value)
     {
-        IsHistoryViewActive = false;
+        CurrentView = MainViewMode.AppView;
         RefreshAppTranscriptHistory();
 
         if (value is null)
@@ -147,7 +163,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ShowHistory()
     {
-        IsHistoryViewActive = true;
+        CurrentView = MainViewMode.History;
+    }
+
+    [RelayCommand]
+    private void ShowConfig()
+    {
+        var configViewModel = new ConfigViewModel();
+        configViewModel.SettingsSaved += OnConfigClosed;
+        configViewModel.CancelRequested += OnConfigClosed;
+
+        ConfigViewModel = configViewModel;
+        CurrentView = MainViewMode.Config;
+    }
+
+    private void OnConfigClosed(object? sender, EventArgs e)
+    {
+        if (sender is ConfigViewModel configViewModel)
+        {
+            configViewModel.SettingsSaved -= OnConfigClosed;
+            configViewModel.CancelRequested -= OnConfigClosed;
+        }
+
+        CurrentView = MainViewMode.AppView;
     }
 
     [RelayCommand(CanExecute = nameof(CanToggleRecording))]

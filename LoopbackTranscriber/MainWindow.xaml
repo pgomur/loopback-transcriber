@@ -6,6 +6,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:conv="clr-namespace:LoopbackTranscriber.Converters"
         xmlns:local="clr-namespace:LoopbackTranscriber"
+        xmlns:views="clr-namespace:LoopbackTranscriber.Views"
         mc:Ignorable="d"
         Title="LoopbackTranscriber" Height="620" Width="920" MinHeight="480" MinWidth="720"
         WindowStartupLocation="CenterScreen">
@@ -13,7 +14,6 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
         <conv:InverseBooleanConverter x:Key="InverseBoolConverter" />
-        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
     </ui:FluentWindow.Resources>
 
     <Grid Margin="16">
@@ -73,7 +73,18 @@
                     </ui:Button>
                     <Separator Margin="0,0,0,10" />
                     <ui:Button x:Name="ConfigButton" Content="Config" HorizontalAlignment="Stretch"
-                               HorizontalContentAlignment="Left" Click="ConfigButton_Click" />
+                               HorizontalContentAlignment="Left"
+                               Command="{Binding ShowConfigCommand}">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConfigViewActive}" Value="True">
+                                        <Setter Property="Appearance" Value="Primary" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
                 </StackPanel>
             </Grid>
         </Border>
@@ -83,7 +94,7 @@
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="1">
             <Grid>
-                <Grid Visibility="{Binding IsHistoryViewActive, Converter={StaticResource InverseBoolToVis}}">
+                <Grid Visibility="{Binding IsAppViewActive, Converter={StaticResource BoolToVis}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -202,6 +213,11 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+                </Grid>
+
+                <!-- Vista dedicada: configuracion, embebida en la misma ventana (sin modal) -->
+                <Grid Visibility="{Binding IsConfigViewActive, Converter={StaticResource BoolToVis}}">
+                    <views:ConfigView DataContext="{Binding ConfigViewModel}" />
                 </Grid>
             </Grid>
         </Border>
