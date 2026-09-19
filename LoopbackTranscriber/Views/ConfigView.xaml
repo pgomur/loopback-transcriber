@@ -8,29 +8,86 @@
              mc:Ignorable="d">
     <UserControl.Resources>
         <conv:InverseBooleanConverter x:Key="InverseDownloadConverter" />
+        <conv:InverseBooleanConverter x:Key="InverseBoolConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
     </UserControl.Resources>
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-            <StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,-16,0">
+            <StackPanel Margin="0,0,20,0">
                 <TextBlock Text="Configuracion" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16" />
 
-                <StackPanel Margin="0,0,0,12">
-                    <TextBlock Text="Tamano del modelo de transcripcion (Whisper)" Margin="0,0,0,6" />
-                    <ComboBox ItemsSource="{Binding AvailableModelSizes}" SelectedItem="{Binding ModelSize, Mode=TwoWay}" />
+                <TextBlock Text="Modelo de transcripcion (Whisper)" FontSize="15" FontWeight="SemiBold"
+                           Margin="0,0,0,10" />
+
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="Modelo a usar" Margin="0,0,0,6" Opacity="0.8" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox Width="150" HorizontalAlignment="Left"
+                                  ItemsSource="{Binding AvailableModelSizes}"
+                                  SelectedItem="{Binding ModelSize, Mode=TwoWay}" />
+                        <ui:Button Content="Descargar modelo seleccionado" Margin="10,0,0,0"
+                                   Command="{Binding DownloadModelNowCommand}"
+                                   IsEnabled="{Binding IsDownloading, Converter={StaticResource InverseDownloadConverter}}" />
+                    </StackPanel>
+
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
                                  Fill="{Binding IsModelDownloaded, Converter={StaticResource BoolToStatusBrush}}" />
                         <TextBlock Text="{Binding ModelStatusText}" Opacity="0.8" TextWrapping="Wrap" />
                     </StackPanel>
+
+                    <ProgressBar Margin="0,10,0,0" Height="6" Width="220" HorizontalAlignment="Left"
+                                 Minimum="0" Maximum="100" Value="{Binding DownloadProgressPercent, Mode=OneWay}"
+                                 IsIndeterminate="{Binding IsProgressIndeterminate}"
+                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
+
+                    <TextBlock Text="{Binding DownloadStatus}" Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
+
+                <TextBlock Text="Modelos instalados" Margin="0,0,0,6" Opacity="0.8" />
+
+                <TextBlock Text="Todavia no hay ningun modelo descargado."
+                           Opacity="0.6" Margin="0,0,0,16"
+                           Visibility="{Binding HasNoInstalledModels, Converter={StaticResource BoolToVis}}" />
+
+                <ItemsControl ItemsSource="{Binding InstalledModels}" Margin="0,0,0,16">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" />
+                                            <TextBlock Text=" (en uso)" FontSize="12" Opacity="0.6"
+                                                       Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding FileSizeText}" Opacity="0.6" FontSize="12" />
+                                    </StackPanel>
+
+                                    <ui:Button Grid.Column="1" Content="Usar" Margin="8,0,0,0"
+                                               IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}"
+                                               Command="{Binding DataContext.UseModelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                               CommandParameter="{Binding}" />
+
+                                    <ui:Button Grid.Column="2" Content="Eliminar" Margin="8,0,0,0"
+                                               Command="{Binding DataContext.DeleteModelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                               CommandParameter="{Binding}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
                 <StackPanel Margin="0,0,0,12">
                     <TextBlock Text="Carpeta de modelos" Margin="0,0,0,6" />
@@ -42,19 +99,6 @@
                         <TextBox Grid.Column="0" Text="{Binding ModelsFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:Button Grid.Column="1" Content="Abrir" Margin="8,0,0,0" Command="{Binding OpenModelsFolderCommand}" />
                     </Grid>
-                </StackPanel>
-
-                <StackPanel Margin="0,0,0,12">
-                    <ui:Button Content="Descargar modelo ahora" HorizontalAlignment="Left"
-                               Command="{Binding DownloadModelNowCommand}"
-                               IsEnabled="{Binding IsDownloading, Converter={StaticResource InverseDownloadConverter}}" />
-
-                    <ProgressBar Margin="0,10,0,0" Height="6"
-                                 Minimum="0" Maximum="100" Value="{Binding DownloadProgressPercent, Mode=OneWay}"
-                                 IsIndeterminate="{Binding IsProgressIndeterminate}"
-                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
-
-                    <TextBlock Text="{Binding DownloadStatus}" Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <StackPanel Margin="0,0,0,12">
@@ -73,14 +117,5 @@
                           IsChecked="{Binding AutoSaveTranscripts, Mode=TwoWay}" Margin="0,0,0,4" />
             </StackPanel>
         </ScrollViewer>
-
-        <Border Grid.Row="1" BorderThickness="0,1,0,0"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                Margin="0,12,0,0" Padding="0,12,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <ui:Button Content="Cancelar" Margin="0,0,8,0" Command="{Binding CancelCommand}" />
-                <ui:Button Content="Guardar" Appearance="Primary" Command="{Binding SaveCommand}" />
-            </StackPanel>
-        </Border>
     </Grid>
 </UserControl>

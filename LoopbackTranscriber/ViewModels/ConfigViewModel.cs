@@ -1,4 +1,7 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LoopbackTranscriber.Models;
@@ -14,6 +17,8 @@ public partial class ConfigViewModel : ObservableObject
     private readonly WhisperTranscriptionService _whisper = new();
 
     public List<string> AvailableModelSizes { get; } = ["tiny", "base", "small", "medium", "large"];
+
+    public ObservableCollection<InstalledModelInfo> InstalledModels { get; } = [];
 
     [ObservableProperty]
     private string _modelSize;
@@ -45,8 +50,8 @@ public partial class ConfigViewModel : ObservableObject
     [ObservableProperty]
     private string _modelStatusText = string.Empty;
 
-    public event EventHandler? SettingsSaved;
-    public event EventHandler? CancelRequested;
+    [ObservableProperty]
+    private bool _hasNoInstalledModels = true;
 
     public ConfigViewModel()
     {
@@ -57,11 +62,51 @@ public partial class ConfigViewModel : ObservableObject
         _autoSaveTranscripts = settings.AutoSaveTranscripts;
 
         RefreshModelStatus();
+        RefreshInstalledModels();
     }
 
-    partial void OnModelSizeChanged(string value) => RefreshModelStatus();
+    public void RefreshFromDisk()
+    {
+        RefreshModelStatus();
+        RefreshInstalledModels();
+    }
 
-    partial void OnModelsFolderChanged(string value) => RefreshModelStatus();
+    private void SaveSettings()
+    {
+        var settings = new AppSettings
+        {
+            ModelSize = ModelSize,
+            ModelsFolder = ModelsFolder,
+            TranscriptsFolder = TranscriptsFolder,
+            AutoSaveTranscripts = AutoSaveTranscripts
+        };
+
+        _settingsService.Save(settings);
+    }
+
+    partial void OnModelSizeChanged(string value)
+    {
+        RefreshModelStatus();
+        RefreshInstalledModels();
+        SaveSettings();
+    }
+
+    partial void OnModelsFolderChanged(string value)
+    {
+        RefreshModelStatus();
+        RefreshInstalledModels();
+        SaveSettings();
+    }
+
+    partial void OnTranscriptsFolderChanged(string value)
+    {
+        SaveSettings();
+    }
+
+    partial void OnAutoSaveTranscriptsChanged(bool value)
+    {
+        SaveSettings();
+    }
 
     private void RefreshModelStatus()
     {
@@ -80,25 +125,48 @@ public partial class ConfigViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void Save()
+    private void RefreshInstalledModels()
     {
-        var settings = new AppSettings
+        InstalledModels.Clear();
+
+        if (!Directory.Exists(ModelsFolder))
         {
-            ModelSize = ModelSize,
-            ModelsFolder = ModelsFolder,
-            TranscriptsFolder = TranscriptsFolder,
-            AutoSaveTranscripts = AutoSaveTranscripts
-        };
+            HasNoInstalledModels = true;
+            return;
+        }
 
-        _settingsService.Save(settings);
-        SettingsSaved?.Invoke(this, EventArgs.Empty);
-    }
+        IEnumerable<FileInfo> files;
+        try
+        {
+            files = Directory.GetFiles(ModelsFolder, "ggml-*.bin")
+                .Select(path => new FileInfo(path))
+                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            HasNoInstalledModels = true;
+            return;
+        }
 
-    [RelayCommand]
-    private void Cancel()
-    {
-        CancelRequested?.Invoke(this, EventArgs.Empty);
+        foreach (var file in files)
+        {
+            var sizeName = Path.GetFileNameWithoutExtension(file.Name);
+            if (sizeName.StartsWith("ggml-", StringComparison.OrdinalIgnoreCase))
+            {
+                sizeName = sizeName["ggml-".Length..];
+            }
+
+            InstalledModels.Add(new InstalledModelInfo
+            {
+                ModelSize = sizeName,
+                FilePath = file.FullName,
+                FileSizeBytes = file.Length,
+                FileSizeText = WhisperTranscriptionService.FormatBytes(file.Length),
+                IsActive = string.Equals(sizeName, ModelSize, StringComparison.OrdinalIgnoreCase)
+            });
+        }
+
+        HasNoInstalledModels = InstalledModels.Count == 0;
     }
 
     [RelayCommand]
@@ -137,7 +205,59 @@ public partial class ConfigViewModel : ObservableObject
         {
             IsDownloading = false;
             RefreshModelStatus();
+            RefreshInstalledModels();
         }
+    }
+
+    [RelayCommand]
+    private void UseModel(InstalledModelInfo? model)
+    {
+        if (model is null)
+        {
+            return;
+        }
+
+        var match = AvailableModelSizes.FirstOrDefault(
+            size => string.Equals(size, model.ModelSize, StringComparison.OrdinalIgnoreCase));
+
+        ModelSize = match ?? model.ModelSize;
+    }
+
+    [RelayCommand]
+    private void DeleteModel(InstalledModelInfo? model)
+    {
+        if (model is null)
+        {
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"Eliminar el modelo \"{model.DisplayName}\" ({model.FileSizeText})? Tendras que volver a descargarlo si quieres usarlo de nuevo.",
+            "Eliminar modelo",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(model.FilePath))
+            {
+                File.Delete(model.FilePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"No se pudo eliminar el modelo: {ex.Message}", "Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        RefreshInstalledModels();
+        RefreshModelStatus();
     }
 
     [RelayCommand]

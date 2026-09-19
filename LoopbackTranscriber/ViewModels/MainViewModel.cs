@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Threading;
@@ -31,6 +32,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<TranscriptHistoryItem> TranscriptHistory { get; } = [];
 
     public ObservableCollection<TranscriptHistoryItem> AppTranscriptHistory { get; } = [];
+
+    [ObservableProperty]
+    private bool _hasSelectedAppHistoryItems;
 
     [ObservableProperty]
     private TargetItemViewModel? _selectedTarget;
@@ -115,8 +119,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedTargetChanged(TargetItemViewModel? value)
     {
+        TranscriptText = string.Empty;
+
+        ApplyTargetSelection(value);
+    }
+    private void ApplyTargetSelection(TargetItemViewModel? value)
+    {
         CurrentView = MainViewMode.AppView;
-        RefreshAppTranscriptHistory();
+
+        LoadTranscriptHistoryFromDisk();
 
         if (value is null)
         {
@@ -131,9 +142,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ToggleRecordingCommand.NotifyCanExecuteChanged();
     }
 
+    [RelayCommand]
+    private void SelectTarget(TargetItemViewModel? target)
+    {
+        if (target is null)
+        {
+            return;
+        }
+
+        SelectedTarget = target;
+        ApplyTargetSelection(target);
+    }
+
     private void RefreshAppTranscriptHistory()
     {
+        foreach (var existing in AppTranscriptHistory)
+        {
+            existing.PropertyChanged -= OnAppHistoryItemPropertyChanged;
+        }
+
         AppTranscriptHistory.Clear();
+        HasSelectedAppHistoryItems = false;
 
         if (SelectedTarget is null)
         {
@@ -142,7 +171,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         foreach (var item in TranscriptHistory.Where(h => h.AppName == SelectedTarget.DisplayName))
         {
+            item.IsSelected = false;
+            item.PropertyChanged += OnAppHistoryItemPropertyChanged;
             AppTranscriptHistory.Add(item);
+        }
+    }
+
+    private void OnAppHistoryItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(TranscriptHistoryItem.IsSelected))
+        {
+            HasSelectedAppHistoryItems = AppTranscriptHistory.Any(i => i.IsSelected);
         }
     }
 
@@ -210,7 +249,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 AppName = appName,
                 Timestamp = timestamp,
-                Preview = preview
+                Preview = preview,
+                FilePath = path
             };
         }
         catch
@@ -222,30 +262,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ShowHistory()
     {
+        LoadTranscriptHistoryFromDisk();
         CurrentView = MainViewMode.History;
     }
 
     [RelayCommand]
     private void ShowConfig()
     {
-        var configViewModel = new ConfigViewModel();
-        configViewModel.SettingsSaved += OnConfigClosed;
-        configViewModel.CancelRequested += OnConfigClosed;
-
-        ConfigViewModel = configViewModel;
-        CurrentView = MainViewMode.Config;
-    }
-
-    private void OnConfigClosed(object? sender, EventArgs e)
-    {
-        if (sender is ConfigViewModel configViewModel)
+        if (ConfigViewModel is null)
         {
-            configViewModel.SettingsSaved -= OnConfigClosed;
-            configViewModel.CancelRequested -= OnConfigClosed;
+            ConfigViewModel = new ConfigViewModel();
+        }
+        else
+        {
+            ConfigViewModel.RefreshFromDisk();
         }
 
-        LoadTranscriptHistoryFromDisk();
-        CurrentView = MainViewMode.AppView;
+        CurrentView = MainViewMode.Config;
     }
 
     [RelayCommand(CanExecute = nameof(CanToggleRecording))]
@@ -421,20 +454,112 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void CopyTranscript()
-    {
-        if (!string.IsNullOrEmpty(TranscriptText))
-        {
-            Clipboard.SetText(TranscriptText);
-        }
-    }
-
-    [RelayCommand]
     private void OpenTranscriptsFolder()
     {
         var settings = _settingsService.Load();
         Directory.CreateDirectory(settings.TranscriptsFolder);
         Process.Start(new ProcessStartInfo(settings.TranscriptsFolder) { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    private void ViewHistoryTranscript(TranscriptHistoryItem? item)
+    {
+        if (item is null || IsRecording || IsBusy)
+        {
+            return;
+        }
+
+        try
+        {
+            TranscriptText = File.Exists(item.FilePath)
+                ? File.ReadAllText(item.FilePath)
+                : item.Preview;
+        }
+        catch
+        {
+            TranscriptText = item.Preview;
+        }
+    }
+
+    private bool DeleteTranscriptFile(TranscriptHistoryItem item)
+    {
+        try
+        {
+            if (File.Exists(item.FilePath))
+            {
+                File.Delete(item.FilePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"No se pudo eliminar la transcripcion de \"{item.AppName}\" del {item.TimestampText}: {ex.Message}",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
+        }
+
+        TryDelete(Path.ChangeExtension(item.FilePath, ".wav"));
+        return true;
+    }
+
+    [RelayCommand]
+    private void DeleteTranscript(TranscriptHistoryItem? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"Eliminar la transcripcion de \"{item.AppName}\" del {item.TimestampText}? Esta accion no se puede deshacer.",
+            "Eliminar transcripcion",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (!DeleteTranscriptFile(item))
+        {
+            return;
+        }
+
+        TranscriptHistory.Remove(item);
+        RefreshAppTranscriptHistory();
+    }
+
+    [RelayCommand]
+    private void DeleteSelectedAppTranscripts()
+    {
+        var selected = AppTranscriptHistory.Where(i => i.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        var message = selected.Count == 1
+            ? "Eliminar la transcripcion seleccionada? Esta accion no se puede deshacer."
+            : $"Eliminar las {selected.Count} transcripciones seleccionadas? Esta accion no se puede deshacer.";
+
+        var result = MessageBox.Show(message, "Eliminar transcripciones",
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        foreach (var item in selected)
+        {
+            if (DeleteTranscriptFile(item))
+            {
+                TranscriptHistory.Remove(item);
+            }
+        }
+
+        RefreshAppTranscriptHistory();
     }
 
     public void Dispose()
