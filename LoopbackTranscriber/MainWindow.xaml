@@ -125,9 +125,9 @@
                             Background="{DynamicResource ControlFillColorSecondaryBrush}">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
-                                     IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                                     IsReadOnly="True" IsUndoEnabled="False" TextWrapping="Wrap" AcceptsReturn="True"
                                      BorderThickness="0" Background="Transparent"
-                                     IsReadOnlyCaretVisible="True" VerticalScrollBarVisibility="Disabled" />
+                                     IsReadOnlyCaretVisible="False" VerticalScrollBarVisibility="Disabled" />
                         </ScrollViewer>
                     </Border>
 

@@ -79,3 +79,6 @@ PublishProfiles/
 # Otros
 *.cache
 *.env
+
+# Instalador (Inno Setup): el .iss se versiona, pero el Setup.exe compilado no
+installer/Output/
