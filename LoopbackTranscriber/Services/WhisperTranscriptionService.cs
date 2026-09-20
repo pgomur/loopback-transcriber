@@ -138,8 +138,9 @@ public sealed class WhisperTranscriptionService
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLog.Warn($"WhisperTranscriptionService: fallo la descarga con progreso del modelo \"{modelSize}\", se usara el descargador de respaldo", ex);
 
             try
             {
@@ -148,9 +149,9 @@ public sealed class WhisperTranscriptionService
                     File.Delete(tempPath);
                 }
             }
-            catch
+            catch (Exception cleanupEx)
             {
-
+                AppLog.Warn($"WhisperTranscriptionService: no se pudo borrar el fichero temporal \"{tempPath}\"", cleanupEx);
             }
 
             return false;

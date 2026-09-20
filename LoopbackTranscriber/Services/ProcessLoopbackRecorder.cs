@@ -21,6 +21,8 @@ public sealed class ProcessLoopbackRecorder : IDisposable
     private WAVEFORMATEX _format;
     private Exception? _captureError;
 
+    private byte[] _scratchBuffer = new byte[4096];
+
     private long _packetCount;
     private long _silentPacketCount;
     private long _framesCaptured;
@@ -97,11 +99,22 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         IsRecording = false;
         _stopEvent!.Set();
 
-        var thread = _captureThread;
-        if (thread is not null)
+        var path = await Task.Run(FinishStop).ConfigureAwait(false);
+
+        var error = _captureError;
+        _captureError = null;
+        if (error is not null)
         {
-            await Task.Run(() => thread.Join(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+            throw new InvalidOperationException("Error durante la captura de audio.", error);
         }
+
+        return path;
+    }
+
+    private string FinishStop()
+    {
+        var thread = _captureThread;
+        thread?.Join(TimeSpan.FromSeconds(5));
 
         _audioClient?.Stop();
 
@@ -123,13 +136,6 @@ public sealed class ProcessLoopbackRecorder : IDisposable
 
         LastCaptureStats =
             $"paquetes={_packetCount}, en_silencio={_silentPacketCount}, frames={_framesCaptured}, pico_senal={_peakSampleAbs}/32768";
-
-        var error = _captureError;
-        _captureError = null;
-        if (error is not null)
-        {
-            throw new InvalidOperationException("Error durante la captura de audio.", error);
-        }
 
         return path;
     }
@@ -161,6 +167,14 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         }
     }
 
+    private void EnsureScratchCapacity(int size)
+    {
+        if (_scratchBuffer.Length < size)
+        {
+            _scratchBuffer = new byte[size];
+        }
+    }
+
     private void DrainAvailablePackets()
     {
         while (true)
@@ -183,20 +197,22 @@ public sealed class ProcessLoopbackRecorder : IDisposable
                 _packetCount++;
                 _framesCaptured += numFrames;
 
+                EnsureScratchCapacity(bytesToCapture);
+
                 if ((bufferFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0 || dataPtr == IntPtr.Zero)
                 {
                     _silentPacketCount++;
-                    _writer!.Write(new byte[bytesToCapture]);
+                    Array.Clear(_scratchBuffer, 0, bytesToCapture);
+                    _writer!.Write(_scratchBuffer, 0, bytesToCapture);
                 }
                 else
                 {
-                    var buffer = new byte[bytesToCapture];
-                    Marshal.Copy(dataPtr, buffer, 0, bytesToCapture);
-                    _writer!.Write(buffer);
+                    Marshal.Copy(dataPtr, _scratchBuffer, 0, bytesToCapture);
+                    _writer!.Write(_scratchBuffer, 0, bytesToCapture);
 
-                    for (var i = 0; i + 1 < buffer.Length; i += 2)
+                    for (var i = 0; i + 1 < bytesToCapture; i += 2)
                     {
-                        var sample = (short)(buffer[i] | (buffer[i + 1] << 8));
+                        var sample = (short)(_scratchBuffer[i] | (_scratchBuffer[i + 1] << 8));
                         var abs = Math.Abs((int)sample);
                         if (abs > _peakSampleAbs)
                         {
@@ -273,11 +289,13 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         {
             try
             {
-                StopAsync().GetAwaiter().GetResult();
+                IsRecording = false;
+                _stopEvent?.Set();
+                FinishStop();
             }
-            catch
+            catch (Exception ex)
             {
-
+                AppLog.Warn("ProcessLoopbackRecorder.Dispose: fallo al detener la grabacion en curso", ex);
             }
         }
 

@@ -10,18 +10,17 @@ using LoopbackTranscriber.Services;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Globalization;
-using System.Text.RegularExpressions;
 
 namespace LoopbackTranscriber.ViewModels;
 
 public partial class MainViewModel : ObservableObject, IDisposable
 {
-    private readonly TargetProcessWatcher _watcher = new();
-    private readonly ProcessLoopbackRecorder _recorder = new();
-    private readonly DeviceLoopbackRecorder _deviceRecorder = new();
-    private readonly WhisperTranscriptionService _whisper = new();
-    private readonly SettingsService _settingsService = new();
+    private readonly TargetProcessWatcher _watcher;
+    private readonly ProcessLoopbackRecorder _recorder;
+    private readonly DeviceLoopbackRecorder _deviceRecorder;
+    private readonly WhisperTranscriptionService _whisper;
+    private readonly SettingsService _settingsService;
+    private readonly TranscriptHistoryService _transcriptHistoryService;
     private readonly DispatcherTimer _elapsedTimer;
 
     private DateTime _recordingStartedAt;
@@ -77,8 +76,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public string RecordButtonText => IsRecording ? "Detener grabacion" : "Iniciar grabacion";
 
-    public MainViewModel()
+    public MainViewModel(
+        TargetProcessWatcher watcher,
+        ProcessLoopbackRecorder recorder,
+        DeviceLoopbackRecorder deviceRecorder,
+        WhisperTranscriptionService whisper,
+        SettingsService settingsService,
+        TranscriptHistoryService transcriptHistoryService)
     {
+        _watcher = watcher;
+        _recorder = recorder;
+        _deviceRecorder = deviceRecorder;
+        _whisper = whisper;
+        _settingsService = settingsService;
+        _transcriptHistoryService = transcriptHistoryService;
+
         foreach (var app in TargetApp.All)
         {
             Targets.Add(new TargetItemViewModel(app));
@@ -185,78 +197,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private static readonly Regex TranscriptFileNamePattern =
-        new(@"^(?<app>.+)_(?<date>\d{8})_(?<time>\d{6})$", RegexOptions.Compiled);
-
     private void LoadTranscriptHistoryFromDisk()
     {
         TranscriptHistory.Clear();
 
         var settings = _settingsService.Load();
-        if (Directory.Exists(settings.TranscriptsFolder))
+        foreach (var item in _transcriptHistoryService.LoadFromDisk(settings.TranscriptsFolder))
         {
-            var items = new List<TranscriptHistoryItem>();
-
-            foreach (var path in Directory.GetFiles(settings.TranscriptsFolder, "*.txt"))
-            {
-                var item = TryReadTranscriptFile(path);
-                if (item is not null)
-                {
-                    items.Add(item);
-                }
-            }
-
-            foreach (var item in items.OrderByDescending(i => i.Timestamp))
-            {
-                TranscriptHistory.Add(item);
-            }
+            TranscriptHistory.Add(item);
         }
 
         RefreshAppTranscriptHistory();
-    }
-
-    private static TranscriptHistoryItem? TryReadTranscriptFile(string path)
-    {
-        try
-        {
-            var fileName = Path.GetFileNameWithoutExtension(path);
-            var match = TranscriptFileNamePattern.Match(fileName);
-
-            string appName;
-            DateTime timestamp;
-
-            if (match.Success && DateTime.TryParseExact(
-                    match.Groups["date"].Value + match.Groups["time"].Value,
-                    "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-            {
-                appName = match.Groups["app"].Value;
-                timestamp = parsed;
-            }
-            else
-            {
-                appName = fileName;
-                timestamp = File.GetLastWriteTime(path);
-            }
-
-            var content = File.ReadAllText(path).Trim();
-            var preview = content.Length > 160 ? content[..160].TrimEnd() + "..." : content;
-            if (string.IsNullOrWhiteSpace(preview))
-            {
-                preview = "(Transcripcion vacia)";
-            }
-
-            return new TranscriptHistoryItem
-            {
-                AppName = appName,
-                Timestamp = timestamp,
-                Preview = preview,
-                FilePath = path
-            };
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     [RelayCommand]
@@ -271,7 +222,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (ConfigViewModel is null)
         {
-            ConfigViewModel = new ConfigViewModel();
+            ConfigViewModel = new ConfigViewModel(_settingsService, _whisper);
         }
         else
         {
@@ -316,8 +267,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 var deviceBaseName = Path.GetFileNameWithoutExtension(wavPath);
                 _deviceRecorder.Start(deviceDir, deviceBaseName);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn("MainViewModel.StartRecordingAsync: fallo al iniciar la captura por dispositivo, se continua solo con la captura por proceso", ex);
             }
 
             IsRecording = true;
@@ -360,8 +312,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 deviceTracks = await Task.Run(() => _deviceRecorder.Stop());
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn("MainViewModel.StopAndTranscribeAsync: fallo al parar la captura por dispositivo, se usa solo la captura por proceso", ex);
                 deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
             }
 
@@ -447,9 +400,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 File.Delete(path);
             }
         }
-        catch
+        catch (Exception ex)
         {
-
+            AppLog.Warn($"MainViewModel.TryDelete: no se pudo borrar el fichero temporal \"{path}\"", ex);
         }
     }
 
@@ -475,31 +428,24 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 ? File.ReadAllText(item.FilePath)
                 : item.Preview;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLog.Warn($"MainViewModel.ViewHistoryTranscript: no se pudo leer \"{item.FilePath}\", se muestra el resumen", ex);
             TranscriptText = item.Preview;
         }
     }
 
     private bool DeleteTranscriptFile(TranscriptHistoryItem item)
     {
-        try
+        if (_transcriptHistoryService.TryDeleteTranscriptFile(item, out var error))
         {
-            if (File.Exists(item.FilePath))
-            {
-                File.Delete(item.FilePath);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(
-                $"No se pudo eliminar la transcripcion de \"{item.AppName}\" del {item.TimestampText}: {ex.Message}",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            return false;
+            return true;
         }
 
-        TryDelete(Path.ChangeExtension(item.FilePath, ".wav"));
-        return true;
+        MessageBox.Show(
+            $"No se pudo eliminar la transcripcion de \"{item.AppName}\" del {item.TimestampText}: {error!.Message}",
+            "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        return false;
     }
 
     [RelayCommand]

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Threading;
 using System.Windows.Threading;
 using LoopbackTranscriber.Models;
 using LoopbackTranscriber.Interop;
@@ -16,7 +17,10 @@ public sealed class TargetProcessStatus
 
 public sealed class TargetProcessWatcher : IDisposable
 {
-    private readonly DispatcherTimer _timer;
+    private readonly System.Threading.Timer _timer;
+    private readonly Dispatcher _dispatcher;
+    private int _isRefreshing;
+    private volatile bool _disposed;
 
     public IReadOnlyList<TargetProcessStatus> Statuses { get; }
 
@@ -26,17 +30,36 @@ public sealed class TargetProcessWatcher : IDisposable
     {
         Statuses = TargetApp.All.Select(app => new TargetProcessStatus { App = app }).ToList();
 
-        _timer = new DispatcherTimer(DispatcherPriority.Background)
-        {
-            Interval = TimeSpan.FromSeconds(1.5)
-        };
-        _timer.Tick += (_, _) => Refresh();
+        _dispatcher = Dispatcher.CurrentDispatcher;
+        _timer = new System.Threading.Timer(_ => RefreshTick(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     public void Start()
     {
         Refresh();
-        _timer.Start();
+        _timer.Change(TimeSpan.FromSeconds(1.5), TimeSpan.FromSeconds(1.5));
+    }
+
+    private void RefreshTick()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _isRefreshing, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            Refresh();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isRefreshing, 0);
+        }
     }
 
     public void Refresh()
@@ -90,12 +113,25 @@ public sealed class TargetProcessWatcher : IDisposable
 
         if (changed)
         {
+            RaiseStatusesChanged();
+        }
+    }
+
+    private void RaiseStatusesChanged()
+    {
+        if (_dispatcher.CheckAccess())
+        {
             StatusesChanged?.Invoke(this, EventArgs.Empty);
+        }
+        else
+        {
+            _dispatcher.BeginInvoke(() => StatusesChanged?.Invoke(this, EventArgs.Empty));
         }
     }
 
     public void Dispose()
     {
-        _timer.Stop();
+        _disposed = true;
+        _timer.Dispose();
     }
 }

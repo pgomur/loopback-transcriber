@@ -26,9 +26,9 @@ public sealed class SettingsService
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-
+            AppLog.Warn($"SettingsService.Load: no se pudo leer \"{SettingsPath}\", se usaran valores por defecto", ex);
         }
 
         return new AppSettings();

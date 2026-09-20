@@ -13,8 +13,8 @@ namespace LoopbackTranscriber.ViewModels;
 
 public partial class ConfigViewModel : ObservableObject
 {
-    private readonly SettingsService _settingsService = new();
-    private readonly WhisperTranscriptionService _whisper = new();
+    private readonly SettingsService _settingsService;
+    private readonly WhisperTranscriptionService _whisper;
 
     public List<string> AvailableModelSizes { get; } = ["tiny", "base", "small", "medium", "large"];
 
@@ -53,8 +53,11 @@ public partial class ConfigViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasNoInstalledModels = true;
 
-    public ConfigViewModel()
+    public ConfigViewModel(SettingsService settingsService, WhisperTranscriptionService whisper)
     {
+        _settingsService = settingsService;
+        _whisper = whisper;
+
         var settings = _settingsService.Load();
         _modelSize = settings.ModelSize;
         _modelsFolder = settings.ModelsFolder;
@@ -142,8 +145,9 @@ public partial class ConfigViewModel : ObservableObject
                 .Select(path => new FileInfo(path))
                 .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLog.Warn($"ConfigViewModel.RefreshInstalledModels: no se pudo listar \"{ModelsFolder}\"", ex);
             HasNoInstalledModels = true;
             return;
         }

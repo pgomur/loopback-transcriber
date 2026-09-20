@@ -37,8 +37,9 @@ public sealed class DeviceLoopbackRecorder : IDisposable
         {
             enumerator = new MMDeviceEnumerator();
         }
-        catch
+        catch (Exception ex)
         {
+            AppLog.Warn("DeviceLoopbackRecorder.Start: no se pudo crear MMDeviceEnumerator, se omite la captura por dispositivo", ex);
             return;
         }
 
@@ -55,8 +56,9 @@ public sealed class DeviceLoopbackRecorder : IDisposable
             {
                 device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, role);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: no se pudo obtener el dispositivo de salida por defecto ({roleLabel})", ex);
                 continue;
             }
 
@@ -70,8 +72,9 @@ public sealed class DeviceLoopbackRecorder : IDisposable
             {
                 capture = new WasapiLoopbackCapture(device);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: no se pudo abrir captura WASAPI para \"{device.FriendlyName}\" ({roleLabel})", ex);
                 continue;
             }
 
@@ -82,8 +85,9 @@ public sealed class DeviceLoopbackRecorder : IDisposable
             {
                 writer = new WaveFileWriter(wavPath, capture.WaveFormat);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: no se pudo crear el fichero WAV \"{wavPath}\"", ex);
                 capture.Dispose();
                 continue;
             }
@@ -104,8 +108,9 @@ public sealed class DeviceLoopbackRecorder : IDisposable
                 capture.StartRecording();
                 _channels.Add(channel);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: no se pudo iniciar la captura para \"{channel.Label}\"", ex);
                 writer.Dispose();
                 capture.Dispose();
                 TryDeleteFile(wavPath);
@@ -160,8 +165,9 @@ public sealed class DeviceLoopbackRecorder : IDisposable
             {
                 channel.Capture.StopRecording();
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn($"DeviceLoopbackRecorder.Stop: fallo al parar la captura de \"{channel.Label}\"", ex);
             }
 
             channel.StoppedEvent.Wait(TimeSpan.FromSeconds(3));
@@ -172,8 +178,9 @@ public sealed class DeviceLoopbackRecorder : IDisposable
                 {
                     channel.Writer.Flush();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLog.Warn($"DeviceLoopbackRecorder.Stop: fallo al volcar el WAV de \"{channel.Label}\"", ex);
                 }
 
                 channel.Writer.Dispose();
@@ -204,8 +211,9 @@ public sealed class DeviceLoopbackRecorder : IDisposable
                 File.Delete(path);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLog.Warn($"DeviceLoopbackRecorder: no se pudo borrar \"{path}\"", ex);
         }
     }
 
@@ -217,16 +225,18 @@ public sealed class DeviceLoopbackRecorder : IDisposable
             {
                 channel.Writer.Dispose();
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn($"DeviceLoopbackRecorder.Dispose: fallo al cerrar el WAV de \"{channel.Label}\"", ex);
             }
 
             try
             {
                 channel.Capture.Dispose();
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warn($"DeviceLoopbackRecorder.Dispose: fallo al liberar la captura de \"{channel.Label}\"", ex);
             }
 
             channel.StoppedEvent.Dispose();
