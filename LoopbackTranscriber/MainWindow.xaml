@@ -16,87 +16,98 @@
         <conv:InverseBooleanConverter x:Key="InverseBoolConverter" />
     </ui:FluentWindow.Resources>
 
-    <Grid Margin="16">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="LoopbackTranscriber"
+                     Background="{DynamicResource ApplicationBackgroundBrush}" />
+
+        <Grid Grid.Row="1" Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="210" />
-            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" CornerRadius="14" Padding="12"
-                Background="{DynamicResource ControlFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="1">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+        <ui:NavigationView Grid.Column="0"
+                            Background="{DynamicResource ApplicationBackgroundBrush}"
+                            PaneDisplayMode="Left"
+                            OpenPaneLength="230"
+                            IsPaneOpen="True"
+                            IsPaneToggleVisible="True"
+                            IsBackButtonVisible="Collapsed"
+                            IsFooterSeparatorVisible="True">
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem Command="{Binding SelectTargetCommand}"
+                                        CommandParameter="{Binding Targets[0]}"
+                                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="PeopleTeam24" />
+                    </ui:NavigationViewItem.Icon>
+                    <ui:NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                     Fill="{Binding Targets[0].IsRunning, Converter={StaticResource BoolToStatusBrush}}" />
+                            <TextBlock Text="{Binding Targets[0].DisplayName}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ui:NavigationViewItem.Content>
+                </ui:NavigationViewItem>
 
-                <ListBox Grid.Row="0"
-                         ItemsSource="{Binding Targets}"
-                         SelectedItem="{Binding SelectedTarget, Mode=TwoWay}"
-                         IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}"
-                         Background="Transparent" BorderThickness="0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="6,10" Background="Transparent">
-                                <StackPanel.InputBindings>
-                                    <MouseBinding MouseAction="LeftClick"
-                                                  Command="{Binding DataContext.SelectTargetCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                  CommandParameter="{Binding}" />
-                                </StackPanel.InputBindings>
-                                <Ellipse Width="8" Height="8" Margin="0,0,10,0" VerticalAlignment="Center"
-                                         Fill="{Binding IsRunning, Converter={StaticResource BoolToStatusBrush}}" />
-                                <TextBlock Text="{Binding DisplayName}" FontSize="16" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Padding" Value="4" />
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                </ListBox>
+                <ui:NavigationViewItem Command="{Binding SelectTargetCommand}"
+                                        CommandParameter="{Binding Targets[1]}"
+                                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Chat24" />
+                    </ui:NavigationViewItem.Icon>
+                    <ui:NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                     Fill="{Binding Targets[1].IsRunning, Converter={StaticResource BoolToStatusBrush}}" />
+                            <TextBlock Text="{Binding Targets[1].DisplayName}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ui:NavigationViewItem.Content>
+                </ui:NavigationViewItem>
 
-                <StackPanel Grid.Row="1">
-                    <ui:Button x:Name="TranscriptsButton" Content="Transcripciones" HorizontalAlignment="Stretch"
-                               HorizontalContentAlignment="Left" Margin="0,0,0,10"
-                               Command="{Binding ShowHistoryCommand}"
-                               IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
-                        <ui:Button.Style>
-                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsHistoryViewActive}" Value="True">
-                                        <Setter Property="Appearance" Value="Primary" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ui:Button.Style>
-                    </ui:Button>
-                    <Separator Margin="0,0,0,10" />
-                    <ui:Button x:Name="ConfigButton" Content="Config" HorizontalAlignment="Stretch"
-                               HorizontalContentAlignment="Left"
-                               Command="{Binding ShowConfigCommand}">
-                        <ui:Button.Style>
-                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsConfigViewActive}" Value="True">
-                                        <Setter Property="Appearance" Value="Primary" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ui:Button.Style>
-                    </ui:Button>
-                </StackPanel>
-            </Grid>
-        </Border>
+                <ui:NavigationViewItem Command="{Binding SelectTargetCommand}"
+                                        CommandParameter="{Binding Targets[2]}"
+                                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Video24" />
+                    </ui:NavigationViewItem.Icon>
+                    <ui:NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                     Fill="{Binding Targets[2].IsRunning, Converter={StaticResource BoolToStatusBrush}}" />
+                            <TextBlock Text="{Binding Targets[2].DisplayName}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ui:NavigationViewItem.Content>
+                </ui:NavigationViewItem>
+            </ui:NavigationView.MenuItems>
 
-        <Border Grid.Column="2" CornerRadius="14" Padding="20"
-                Background="{DynamicResource ControlFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="1">
+            <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem Content="Transcripciones"
+                                        Command="{Binding ShowHistoryCommand}"
+                                        IsActive="{Binding IsHistoryViewActive}"
+                                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="History24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="Config"
+                                        Command="{Binding ShowConfigCommand}"
+                                        IsActive="{Binding IsConfigViewActive}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Settings24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+            </ui:NavigationView.FooterMenuItems>
+        </ui:NavigationView>
+
+        <Border Grid.Column="1" Padding="28"
+                CornerRadius="16,0,0,0"
+                Background="{DynamicResource ControlFillColorDefaultBrush}">
             <Grid>
                 <Grid Visibility="{Binding IsAppViewActive, Converter={StaticResource BoolToVis}}">
                     <Grid.RowDefinitions>
@@ -247,11 +258,11 @@
                     </ScrollViewer>
                 </Grid>
 
-                <!-- Vista dedicada: configuracion, embebida en la misma ventana (sin modal) -->
                 <Grid Visibility="{Binding IsConfigViewActive, Converter={StaticResource BoolToVis}}">
                     <views:ConfigView DataContext="{Binding ConfigViewModel}" />
                 </Grid>
             </Grid>
         </Border>
+    </Grid>
     </Grid>
 </ui:FluentWindow>
