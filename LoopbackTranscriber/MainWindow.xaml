@@ -31,7 +31,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <ui:NavigationView Grid.Column="0"
+        <ui:NavigationView x:Name="AppsNavigationView" Grid.Column="0"
                             Background="{DynamicResource ApplicationBackgroundBrush}"
                             PaneDisplayMode="Left"
                             OpenPaneLength="230"
@@ -39,54 +39,18 @@
                             IsPaneToggleVisible="True"
                             IsBackButtonVisible="Collapsed"
                             IsFooterSeparatorVisible="True">
-            <ui:NavigationView.MenuItems>
-                <ui:NavigationViewItem Command="{Binding SelectTargetCommand}"
-                                        CommandParameter="{Binding Targets[0]}"
-                                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="PeopleTeam24" />
-                    </ui:NavigationViewItem.Icon>
-                    <ui:NavigationViewItem.Content>
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
-                                     Fill="{Binding Targets[0].IsRunning, Converter={StaticResource BoolToStatusBrush}}" />
-                            <TextBlock Text="{Binding Targets[0].DisplayName}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </ui:NavigationViewItem.Content>
-                </ui:NavigationViewItem>
-
-                <ui:NavigationViewItem Command="{Binding SelectTargetCommand}"
-                                        CommandParameter="{Binding Targets[1]}"
-                                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Chat24" />
-                    </ui:NavigationViewItem.Icon>
-                    <ui:NavigationViewItem.Content>
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
-                                     Fill="{Binding Targets[1].IsRunning, Converter={StaticResource BoolToStatusBrush}}" />
-                            <TextBlock Text="{Binding Targets[1].DisplayName}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </ui:NavigationViewItem.Content>
-                </ui:NavigationViewItem>
-
-                <ui:NavigationViewItem Command="{Binding SelectTargetCommand}"
-                                        CommandParameter="{Binding Targets[2]}"
-                                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Video24" />
-                    </ui:NavigationViewItem.Icon>
-                    <ui:NavigationViewItem.Content>
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
-                                     Fill="{Binding Targets[2].IsRunning, Converter={StaticResource BoolToStatusBrush}}" />
-                            <TextBlock Text="{Binding Targets[2].DisplayName}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </ui:NavigationViewItem.Content>
-                </ui:NavigationViewItem>
-            </ui:NavigationView.MenuItems>
+            <ui:NavigationView.Resources>
+                <SolidColorBrush x:Key="LeftNavigationViewSeparatorBrush" Color="{DynamicResource ControlStrokeColorDefault}" />
+            </ui:NavigationView.Resources>
 
             <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem Content="Aplicaciones"
+                                        Command="{Binding ShowApplicationsCommand}"
+                                        IsActive="{Binding IsApplicationsViewActive}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="AppsList24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="Transcripciones"
                                         Command="{Binding ShowHistoryCommand}"
                                         IsActive="{Binding IsHistoryViewActive}"
@@ -256,6 +220,10 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+                </Grid>
+
+                <Grid Visibility="{Binding IsApplicationsViewActive, Converter={StaticResource BoolToVis}}">
+                    <views:ApplicationsView DataContext="{Binding ApplicationsViewModel}" />
                 </Grid>
 
                 <Grid Visibility="{Binding IsConfigViewActive, Converter={StaticResource BoolToVis}}">

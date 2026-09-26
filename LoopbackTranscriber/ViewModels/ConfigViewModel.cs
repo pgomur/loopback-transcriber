@@ -76,13 +76,11 @@ public partial class ConfigViewModel : ObservableObject
 
     private void SaveSettings()
     {
-        var settings = new AppSettings
-        {
-            ModelSize = ModelSize,
-            ModelsFolder = ModelsFolder,
-            TranscriptsFolder = TranscriptsFolder,
-            AutoSaveTranscripts = AutoSaveTranscripts
-        };
+        var settings = _settingsService.Load();
+        settings.ModelSize = ModelSize;
+        settings.ModelsFolder = ModelsFolder;
+        settings.TranscriptsFolder = TranscriptsFolder;
+        settings.AutoSaveTranscripts = AutoSaveTranscripts;
 
         _settingsService.Save(settings);
     }

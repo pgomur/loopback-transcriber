@@ -21,6 +21,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly WhisperTranscriptionService _whisper;
     private readonly SettingsService _settingsService;
     private readonly TranscriptHistoryService _transcriptHistoryService;
+    private readonly CustomAppsService _customAppsService;
     private readonly DispatcherTimer _elapsedTimer;
 
     private DateTime _recordingStartedAt;
@@ -44,17 +45,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private ConfigViewModel? _configViewModel;
 
+    [ObservableProperty]
+    private ApplicationsViewModel? _applicationsViewModel;
+
     public bool IsAppViewActive => CurrentView == MainViewMode.AppView;
 
     public bool IsHistoryViewActive => CurrentView == MainViewMode.History;
 
     public bool IsConfigViewActive => CurrentView == MainViewMode.Config;
 
+    public bool IsApplicationsViewActive => CurrentView == MainViewMode.Applications;
+
     partial void OnCurrentViewChanged(MainViewMode value)
     {
         OnPropertyChanged(nameof(IsAppViewActive));
         OnPropertyChanged(nameof(IsHistoryViewActive));
         OnPropertyChanged(nameof(IsConfigViewActive));
+        OnPropertyChanged(nameof(IsApplicationsViewActive));
     }
 
     [ObservableProperty]
@@ -82,7 +89,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         DeviceLoopbackRecorder deviceRecorder,
         WhisperTranscriptionService whisper,
         SettingsService settingsService,
-        TranscriptHistoryService transcriptHistoryService)
+        TranscriptHistoryService transcriptHistoryService,
+        CustomAppsService customAppsService)
     {
         _watcher = watcher;
         _recorder = recorder;
@@ -90,11 +98,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _whisper = whisper;
         _settingsService = settingsService;
         _transcriptHistoryService = transcriptHistoryService;
+        _customAppsService = customAppsService;
 
-        foreach (var app in TargetApp.All)
+        foreach (var app in TargetApp.All.Concat(_customAppsService.CustomApps))
         {
-            Targets.Add(new TargetItemViewModel(app));
+            AddTargetInternal(app);
         }
+
+        _customAppsService.Changed += OnCustomAppsChanged;
 
         _watcher.StatusesChanged += OnWatcherStatusesChanged;
 
@@ -123,6 +134,44 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             var vm = Targets.FirstOrDefault(t => t.App.Id == status.App.Id);
             vm?.UpdateFrom(status);
+        }
+
+        OnPropertyChanged(nameof(CanToggleRecording));
+        ToggleRecordingCommand.NotifyCanExecuteChanged();
+    }
+
+    private void AddTargetInternal(TargetApp app)
+    {
+        Targets.Add(new TargetItemViewModel(app));
+        _watcher.AddTarget(app);
+    }
+
+    private void OnCustomAppsChanged(object? sender, EventArgs e)
+    {
+        foreach (var app in _customAppsService.CustomApps)
+        {
+            if (Targets.All(t => t.App.Id != app.Id))
+            {
+                AddTargetInternal(app);
+            }
+        }
+
+        var builtInIds = new HashSet<string>(TargetApp.All.Select(a => a.Id));
+        var currentCustomIds = new HashSet<string>(_customAppsService.CustomApps.Select(a => a.Id));
+
+        var toRemove = Targets
+            .Where(t => !builtInIds.Contains(t.App.Id) && !currentCustomIds.Contains(t.App.Id))
+            .ToList();
+
+        foreach (var target in toRemove)
+        {
+            if (SelectedTarget == target)
+            {
+                SelectedTarget = null;
+            }
+
+            Targets.Remove(target);
+            _watcher.RemoveTarget(target.App.Id);
         }
 
         OnPropertyChanged(nameof(CanToggleRecording));
@@ -230,6 +279,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         CurrentView = MainViewMode.Config;
+    }
+
+    [RelayCommand]
+    private void ShowApplications()
+    {
+        if (ApplicationsViewModel is null)
+        {
+            ApplicationsViewModel = new ApplicationsViewModel(_customAppsService);
+        }
+        else
+        {
+            ApplicationsViewModel.RefreshFromDisk();
+        }
+
+        CurrentView = MainViewMode.Applications;
     }
 
     [RelayCommand(CanExecute = nameof(CanToggleRecording))]
@@ -511,6 +575,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _watcher.StatusesChanged -= OnWatcherStatusesChanged;
+        _customAppsService.Changed -= OnCustomAppsChanged;
         _watcher.Dispose();
         _recorder.Dispose();
         _deviceRecorder.Dispose();

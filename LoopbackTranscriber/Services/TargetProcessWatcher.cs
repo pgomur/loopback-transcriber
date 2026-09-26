@@ -19,17 +19,17 @@ public sealed class TargetProcessWatcher : IDisposable
 {
     private readonly System.Threading.Timer _timer;
     private readonly Dispatcher _dispatcher;
+    private readonly object _statusesLock = new();
+    private readonly List<TargetProcessStatus> _statuses = [];
     private int _isRefreshing;
     private volatile bool _disposed;
 
-    public IReadOnlyList<TargetProcessStatus> Statuses { get; }
+    public IReadOnlyList<TargetProcessStatus> Statuses => _statuses;
 
     public event EventHandler? StatusesChanged;
 
     public TargetProcessWatcher()
     {
-        Statuses = TargetApp.All.Select(app => new TargetProcessStatus { App = app }).ToList();
-
         _dispatcher = Dispatcher.CurrentDispatcher;
         _timer = new System.Threading.Timer(_ => RefreshTick(), null, Timeout.Infinite, Timeout.Infinite);
     }
@@ -38,6 +38,37 @@ public sealed class TargetProcessWatcher : IDisposable
     {
         Refresh();
         _timer.Change(TimeSpan.FromSeconds(1.5), TimeSpan.FromSeconds(1.5));
+    }
+
+    public void AddTarget(TargetApp app)
+    {
+        lock (_statusesLock)
+        {
+            if (_statuses.Any(s => s.App.Id == app.Id))
+            {
+                return;
+            }
+
+            _statuses.Add(new TargetProcessStatus { App = app });
+        }
+
+        RefreshTick();
+    }
+
+    public void RemoveTarget(string appId)
+    {
+        lock (_statusesLock)
+        {
+            var index = _statuses.FindIndex(s => s.App.Id == appId);
+            if (index < 0)
+            {
+                return;
+            }
+
+            _statuses.RemoveAt(index);
+        }
+
+        RaiseStatusesChanged();
     }
 
     private void RefreshTick()
@@ -64,9 +95,15 @@ public sealed class TargetProcessWatcher : IDisposable
 
     public void Refresh()
     {
+        TargetProcessStatus[] snapshot;
+        lock (_statusesLock)
+        {
+            snapshot = [.. _statuses];
+        }
+
         var changed = false;
 
-        foreach (var status in Statuses)
+        foreach (var status in snapshot)
         {
             uint foundPid = 0;
             var foundName = string.Empty;

@@ -18,6 +18,8 @@ public sealed class AppSettings
 
     public bool AutoSaveTranscripts { get; set; } = true;
 
+    public List<CustomTargetAppSettings> CustomApps { get; set; } = [];
+
     public string GetModelFileName() => $"ggml-{ModelSize}.bin";
 
     public string GetModelFilePath() => Path.Combine(ModelsFolder, GetModelFileName());

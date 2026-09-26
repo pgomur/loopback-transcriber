@@ -4,5 +4,6 @@ public enum MainViewMode
 {
     AppView,
     History,
-    Config
+    Config,
+    Applications
 }
