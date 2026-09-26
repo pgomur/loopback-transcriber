@@ -159,7 +159,8 @@ public sealed class WhisperTranscriptionService
     }
 
     public async Task<string> TranscribeAsync(string wavPath, string modelPath, string language,
-        IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+        IProgress<string>? progress = null, IProgress<int>? percentProgress = null,
+        CancellationToken cancellationToken = default)
     {
         var threadCount = Math.Clamp(Environment.ProcessorCount, 1, 8);
 
@@ -167,6 +168,7 @@ public sealed class WhisperTranscriptionService
         using var processor = whisperFactory.CreateBuilder()
             .WithLanguage(language)
             .WithThreads(threadCount)
+            .WithProgressHandler(percent => percentProgress?.Report(percent))
             .Build();
 
         await using var fileStream = File.OpenRead(wavPath);

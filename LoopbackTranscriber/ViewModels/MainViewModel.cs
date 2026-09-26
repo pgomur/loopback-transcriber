@@ -26,6 +26,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private DateTime _recordingStartedAt;
     private string? _currentRawWavPath;
+    private FileSystemWatcher? _transcriptsWatcher;
+    private string? _watchedTranscriptsFolderPath;
+    private readonly DispatcherTimer _transcriptsRefreshTimer;
 
     public ObservableCollection<TargetItemViewModel> Targets { get; } = [];
 
@@ -35,6 +38,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _hasSelectedAppHistoryItems;
+
+    [ObservableProperty]
+    private bool _hasSelectedHistoryItems;
 
     [ObservableProperty]
     private TargetItemViewModel? _selectedTarget;
@@ -79,6 +85,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _elapsedText = "00:00";
 
+    [ObservableProperty]
+    private bool _isTranscribingActive;
+
+    [ObservableProperty]
+    private double _transcriptionProgressPercent;
+
+    [ObservableProperty]
+    private string _transcriptionProgressText = string.Empty;
+
     public bool CanToggleRecording => IsBusy == false && (IsRecording || (SelectedTarget?.IsRunning ?? false));
 
     public string RecordButtonText => IsRecording ? Strings.Instance.Get("RecordStop") : Strings.Instance.Get("RecordStart");
@@ -116,6 +131,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             var elapsed = DateTime.Now - _recordingStartedAt;
             ElapsedText = elapsed.ToString(@"mm\:ss");
+        };
+
+        _transcriptsRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };
+        _transcriptsRefreshTimer.Tick += (_, _) =>
+        {
+            _transcriptsRefreshTimer.Stop();
+            LoadTranscriptHistoryFromDisk();
         };
 
         ShowConfig();
@@ -260,17 +282,91 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void OnHistoryItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(TranscriptHistoryItem.IsSelected))
+        {
+            HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
+        }
+    }
+
     private void LoadTranscriptHistoryFromDisk()
     {
+        foreach (var existing in TranscriptHistory)
+        {
+            existing.PropertyChanged -= OnHistoryItemPropertyChanged;
+        }
+
         TranscriptHistory.Clear();
+        HasSelectedHistoryItems = false;
 
         var settings = _settingsService.Load();
+        EnsureTranscriptsWatcher(settings.TranscriptsFolder);
+
         foreach (var item in _transcriptHistoryService.LoadFromDisk(settings.TranscriptsFolder))
         {
+            item.PropertyChanged += OnHistoryItemPropertyChanged;
             TranscriptHistory.Add(item);
         }
 
         RefreshAppTranscriptHistory();
+    }
+
+    private void EnsureTranscriptsWatcher(string folder)
+    {
+        if (_transcriptsWatcher is not null &&
+            string.Equals(_watchedTranscriptsFolderPath, folder, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _transcriptsWatcher?.Dispose();
+        _transcriptsWatcher = null;
+        _watchedTranscriptsFolderPath = folder;
+
+        try
+        {
+            Directory.CreateDirectory(folder);
+
+            var watcher = new FileSystemWatcher(folder)
+            {
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName
+            };
+
+            watcher.Deleted += OnTranscriptsFolderChanged;
+            watcher.Renamed += OnTranscriptsFolderChanged;
+            watcher.Created += OnTranscriptsFolderChanged;
+            watcher.Error += OnTranscriptsWatcherError;
+            watcher.EnableRaisingEvents = true;
+
+            _transcriptsWatcher = watcher;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"MainViewModel.EnsureTranscriptsWatcher: no se pudo observar \"{folder}\"", ex);
+        }
+    }
+
+    private void OnTranscriptsFolderChanged(object? sender, FileSystemEventArgs e)
+    {
+        Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            _transcriptsRefreshTimer.Stop();
+            _transcriptsRefreshTimer.Start();
+        });
+    }
+
+    private void OnTranscriptsWatcherError(object? sender, ErrorEventArgs e)
+    {
+        AppLog.Warn("MainViewModel: el observador de la carpeta de transcripciones fallo, se reiniciara", e.GetException());
+
+        Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            _watchedTranscriptsFolderPath = null;
+            _transcriptsRefreshTimer.Stop();
+            _transcriptsRefreshTimer.Start();
+        });
     }
 
     [RelayCommand]
@@ -415,12 +511,43 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await _whisper.EnsureModelDownloadedAsync(settings.ModelSize, modelPath, progress);
 
             StatusText = Strings.Instance.Get("StatusTranscribing");
+
+            IsTranscribingActive = true;
+            TranscriptionProgressPercent = 0;
+            TranscriptionProgressText = Strings.Instance.Format("TranscriptionProgressText", 0, "--:--");
+            var transcriptionStopwatch = Stopwatch.StartNew();
+
             whisperWavPath = Path.Combine(Path.GetDirectoryName(transcriptionSourceWavPath)!,
                 Path.GetFileNameWithoutExtension(transcriptionSourceWavPath) + ".16k.wav");
             AudioConverter.ConvertToWhisperFormat(transcriptionSourceWavPath, whisperWavPath);
 
             var transcriptProgress = new Progress<string>(text => TranscriptText = text);
-            var text = await _whisper.TranscribeAsync(whisperWavPath, modelPath, settings.Language, transcriptProgress);
+
+            var transcriptPercentProgress = new Progress<int>(percent =>
+            {
+                TranscriptionProgressPercent = percent;
+
+                if (percent <= 0)
+                {
+                    return;
+                }
+
+                var elapsed = transcriptionStopwatch.Elapsed;
+                var estimatedTotal = TimeSpan.FromTicks((long)(elapsed.Ticks * 100.0 / percent));
+                var remaining = estimatedTotal - elapsed;
+                if (remaining < TimeSpan.Zero)
+                {
+                    remaining = TimeSpan.Zero;
+                }
+
+                TranscriptionProgressText = Strings.Instance.Format("TranscriptionProgressText", percent,
+                    remaining.ToString(@"mm\:ss"));
+            });
+
+            var text = await _whisper.TranscribeAsync(whisperWavPath, modelPath, settings.Language,
+                transcriptProgress, transcriptPercentProgress);
+            IsTranscribingActive = false;
+
             TranscriptText = string.IsNullOrWhiteSpace(text)
                 ? Strings.Instance.Get("StatusNoTextDetected")
                 : text;
@@ -461,6 +588,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         finally
         {
             IsBusy = false;
+            IsTranscribingActive = false;
             OnPropertyChanged(nameof(CanToggleRecording));
         ToggleRecordingCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(RecordButtonText));
@@ -561,6 +689,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         TranscriptHistory.Remove(item);
+        HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
         RefreshAppTranscriptHistory();
     }
 
@@ -593,6 +722,40 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
         }
 
+        HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
+        RefreshAppTranscriptHistory();
+    }
+
+    [RelayCommand]
+    private void DeleteSelectedTranscripts()
+    {
+        var selected = TranscriptHistory.Where(i => i.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        var message = selected.Count == 1
+            ? Strings.Instance.Get("ConfirmDeleteSelectedOne")
+            : Strings.Instance.Format("ConfirmDeleteSelectedMany", selected.Count);
+
+        var result = MessageBox.Show(message, Strings.Instance.Get("ConfirmDeleteSelectedTitle"),
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        foreach (var item in selected)
+        {
+            if (DeleteTranscriptFile(item))
+            {
+                TranscriptHistory.Remove(item);
+            }
+        }
+
+        HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
         RefreshAppTranscriptHistory();
     }
 
@@ -601,6 +764,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _watcher.StatusesChanged -= OnWatcherStatusesChanged;
         _customAppsService.Changed -= OnCustomAppsChanged;
         Strings.Instance.LanguageChanged -= OnAppLanguageChanged;
+        _transcriptsRefreshTimer.Stop();
+        _transcriptsWatcher?.Dispose();
         _watcher.Dispose();
         _recorder.Dispose();
         _deviceRecorder.Dispose();
