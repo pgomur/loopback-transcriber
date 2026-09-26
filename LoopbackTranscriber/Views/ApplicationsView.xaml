@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:services="clr-namespace:LoopbackTranscriber.Services"
              mc:Ignorable="d">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -17,13 +18,13 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Aplicaciones" FontSize="20" FontWeight="SemiBold" />
-                    <ui:Button Grid.Column="1" Content="Actualizar" Command="{Binding RefreshCommand}" />
+                    <TextBlock Grid.Column="0" Text="{Binding Path=[AppsTitle], Source={x:Static services:Strings.Instance}}" FontSize="20" FontWeight="SemiBold" />
+                    <ui:Button Grid.Column="1" Content="{Binding Path=[AppsRefresh], Source={x:Static services:Strings.Instance}}" Command="{Binding RefreshCommand}" />
                 </Grid>
 
-                <TextBlock Text="Añadidas para escuchar" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <TextBlock Text="{Binding Path=[AppsAddedHeader], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10" />
 
-                <TextBlock Text="Todavia no has añadido ninguna aplicacion."
+                <TextBlock Text="{Binding Path=[AppsNoneAdded], Source={x:Static services:Strings.Instance}}"
                            Opacity="0.6" Margin="0,0,0,16"
                            Visibility="{Binding HasNoAddedApps, Converter={StaticResource BoolToVis}}" />
 
@@ -41,7 +42,7 @@
                                     <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
                                                FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
 
-                                    <ui:Button Grid.Column="1" Content="Quitar" Margin="8,0,0,0"
+                                    <ui:Button Grid.Column="1" Content="{Binding Path=[AppsRemove], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
                                                Command="{Binding DataContext.RemoveAppCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                CommandParameter="{Binding}" />
                                 </Grid>
@@ -50,9 +51,9 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <TextBlock Text="Procesos detectados con audio" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <TextBlock Text="{Binding Path=[AppsDetectedHeader], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10" />
 
-                <TextBlock Text="No se ha detectado ninguna aplicacion nueva reproduciendo audio ahora mismo."
+                <TextBlock Text="{Binding Path=[AppsNoneDetected], Source={x:Static services:Strings.Instance}}"
                            Opacity="0.6" Margin="0,0,0,16" TextWrapping="Wrap"
                            Visibility="{Binding HasNoDiscoveredApps, Converter={StaticResource BoolToVis}}" />
 
@@ -72,7 +73,7 @@
                                         <TextBlock Text="{Binding ProcessName}" Opacity="0.6" FontSize="12" />
                                     </StackPanel>
 
-                                    <ui:Button Grid.Column="1" Content="Añadir" Margin="8,0,0,0"
+                                    <ui:Button Grid.Column="1" Content="{Binding Path=[AppsAdd], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
                                                Command="{Binding DataContext.AddAppCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                CommandParameter="{Binding}" />
                                 </Grid>

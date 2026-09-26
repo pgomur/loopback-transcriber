@@ -20,9 +20,11 @@ namespace LoopbackTranscriber
 
         public MainWindow()
         {
+            var settingsService = new SettingsService();
+            Strings.Instance.SetLanguage(settingsService.Load().UiLanguage);
+
             InitializeComponent();
 
-            var settingsService = new SettingsService();
             var whisper = new WhisperTranscriptionService();
             var transcriptHistoryService = new TranscriptHistoryService();
             var customAppsService = new CustomAppsService(settingsService);
@@ -82,6 +84,17 @@ namespace LoopbackTranscriber
         {
             var symbol = target.App.Id == "teams" ? SymbolRegular.PeopleTeam24 : SymbolRegular.AppGeneric24;
 
+            var icon = new SymbolIcon
+            {
+                Symbol = symbol,
+                FontSize = 20,
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
+            };
+            TextOptions.SetTextFormattingMode(icon, TextFormattingMode.Display);
+            TextOptions.SetTextRenderingMode(icon, TextRenderingMode.ClearType);
+            RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
+
             var statusDot = new Ellipse
             {
                 Width = 8,
@@ -108,7 +121,7 @@ namespace LoopbackTranscriber
             var item = new NavigationViewItem
             {
                 Tag = target,
-                Icon = new SymbolIcon { Symbol = symbol },
+                Icon = icon,
                 Content = panel
             };
 

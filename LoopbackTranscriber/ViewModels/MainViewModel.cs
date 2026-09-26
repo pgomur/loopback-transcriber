@@ -71,7 +71,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool _isBusy;
 
     [ObservableProperty]
-    private string _statusText = "Selecciona una aplicacion para empezar a escuchar.";
+    private string _statusText = Strings.Instance.Get("StatusSelectApp");
 
     [ObservableProperty]
     private string _transcriptText = string.Empty;
@@ -81,7 +81,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public bool CanToggleRecording => IsBusy == false && (IsRecording || (SelectedTarget?.IsRunning ?? false));
 
-    public string RecordButtonText => IsRecording ? "Detener grabacion" : "Iniciar grabacion";
+    public string RecordButtonText => IsRecording ? Strings.Instance.Get("RecordStop") : Strings.Instance.Get("RecordStart");
 
     public MainViewModel(
         TargetProcessWatcher watcher,
@@ -109,6 +109,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         _watcher.StatusesChanged += OnWatcherStatusesChanged;
 
+        Strings.Instance.LanguageChanged += OnAppLanguageChanged;
+
         _elapsedTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
         _elapsedTimer.Tick += (_, _) =>
         {
@@ -127,6 +129,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     private void OnWatcherStatusesChanged(object? sender, EventArgs e) => SyncTargetsFromWatcher();
+
+    private void OnAppLanguageChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(RecordButtonText));
+
+        if (!IsRecording && !IsBusy && SelectedTarget is not null)
+        {
+            StatusText = SelectedTarget.IsRunning
+                ? Strings.Instance.Format("StatusDetected", SelectedTarget.DisplayName, Strings.Instance.Get("RecordStart"))
+                : Strings.Instance.Format("StatusNotRunning", SelectedTarget.DisplayName);
+        }
+    }
 
     private void SyncTargetsFromWatcher()
     {
@@ -196,8 +210,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         StatusText = value.IsRunning
-            ? $"{value.DisplayName} detectado. Pulsa \"Iniciar grabacion\" para empezar."
-            : $"{value.DisplayName} no parece estar abierto todavia. Abrelo y vuelve a seleccionarlo.";
+            ? Strings.Instance.Format("StatusDetected", value.DisplayName, Strings.Instance.Get("RecordStart"))
+            : Strings.Instance.Format("StatusNotRunning", value.DisplayName);
 
         OnPropertyChanged(nameof(CanToggleRecording));
         ToggleRecordingCommand.NotifyCanExecuteChanged();
@@ -313,7 +327,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedTarget is null || !SelectedTarget.IsRunning)
         {
-            StatusText = "Abre la aplicacion y selecciona una que este en ejecucion.";
+            StatusText = Strings.Instance.Get("StatusOpenAndSelect");
             return;
         }
 
@@ -337,14 +351,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
 
             IsRecording = true;
-            StatusText = $"Escuchando {SelectedTarget.DisplayName}...";
+            StatusText = Strings.Instance.Format("StatusListening", SelectedTarget.DisplayName);
             _recordingStartedAt = DateTime.Now;
             ElapsedText = "00:00";
             _elapsedTimer.Start();
         }
         catch (Exception ex)
         {
-            StatusText = $"No se pudo iniciar la grabacion: {ex.Message}";
+            StatusText = Strings.Instance.Format("StatusRecordFailed", ex.Message);
         }
         finally
         {
@@ -359,7 +373,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _elapsedTimer.Stop();
         IsRecording = false;
         IsBusy = true;
-        StatusText = "Procesando audio...";
+        StatusText = Strings.Instance.Get("StatusProcessingAudio");
         OnPropertyChanged(nameof(CanToggleRecording));
         ToggleRecordingCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(RecordButtonText));
@@ -397,10 +411,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             var progress = new Progress<string>(text => StatusText = text);
 
-            StatusText = "Comprobando el modelo de transcripcion...";
+            StatusText = Strings.Instance.Get("StatusCheckingModel");
             await _whisper.EnsureModelDownloadedAsync(settings.ModelSize, modelPath, progress);
 
-            StatusText = "Transcribiendo...";
+            StatusText = Strings.Instance.Get("StatusTranscribing");
             whisperWavPath = Path.Combine(Path.GetDirectoryName(transcriptionSourceWavPath)!,
                 Path.GetFileNameWithoutExtension(transcriptionSourceWavPath) + ".16k.wav");
             AudioConverter.ConvertToWhisperFormat(transcriptionSourceWavPath, whisperWavPath);
@@ -408,7 +422,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var transcriptProgress = new Progress<string>(text => TranscriptText = text);
             var text = await _whisper.TranscribeAsync(whisperWavPath, modelPath, settings.Language, transcriptProgress);
             TranscriptText = string.IsNullOrWhiteSpace(text)
-                ? "(No se detecto ningun texto en el audio)"
+                ? Strings.Instance.Get("StatusNoTextDetected")
                 : text;
 
             if (settings.AutoSaveTranscripts && !string.IsNullOrWhiteSpace(text))
@@ -424,17 +438,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     File.Copy(whisperWavPath, Path.Combine(recordingFolder, baseName + ".wav"), overwrite: true);
                 }
 
-                StatusText = "Transcripcion lista y guardada";
+                StatusText = Strings.Instance.Get("StatusTranscriptReadySaved");
                 LoadTranscriptHistoryFromDisk();
             }
             else
             {
-                StatusText = "Transcripcion lista.";
+                StatusText = Strings.Instance.Get("StatusTranscriptReady");
             }
         }
         catch (Exception ex)
         {
-            StatusText = $"Error al procesar la grabacion: {ex.Message}";
+            StatusText = Strings.Instance.Format("StatusErrorProcessing", ex.Message);
         }
         finally
         {
@@ -509,8 +523,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         MessageBox.Show(
-            $"No se pudo eliminar la transcripcion de \"{item.AppName}\" del {item.TimestampText}: {error!.Message}",
-            "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            Strings.Instance.Format("ErrorDeleteTranscriptBody", item.AppName, item.TimestampText, error!.Message),
+            Strings.Instance.Get("ErrorTitle"), MessageBoxButton.OK, MessageBoxImage.Error);
         return false;
     }
 
@@ -523,8 +537,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         var result = MessageBox.Show(
-            $"Eliminar la transcripcion de \"{item.AppName}\" del {item.TimestampText}? Esta accion no se puede deshacer.",
-            "Eliminar transcripcion",
+            Strings.Instance.Format("ConfirmDeleteTranscript", item.AppName, item.TimestampText),
+            Strings.Instance.Get("ConfirmDeleteTranscriptTitle"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
 
@@ -552,10 +566,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         var message = selected.Count == 1
-            ? "Eliminar la transcripcion seleccionada? Esta accion no se puede deshacer."
-            : $"Eliminar las {selected.Count} transcripciones seleccionadas? Esta accion no se puede deshacer.";
+            ? Strings.Instance.Get("ConfirmDeleteSelectedOne")
+            : Strings.Instance.Format("ConfirmDeleteSelectedMany", selected.Count);
 
-        var result = MessageBox.Show(message, "Eliminar transcripciones",
+        var result = MessageBox.Show(message, Strings.Instance.Get("ConfirmDeleteSelectedTitle"),
             MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
         if (result != MessageBoxResult.Yes)
@@ -578,6 +592,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _watcher.StatusesChanged -= OnWatcherStatusesChanged;
         _customAppsService.Changed -= OnCustomAppsChanged;
+        Strings.Instance.LanguageChanged -= OnAppLanguageChanged;
         _watcher.Dispose();
         _recorder.Dispose();
         _deviceRecorder.Dispose();

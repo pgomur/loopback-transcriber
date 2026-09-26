@@ -16,6 +16,8 @@ public sealed class AppSettings
 
     public string Language { get; set; } = "auto";
 
+    public string UiLanguage { get; set; } = "es";
+
     public bool AutoSaveTranscripts { get; set; } = true;
 
     public List<CustomTargetAppSettings> CustomApps { get; set; } = [];

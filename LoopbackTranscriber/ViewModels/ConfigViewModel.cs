@@ -18,11 +18,15 @@ public partial class ConfigViewModel : ObservableObject
 
     public List<string> AvailableModelSizes { get; } = ["medium", "large"];
 
-    public List<LanguageOption> AvailableLanguages { get; } =
+    public ObservableCollection<LanguageOption> AvailableLanguages { get; } = [];
+
+    public List<LanguageOption> AvailableUiLanguages { get; } =
     [
-        new LanguageOption { Code = "auto", DisplayName = "Automatico (detecta el idioma)" },
         new LanguageOption { Code = "es", DisplayName = "Español" },
-        new LanguageOption { Code = "en", DisplayName = "English" }
+        new LanguageOption { Code = "en", DisplayName = "English" },
+        new LanguageOption { Code = "pt", DisplayName = "Português" },
+        new LanguageOption { Code = "de", DisplayName = "Deutsch" },
+        new LanguageOption { Code = "ru", DisplayName = "Русский" }
     ];
 
     public ObservableCollection<InstalledModelInfo> InstalledModels { get; } = [];
@@ -32,6 +36,9 @@ public partial class ConfigViewModel : ObservableObject
 
     [ObservableProperty]
     private string _language;
+
+    [ObservableProperty]
+    private string _uiLanguage;
 
     [ObservableProperty]
     private string _modelsFolder;
@@ -75,9 +82,17 @@ public partial class ConfigViewModel : ObservableObject
         _modelsFolder = settings.ModelsFolder;
         _transcriptsFolder = settings.TranscriptsFolder;
         _autoSaveTranscripts = settings.AutoSaveTranscripts;
+        _uiLanguage = AvailableUiLanguages.Any(l => string.Equals(l.Code, settings.UiLanguage, StringComparison.OrdinalIgnoreCase))
+            ? settings.UiLanguage
+            : "es";
+
+        RefreshLanguageOptions();
+
         _language = AvailableLanguages.Any(l => string.Equals(l.Code, settings.Language, StringComparison.OrdinalIgnoreCase))
             ? settings.Language
             : "auto";
+
+        Strings.Instance.LanguageChanged += OnAppLanguageChanged;
 
         RefreshModelStatus();
         RefreshInstalledModels();
@@ -89,6 +104,24 @@ public partial class ConfigViewModel : ObservableObject
         RefreshInstalledModels();
     }
 
+    private void OnAppLanguageChanged(object? sender, EventArgs e)
+    {
+        var currentLanguage = Language;
+
+        RefreshLanguageOptions();
+        Language = currentLanguage;
+
+        RefreshModelStatus();
+    }
+
+    private void RefreshLanguageOptions()
+    {
+        AvailableLanguages.Clear();
+        AvailableLanguages.Add(new LanguageOption { Code = "auto", DisplayName = Strings.Instance.Get("MeetingLangAuto") });
+        AvailableLanguages.Add(new LanguageOption { Code = "es", DisplayName = Strings.Instance.Get("MeetingLangEs") });
+        AvailableLanguages.Add(new LanguageOption { Code = "en", DisplayName = Strings.Instance.Get("MeetingLangEn") });
+    }
+
     private void SaveSettings()
     {
         var settings = _settingsService.Load();
@@ -97,6 +130,7 @@ public partial class ConfigViewModel : ObservableObject
         settings.TranscriptsFolder = TranscriptsFolder;
         settings.AutoSaveTranscripts = AutoSaveTranscripts;
         settings.Language = Language;
+        settings.UiLanguage = UiLanguage;
 
         _settingsService.Save(settings);
     }
@@ -130,6 +164,12 @@ public partial class ConfigViewModel : ObservableObject
         SaveSettings();
     }
 
+    partial void OnUiLanguageChanged(string value)
+    {
+        SaveSettings();
+        Strings.Instance.SetLanguage(value);
+    }
+
     private void RefreshModelStatus()
     {
         var path = new AppSettings { ModelSize = ModelSize, ModelsFolder = ModelsFolder }.GetModelFilePath();
@@ -138,12 +178,12 @@ public partial class ConfigViewModel : ObservableObject
         {
             IsModelDownloaded = true;
             var sizeText = WhisperTranscriptionService.FormatBytes(new FileInfo(path).Length);
-            ModelStatusText = $"Modelo \"{ModelSize}\" ya descargado ({sizeText}).";
+            ModelStatusText = Strings.Instance.Format("ModelStatusDownloaded", ModelSize, sizeText);
         }
         else
         {
             IsModelDownloaded = false;
-            ModelStatusText = $"El modelo \"{ModelSize}\" todavia no esta descargado.";
+            ModelStatusText = Strings.Instance.Format("ModelStatusNotDownloaded", ModelSize);
         }
     }
 
@@ -217,12 +257,12 @@ public partial class ConfigViewModel : ObservableObject
 
             DownloadProgressPercent = 100;
             DownloadStatus = File.Exists(settings.GetModelFilePath())
-                ? "Modelo listo para usarse."
-                : "No se pudo descargar el modelo.";
+                ? Strings.Instance.Get("DownloadStatusReady")
+                : Strings.Instance.Get("DownloadStatusFailed");
         }
         catch (Exception ex)
         {
-            DownloadStatus = $"Error al descargar el modelo: {ex.Message}";
+            DownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.Message);
         }
         finally
         {
@@ -255,8 +295,8 @@ public partial class ConfigViewModel : ObservableObject
         }
 
         var result = MessageBox.Show(
-            $"Eliminar el modelo \"{model.DisplayName}\" ({model.FileSizeText})? Tendras que volver a descargarlo si quieres usarlo de nuevo.",
-            "Eliminar modelo",
+            Strings.Instance.Format("ConfirmDeleteModel", model.DisplayName, model.FileSizeText),
+            Strings.Instance.Get("ConfirmDeleteModelTitle"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
 
@@ -274,7 +314,7 @@ public partial class ConfigViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"No se pudo eliminar el modelo: {ex.Message}", "Error",
+            MessageBox.Show(Strings.Instance.Format("ErrorDeleteModel", ex.Message), Strings.Instance.Get("ErrorTitle"),
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }

@@ -7,9 +7,14 @@
         xmlns:conv="clr-namespace:LoopbackTranscriber.Converters"
         xmlns:local="clr-namespace:LoopbackTranscriber"
         xmlns:views="clr-namespace:LoopbackTranscriber.Views"
+        xmlns:services="clr-namespace:LoopbackTranscriber.Services"
         mc:Ignorable="d"
         Title="LoopbackTranscriber" Height="800" Width="1240" MinHeight="600" MinWidth="900"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
@@ -44,14 +49,14 @@
             </ui:NavigationView.Resources>
 
             <ui:NavigationView.FooterMenuItems>
-                <ui:NavigationViewItem Content="Aplicaciones"
+                <ui:NavigationViewItem Content="{Binding Path=[NavApplications], Source={x:Static services:Strings.Instance}}"
                                         Command="{Binding ShowApplicationsCommand}"
                                         IsActive="{Binding IsApplicationsViewActive}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="AppsList24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="Transcripciones"
+                <ui:NavigationViewItem Content="{Binding Path=[NavHistory], Source={x:Static services:Strings.Instance}}"
                                         Command="{Binding ShowHistoryCommand}"
                                         IsActive="{Binding IsHistoryViewActive}"
                                         IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
@@ -59,7 +64,7 @@
                         <ui:SymbolIcon Symbol="History24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="Config"
+                <ui:NavigationViewItem Content="{Binding Path=[NavConfig], Source={x:Static services:Strings.Instance}}"
                                         Command="{Binding ShowConfigCommand}"
                                         IsActive="{Binding IsConfigViewActive}">
                     <ui:NavigationViewItem.Icon>
@@ -82,7 +87,7 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
-                        <TextBlock Text="Informacion" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Path=[AppInfoTitle], Source={x:Static services:Strings.Instance}}" FontSize="20" FontWeight="SemiBold" />
                         <TextBlock Text="{Binding StatusText}" Opacity="0.75" Margin="0,6,0,0"
                                    TextWrapping="Wrap" />
                     </StackPanel>
@@ -117,13 +122,13 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Historial de esta app" FontWeight="SemiBold"
+                            <TextBlock Grid.Column="0" Text="{Binding Path=[HistoryOfAppTitle], Source={x:Static services:Strings.Instance}}" FontWeight="SemiBold"
                                        Opacity="0.85" VerticalAlignment="Center" />
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,14,0">
-                                <ui:Button Content="Eliminar" Margin="0,0,8,0"
+                                <ui:Button Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}" Margin="0,0,8,0"
                                            Command="{Binding DeleteSelectedAppTranscriptsCommand}"
                                            Visibility="{Binding HasSelectedAppHistoryItems, Converter={StaticResource BoolToVis}}" />
-                                <ui:Button Content="Ver carpeta" Command="{Binding OpenTranscriptsFolderCommand}" />
+                                <ui:Button Content="{Binding Path=[OpenFolder], Source={x:Static services:Strings.Instance}}" Command="{Binding OpenTranscriptsFolderCommand}" />
                             </StackPanel>
                         </Grid>
 
@@ -184,8 +189,8 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
-                        <TextBlock Text="Transcripciones" FontSize="20" FontWeight="SemiBold" />
-                        <TextBlock Text="Todas las transcripciones guardadas, de cualquier aplicacion."
+                        <TextBlock Text="{Binding Path=[HistoryTitle], Source={x:Static services:Strings.Instance}}" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Path=[HistorySubtitle], Source={x:Static services:Strings.Instance}}"
                                    Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap" />
                     </StackPanel>
 
@@ -207,7 +212,7 @@
                                                 <TextBlock Grid.Column="1" Text="{Binding TimestampText}"
                                                            Opacity="0.55" FontSize="12" VerticalAlignment="Center"
                                                            Margin="0,0,8,0" />
-                                                <ui:Button Grid.Column="2" Content="Eliminar"
+                                                <ui:Button Grid.Column="2" Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}"
                                                            Command="{Binding DataContext.DeleteTranscriptCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                            CommandParameter="{Binding}" />
                                             </Grid>

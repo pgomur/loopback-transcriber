@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:conv="clr-namespace:LoopbackTranscriber.Converters"
+             xmlns:services="clr-namespace:LoopbackTranscriber.Services"
              mc:Ignorable="d">
     <UserControl.Resources>
         <conv:InverseBooleanConverter x:Key="InverseDownloadConverter" />
@@ -16,19 +17,29 @@
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,-16,0">
             <StackPanel Margin="0,0,20,0">
-                <TextBlock Text="Configuracion" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16" />
-
-                <TextBlock Text="Modelo de transcripcion (Whisper)" FontSize="15" FontWeight="SemiBold"
-                           Margin="0,0,0,10" />
+                <TextBlock Text="{Binding Path=[ConfigTitle], Source={x:Static services:Strings.Instance}}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,20" />
 
                 <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="Modelo a usar" Margin="0,0,0,6" Opacity="0.8" />
+                    <TextBlock Text="{Binding Path=[ConfigAppLanguageLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
+                    <ComboBox Width="200" HorizontalAlignment="Left"
+                              ItemsSource="{Binding AvailableUiLanguages}"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Code"
+                              SelectedValue="{Binding UiLanguage, Mode=TwoWay}" />
+                </StackPanel>
+
+                <Border Height="1" Margin="0,0,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+                <TextBlock Text="{Binding Path=[ConfigTranscriptionSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="{Binding Path=[ConfigModelLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
 
                     <StackPanel Orientation="Horizontal">
                         <ComboBox Width="150" HorizontalAlignment="Left"
                                   ItemsSource="{Binding AvailableModelSizes}"
                                   SelectedItem="{Binding ModelSize, Mode=TwoWay}" />
-                        <ui:Button Content="Descargar modelo seleccionado" Margin="10,0,0,0"
+                        <ui:Button Content="{Binding Path=[ConfigDownloadModel], Source={x:Static services:Strings.Instance}}" Margin="10,0,0,0"
                                    Command="{Binding DownloadModelNowCommand}"
                                    IsEnabled="{Binding IsDownloading, Converter={StaticResource InverseDownloadConverter}}" />
                     </StackPanel>
@@ -48,24 +59,26 @@
                                Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
 
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="Idioma de la reunion" Margin="0,0,0,6" Opacity="0.8" />
+                <StackPanel Margin="0,0,0,4">
+                    <TextBlock Text="{Binding Path=[ConfigMeetingLanguageLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
                     <ComboBox Width="260" HorizontalAlignment="Left"
                               ItemsSource="{Binding AvailableLanguages}"
                               DisplayMemberPath="DisplayName"
                               SelectedValuePath="Code"
                               SelectedValue="{Binding Language, Mode=TwoWay}" />
-                    <TextBlock Text="Si en la misma reunion se habla en varios idiomas, deja &quot;Automatico&quot;: Whisper detecta el idioma de cada tramo."
+                    <TextBlock Text="{Binding Path=[ConfigMeetingLanguageHint], Source={x:Static services:Strings.Instance}}"
                                Opacity="0.6" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" />
                 </StackPanel>
 
-                <TextBlock Text="Modelos instalados" Margin="0,0,0,6" Opacity="0.8" />
+                <Border Height="1" Margin="0,20,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
 
-                <TextBlock Text="Todavia no hay ningun modelo descargado."
+                <TextBlock Text="{Binding Path=[ConfigInstalledModelsSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                <TextBlock Text="{Binding Path=[ConfigNoModelsInstalled], Source={x:Static services:Strings.Instance}}"
                            Opacity="0.6" Margin="0,0,0,16"
                            Visibility="{Binding HasNoInstalledModels, Converter={StaticResource BoolToVis}}" />
 
-                <ItemsControl ItemsSource="{Binding InstalledModels}" Margin="0,0,0,16">
+                <ItemsControl ItemsSource="{Binding InstalledModels}" Margin="0,0,0,4">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
@@ -80,18 +93,18 @@
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" />
-                                            <TextBlock Text=" (en uso)" FontSize="12" Opacity="0.6"
+                                            <TextBlock Text="{Binding Path=[ConfigInUseSuffix], Source={x:Static services:Strings.Instance}}" FontSize="12" Opacity="0.6"
                                                        Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}" />
                                         </StackPanel>
                                         <TextBlock Text="{Binding FileSizeText}" Opacity="0.6" FontSize="12" />
                                     </StackPanel>
 
-                                    <ui:Button Grid.Column="1" Content="Usar" Margin="8,0,0,0"
+                                    <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigUse], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
                                                IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}"
                                                Command="{Binding DataContext.UseModelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                CommandParameter="{Binding}" />
 
-                                    <ui:Button Grid.Column="2" Content="Eliminar" Margin="8,0,0,0"
+                                    <ui:Button Grid.Column="2" Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
                                                Command="{Binding DataContext.DeleteModelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                CommandParameter="{Binding}" />
                                 </Grid>
@@ -100,31 +113,35 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <Border Height="1" Margin="0,16,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+                <TextBlock Text="{Binding Path=[ConfigFoldersSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
+
                 <StackPanel Margin="0,0,0,12">
-                    <TextBlock Text="Carpeta de modelos" Margin="0,0,0,6" />
+                    <TextBlock Text="{Binding Path=[ConfigModelsFolderLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBox Grid.Column="0" Text="{Binding ModelsFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <ui:Button Grid.Column="1" Content="Abrir" Margin="8,0,0,0" Command="{Binding OpenModelsFolderCommand}" />
+                        <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenModelsFolderCommand}" />
                     </Grid>
                 </StackPanel>
 
                 <StackPanel Margin="0,0,0,12">
-                    <TextBlock Text="Carpeta de transcripciones" Margin="0,0,0,6" />
+                    <TextBlock Text="{Binding Path=[ConfigTranscriptsFolderLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBox Grid.Column="0" Text="{Binding TranscriptsFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <ui:Button Grid.Column="1" Content="Abrir" Margin="8,0,0,0" Command="{Binding OpenTranscriptsFolderCommand}" />
+                        <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenTranscriptsFolderCommand}" />
                     </Grid>
                 </StackPanel>
 
-                <CheckBox Content="Guardar automaticamente cada transcripcion en .txt"
+                <CheckBox Content="{Binding Path=[ConfigAutoSave], Source={x:Static services:Strings.Instance}}"
                           IsChecked="{Binding AutoSaveTranscripts, Mode=TwoWay}" Margin="0,0,0,4" />
             </StackPanel>
         </ScrollViewer>

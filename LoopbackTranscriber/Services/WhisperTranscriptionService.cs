@@ -72,7 +72,7 @@ public sealed class WhisperTranscriptionService
 
         if (!downloadedWithProgress)
         {
-            progress?.Report($"Descargando modelo Whisper ({modelSize})...");
+            progress?.Report(Strings.Instance.Format("ProgressDownloadingModel", modelSize));
 
             await using (var modelStream = await WhisperGgmlDownloader.Default
                              .GetGgmlModelAsync(ggmlType, cancellationToken: cancellationToken)
@@ -85,7 +85,7 @@ public sealed class WhisperTranscriptionService
 
         File.Move(tempPath, destinationPath, overwrite: true);
         percentProgress?.Report(100);
-        progress?.Report("Modelo descargado.");
+        progress?.Report(Strings.Instance.Get("ProgressModelDownloaded"));
     }
 
     private static async Task<bool> TryDownloadWithProgressAsync(GgmlType type, string modelSize, string tempPath,
@@ -127,12 +127,12 @@ public sealed class WhisperTranscriptionService
                 {
                     var percent = Math.Min(100.0, totalRead * 100.0 / totalBytes.Value);
                     percentProgress?.Report(percent);
-                    progress?.Report(
-                        $"Descargando modelo ({modelSize}): {percent:0}% ({FormatBytes(totalRead)} / {FormatBytes(totalBytes.Value)})");
+                    progress?.Report(Strings.Instance.Format("ProgressDownloadingWithPercent", modelSize,
+                        $"{percent:0}", FormatBytes(totalRead), FormatBytes(totalBytes.Value)));
                 }
                 else
                 {
-                    progress?.Report($"Descargando modelo ({modelSize}): {FormatBytes(totalRead)} descargados...");
+                    progress?.Report(Strings.Instance.Format("ProgressDownloadingBytes", modelSize, FormatBytes(totalRead)));
                 }
             }
 

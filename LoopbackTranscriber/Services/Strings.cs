@@ -1,0 +1,121 @@
+namespace LoopbackTranscriber.Services;
+
+public sealed class Strings : System.ComponentModel.INotifyPropertyChanged
+{
+    public static Strings Instance { get; } = new();
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public event EventHandler? LanguageChanged;
+
+    private string _language = "es";
+
+    public string Language => _language;
+
+    public string this[string key] => Get(key);
+
+    public string Get(string key)
+    {
+        if (Translations.TryGetValue(key, out var byLanguage))
+        {
+            if (byLanguage.TryGetValue(_language, out var text))
+            {
+                return text;
+            }
+
+            if (byLanguage.TryGetValue("en", out var fallback))
+            {
+                return fallback;
+            }
+        }
+
+        return key;
+    }
+
+    public string Format(string key, params object?[] args) => string.Format(Get(key), args);
+
+    public void SetLanguage(string language)
+    {
+        if (string.Equals(_language, language, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _language = language;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
+        LanguageChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()
+    {
+        ["NavApplications"] = new() { ["es"] = "Aplicaciones", ["en"] = "Applications", ["pt"] = "Aplicativos", ["de"] = "Anwendungen", ["ru"] = "Приложения" },
+        ["NavHistory"] = new() { ["es"] = "Transcripciones", ["en"] = "Transcripts", ["pt"] = "Transcrições", ["de"] = "Transkripte", ["ru"] = "Транскрипты" },
+        ["NavConfig"] = new() { ["es"] = "Config", ["en"] = "Settings", ["pt"] = "Config", ["de"] = "Einstellungen", ["ru"] = "Настройки" },
+        ["AppInfoTitle"] = new() { ["es"] = "Informacion", ["en"] = "Information", ["pt"] = "Informação", ["de"] = "Information", ["ru"] = "Информация" },
+        ["StatusSelectApp"] = new() { ["es"] = "Selecciona una aplicacion para empezar a escuchar.", ["en"] = "Select an application to start listening.", ["pt"] = "Selecione um aplicativo para começar a escutar.", ["de"] = "Wähle eine Anwendung aus, um mit dem Zuhören zu beginnen.", ["ru"] = "Выберите приложение, чтобы начать прослушивание." },
+        ["RecordStart"] = new() { ["es"] = "Iniciar grabacion", ["en"] = "Start recording", ["pt"] = "Iniciar gravação", ["de"] = "Aufnahme starten", ["ru"] = "Начать запись" },
+        ["RecordStop"] = new() { ["es"] = "Detener grabacion", ["en"] = "Stop recording", ["pt"] = "Parar gravação", ["de"] = "Aufnahme stoppen", ["ru"] = "Остановить запись" },
+        ["HistoryOfAppTitle"] = new() { ["es"] = "Historial de esta app", ["en"] = "History for this app", ["pt"] = "Histórico deste aplicativo", ["de"] = "Verlauf dieser App", ["ru"] = "История этого приложения" },
+        ["Delete"] = new() { ["es"] = "Eliminar", ["en"] = "Delete", ["pt"] = "Excluir", ["de"] = "Löschen", ["ru"] = "Удалить" },
+        ["OpenFolder"] = new() { ["es"] = "Ver carpeta", ["en"] = "Open folder", ["pt"] = "Ver pasta", ["de"] = "Ordner öffnen", ["ru"] = "Открыть папку" },
+        ["HistoryTitle"] = new() { ["es"] = "Transcripciones", ["en"] = "Transcripts", ["pt"] = "Transcrições", ["de"] = "Transkripte", ["ru"] = "Транскрипты" },
+        ["HistorySubtitle"] = new() { ["es"] = "Todas las transcripciones guardadas, de cualquier aplicacion.", ["en"] = "All saved transcripts, from any application.", ["pt"] = "Todas as transcrições salvas, de qualquer aplicativo.", ["de"] = "Alle gespeicherten Transkripte, von jeder Anwendung.", ["ru"] = "Все сохранённые транскрипты из любых приложений." },
+        ["AppsTitle"] = new() { ["es"] = "Aplicaciones", ["en"] = "Applications", ["pt"] = "Aplicativos", ["de"] = "Anwendungen", ["ru"] = "Приложения" },
+        ["AppsRefresh"] = new() { ["es"] = "Actualizar", ["en"] = "Refresh", ["pt"] = "Atualizar", ["de"] = "Aktualisieren", ["ru"] = "Обновить" },
+        ["AppsAddedHeader"] = new() { ["es"] = "Añadidas para escuchar", ["en"] = "Added for listening", ["pt"] = "Adicionados para escuta", ["de"] = "Zum Zuhören hinzugefügt", ["ru"] = "Добавлены для прослушивания" },
+        ["AppsNoneAdded"] = new() { ["es"] = "Todavia no has añadido ninguna aplicacion.", ["en"] = "You haven't added any application yet.", ["pt"] = "Você ainda não adicionou nenhum aplicativo.", ["de"] = "Du hast noch keine Anwendung hinzugefügt.", ["ru"] = "Вы ещё не добавили ни одного приложения." },
+        ["AppsRemove"] = new() { ["es"] = "Quitar", ["en"] = "Remove", ["pt"] = "Remover", ["de"] = "Entfernen", ["ru"] = "Убрать" },
+        ["AppsDetectedHeader"] = new() { ["es"] = "Procesos detectados con audio", ["en"] = "Detected processes with audio", ["pt"] = "Processos detectados com áudio", ["de"] = "Erkannte Prozesse mit Audio", ["ru"] = "Обнаруженные процессы со звуком" },
+        ["AppsNoneDetected"] = new() { ["es"] = "No se ha detectado ninguna aplicacion nueva reproduciendo audio ahora mismo.", ["en"] = "No new application playing audio has been detected right now.", ["pt"] = "Nenhum aplicativo novo reproduzindo áudio foi detectado agora.", ["de"] = "Derzeit wurde keine neue Anwendung erkannt, die Audio wiedergibt.", ["ru"] = "Сейчас не обнаружено ни одного нового приложения, воспроизводящего звук." },
+        ["AppsAdd"] = new() { ["es"] = "Añadir", ["en"] = "Add", ["pt"] = "Adicionar", ["de"] = "Hinzufügen", ["ru"] = "Добавить" },
+        ["ConfigTitle"] = new() { ["es"] = "Configuracion", ["en"] = "Settings", ["pt"] = "Configurações", ["de"] = "Einstellungen", ["ru"] = "Настройки" },
+        ["ConfigTranscriptionSection"] = new() { ["es"] = "Transcripcion", ["en"] = "Transcription", ["pt"] = "Transcrição", ["de"] = "Transkription", ["ru"] = "Транскрипция" },
+        ["ConfigModelLabel"] = new() { ["es"] = "Modelo a usar", ["en"] = "Model to use", ["pt"] = "Modelo a usar", ["de"] = "Zu verwendendes Modell", ["ru"] = "Используемая модель" },
+        ["ConfigDownloadModel"] = new() { ["es"] = "Descargar modelo seleccionado", ["en"] = "Download selected model", ["pt"] = "Baixar modelo selecionado", ["de"] = "Ausgewähltes Modell herunterladen", ["ru"] = "Скачать выбранную модель" },
+        ["ConfigMeetingLanguageLabel"] = new() { ["es"] = "Idioma de la reunion", ["en"] = "Meeting language", ["pt"] = "Idioma da reunião", ["de"] = "Besprechungssprache", ["ru"] = "Язык встречи" },
+        ["ConfigMeetingLanguageHint"] = new() { ["es"] = "Si en la misma reunion se habla en varios idiomas, deja \"Automatico\": Whisper detecta el idioma de cada tramo.", ["en"] = "If several languages are spoken in the same meeting, leave \"Automatic\": Whisper detects the language of each segment.", ["pt"] = "Se vários idiomas forem falados na mesma reunião, deixe \"Automático\": o Whisper detecta o idioma de cada trecho.", ["de"] = "Wenn in derselben Besprechung mehrere Sprachen gesprochen werden, lasse \"Automatisch\": Whisper erkennt die Sprache jedes Abschnitts.", ["ru"] = "Если на одной встрече говорят на нескольких языках, оставьте «Автоматически»: Whisper определяет язык каждого фрагмента." },
+        ["ConfigInstalledModelsSection"] = new() { ["es"] = "Modelos instalados", ["en"] = "Installed models", ["pt"] = "Modelos instalados", ["de"] = "Installierte Modelle", ["ru"] = "Установленные модели" },
+        ["ConfigNoModelsInstalled"] = new() { ["es"] = "Todavia no hay ningun modelo descargado.", ["en"] = "No model has been downloaded yet.", ["pt"] = "Ainda não há nenhum modelo baixado.", ["de"] = "Es wurde noch kein Modell heruntergeladen.", ["ru"] = "Пока не загружено ни одной модели." },
+        ["ConfigInUseSuffix"] = new() { ["es"] = " (en uso)", ["en"] = " (in use)", ["pt"] = " (em uso)", ["de"] = " (in Verwendung)", ["ru"] = " (используется)" },
+        ["ConfigUse"] = new() { ["es"] = "Usar", ["en"] = "Use", ["pt"] = "Usar", ["de"] = "Verwenden", ["ru"] = "Использовать" },
+        ["ConfigFoldersSection"] = new() { ["es"] = "Carpetas y guardado", ["en"] = "Folders and saving", ["pt"] = "Pastas e salvamento", ["de"] = "Ordner und Speichern", ["ru"] = "Папки и сохранение" },
+        ["ConfigModelsFolderLabel"] = new() { ["es"] = "Carpeta de modelos", ["en"] = "Models folder", ["pt"] = "Pasta de modelos", ["de"] = "Modellordner", ["ru"] = "Папка моделей" },
+        ["ConfigOpen"] = new() { ["es"] = "Abrir", ["en"] = "Open", ["pt"] = "Abrir", ["de"] = "Öffnen", ["ru"] = "Открыть" },
+        ["ConfigTranscriptsFolderLabel"] = new() { ["es"] = "Carpeta de transcripciones", ["en"] = "Transcripts folder", ["pt"] = "Pasta de transcrições", ["de"] = "Transkriptordner", ["ru"] = "Папка транскриптов" },
+        ["ConfigAutoSave"] = new() { ["es"] = "Guardar automaticamente cada transcripcion en .txt", ["en"] = "Automatically save each transcript as .txt", ["pt"] = "Salvar automaticamente cada transcrição em .txt", ["de"] = "Jedes Transkript automatisch als .txt speichern", ["ru"] = "Автоматически сохранять каждый транскрипт в .txt" },
+        ["ConfigAppLanguageLabel"] = new() { ["es"] = "Idioma de la aplicacion", ["en"] = "Application language", ["pt"] = "Idioma do aplicativo", ["de"] = "Anwendungssprache", ["ru"] = "Язык приложения" },
+        ["MeetingLangAuto"] = new() { ["es"] = "Automatico (detecta el idioma)", ["en"] = "Automatic (detects the language)", ["pt"] = "Automático (detecta o idioma)", ["de"] = "Automatisch (erkennt die Sprache)", ["ru"] = "Автоматически (определяет язык)" },
+        ["MeetingLangEs"] = new() { ["es"] = "Español", ["en"] = "Spanish", ["pt"] = "Espanhol", ["de"] = "Spanisch", ["ru"] = "Испанский" },
+        ["MeetingLangEn"] = new() { ["es"] = "English", ["en"] = "English", ["pt"] = "Inglês", ["de"] = "Englisch", ["ru"] = "Английский" },
+        ["ModelStatusDownloaded"] = new() { ["es"] = "Modelo \"{0}\" ya descargado ({1}).", ["en"] = "Model \"{0}\" already downloaded ({1}).", ["pt"] = "Modelo \"{0}\" já baixado ({1}).", ["de"] = "Modell \"{0}\" bereits heruntergeladen ({1}).", ["ru"] = "Модель «{0}» уже загружена ({1})." },
+        ["ModelStatusNotDownloaded"] = new() { ["es"] = "El modelo \"{0}\" todavia no esta descargado.", ["en"] = "Model \"{0}\" has not been downloaded yet.", ["pt"] = "O modelo \"{0}\" ainda não foi baixado.", ["de"] = "Das Modell \"{0}\" wurde noch nicht heruntergeladen.", ["ru"] = "Модель «{0}» ещё не загружена." },
+        ["DownloadStatusReady"] = new() { ["es"] = "Modelo listo para usarse.", ["en"] = "Model ready to use.", ["pt"] = "Modelo pronto para uso.", ["de"] = "Modell einsatzbereit.", ["ru"] = "Модель готова к использованию." },
+        ["DownloadStatusFailed"] = new() { ["es"] = "No se pudo descargar el modelo.", ["en"] = "The model could not be downloaded.", ["pt"] = "Não foi possível baixar o modelo.", ["de"] = "Das Modell konnte nicht heruntergeladen werden.", ["ru"] = "Не удалось загрузить модель." },
+        ["DownloadStatusError"] = new() { ["es"] = "Error al descargar el modelo: {0}", ["en"] = "Error downloading the model: {0}", ["pt"] = "Erro ao baixar o modelo: {0}", ["de"] = "Fehler beim Herunterladen des Modells: {0}", ["ru"] = "Ошибка при загрузке модели: {0}" },
+        ["ConfirmDeleteModel"] = new() { ["es"] = "Eliminar el modelo \"{0}\" ({1})? Tendras que volver a descargarlo si quieres usarlo de nuevo.", ["en"] = "Delete the model \"{0}\" ({1})? You will have to download it again if you want to use it later.", ["pt"] = "Excluir o modelo \"{0}\" ({1})? Você terá que baixá-lo novamente se quiser usá-lo depois.", ["de"] = "Modell \"{0}\" ({1}) löschen? Du musst es erneut herunterladen, wenn du es später wieder verwenden möchtest.", ["ru"] = "Удалить модель «{0}» ({1})? Если понадобится снова, придётся загрузить её заново." },
+        ["ConfirmDeleteModelTitle"] = new() { ["es"] = "Eliminar modelo", ["en"] = "Delete model", ["pt"] = "Excluir modelo", ["de"] = "Modell löschen", ["ru"] = "Удалить модель" },
+        ["ErrorDeleteModel"] = new() { ["es"] = "No se pudo eliminar el modelo: {0}", ["en"] = "The model could not be deleted: {0}", ["pt"] = "Não foi possível excluir o modelo: {0}", ["de"] = "Das Modell konnte nicht gelöscht werden: {0}", ["ru"] = "Не удалось удалить модель: {0}" },
+        ["ErrorTitle"] = new() { ["es"] = "Error", ["en"] = "Error", ["pt"] = "Erro", ["de"] = "Fehler", ["ru"] = "Ошибка" },
+        ["StatusDetected"] = new() { ["es"] = "{0} detectado. Pulsa \"{1}\" para empezar.", ["en"] = "{0} detected. Press \"{1}\" to start.", ["pt"] = "{0} detectado. Pressione \"{1}\" para começar.", ["de"] = "{0} erkannt. Drücke \"{1}\", um zu starten.", ["ru"] = "{0} обнаружено. Нажмите «{1}», чтобы начать." },
+        ["StatusNotRunning"] = new() { ["es"] = "{0} no parece estar abierto todavia. Abrelo y vuelve a seleccionarlo.", ["en"] = "{0} doesn't seem to be open yet. Open it and select it again.", ["pt"] = "{0} ainda não parece estar aberto. Abra-o e selecione-o novamente.", ["de"] = "{0} scheint noch nicht geöffnet zu sein. Öffne es und wähle es erneut aus.", ["ru"] = "Похоже, {0} ещё не открыто. Откройте его и выберите снова." },
+        ["StatusOpenAndSelect"] = new() { ["es"] = "Abre la aplicacion y selecciona una que este en ejecucion.", ["en"] = "Open the application and select one that is running.", ["pt"] = "Abra o aplicativo e selecione um que esteja em execução.", ["de"] = "Öffne die Anwendung und wähle eine aus, die läuft.", ["ru"] = "Откройте приложение и выберите то, которое запущено." },
+        ["StatusRecordFailed"] = new() { ["es"] = "No se pudo iniciar la grabacion: {0}", ["en"] = "The recording could not be started: {0}", ["pt"] = "Não foi possível iniciar a gravação: {0}", ["de"] = "Die Aufnahme konnte nicht gestartet werden: {0}", ["ru"] = "Не удалось начать запись: {0}" },
+        ["StatusListening"] = new() { ["es"] = "Escuchando {0}...", ["en"] = "Listening to {0}...", ["pt"] = "Ouvindo {0}...", ["de"] = "Höre {0} zu...", ["ru"] = "Слушаем {0}..." },
+        ["StatusProcessingAudio"] = new() { ["es"] = "Procesando audio...", ["en"] = "Processing audio...", ["pt"] = "Processando áudio...", ["de"] = "Audio wird verarbeitet...", ["ru"] = "Обработка звука..." },
+        ["StatusCheckingModel"] = new() { ["es"] = "Comprobando el modelo de transcripcion...", ["en"] = "Checking the transcription model...", ["pt"] = "Verificando o modelo de transcrição...", ["de"] = "Transkriptionsmodell wird überprüft...", ["ru"] = "Проверка модели транскрипции..." },
+        ["StatusTranscribing"] = new() { ["es"] = "Transcribiendo...", ["en"] = "Transcribing...", ["pt"] = "Transcrevendo...", ["de"] = "Transkribiere...", ["ru"] = "Транскрибирование..." },
+        ["StatusNoTextDetected"] = new() { ["es"] = "(No se detecto ningun texto en el audio)", ["en"] = "(No text was detected in the audio)", ["pt"] = "(Nenhum texto foi detectado no áudio)", ["de"] = "(Im Audio wurde kein Text erkannt)", ["ru"] = "(В аудио текст не обнаружен)" },
+        ["StatusTranscriptReadySaved"] = new() { ["es"] = "Transcripcion lista y guardada", ["en"] = "Transcript ready and saved", ["pt"] = "Transcrição pronta e salva", ["de"] = "Transkript fertig und gespeichert", ["ru"] = "Транскрипт готов и сохранён" },
+        ["StatusTranscriptReady"] = new() { ["es"] = "Transcripcion lista.", ["en"] = "Transcript ready.", ["pt"] = "Transcrição pronta.", ["de"] = "Transkript fertig.", ["ru"] = "Транскрипт готов." },
+        ["StatusErrorProcessing"] = new() { ["es"] = "Error al procesar la grabacion: {0}", ["en"] = "Error processing the recording: {0}", ["pt"] = "Erro ao processar a gravação: {0}", ["de"] = "Fehler bei der Verarbeitung der Aufnahme: {0}", ["ru"] = "Ошибка обработки записи: {0}" },
+        ["ConfirmDeleteTranscript"] = new() { ["es"] = "Eliminar la transcripcion de \"{0}\" del {1}? Esta accion no se puede deshacer.", ["en"] = "Delete the transcript of \"{0}\" from {1}? This action cannot be undone.", ["pt"] = "Excluir a transcrição de \"{0}\" de {1}? Esta ação não pode ser desfeita.", ["de"] = "Transkript von \"{0}\" vom {1} löschen? Diese Aktion kann nicht rückgängig gemacht werden.", ["ru"] = "Удалить транскрипт «{0}» от {1}? Это действие нельзя отменить." },
+        ["ConfirmDeleteTranscriptTitle"] = new() { ["es"] = "Eliminar transcripcion", ["en"] = "Delete transcript", ["pt"] = "Excluir transcrição", ["de"] = "Transkript löschen", ["ru"] = "Удалить транскрипт" },
+        ["ConfirmDeleteSelectedOne"] = new() { ["es"] = "Eliminar la transcripcion seleccionada? Esta accion no se puede deshacer.", ["en"] = "Delete the selected transcript? This action cannot be undone.", ["pt"] = "Excluir a transcrição selecionada? Esta ação não pode ser desfeita.", ["de"] = "Ausgewähltes Transkript löschen? Diese Aktion kann nicht rückgängig gemacht werden.", ["ru"] = "Удалить выбранный транскрипт? Это действие нельзя отменить." },
+        ["ConfirmDeleteSelectedMany"] = new() { ["es"] = "Eliminar las {0} transcripciones seleccionadas? Esta accion no se puede deshacer.", ["en"] = "Delete the {0} selected transcripts? This action cannot be undone.", ["pt"] = "Excluir as {0} transcrições selecionadas? Esta ação não pode ser desfeita.", ["de"] = "Die {0} ausgewählten Transkripte löschen? Diese Aktion kann nicht rückgängig gemacht werden.", ["ru"] = "Удалить {0} выбранных транскрипта(ов)? Это действие нельзя отменить." },
+        ["ConfirmDeleteSelectedTitle"] = new() { ["es"] = "Eliminar transcripciones", ["en"] = "Delete transcripts", ["pt"] = "Excluir transcrições", ["de"] = "Transkripte löschen", ["ru"] = "Удалить транскрипты" },
+        ["ErrorDeleteTranscriptBody"] = new() { ["es"] = "No se pudo eliminar la transcripcion de \"{0}\" del {1}: {2}", ["en"] = "The transcript of \"{0}\" from {1} could not be deleted: {2}", ["pt"] = "Não foi possível excluir a transcrição de \"{0}\" de {1}: {2}", ["de"] = "Das Transkript von \"{0}\" vom {1} konnte nicht gelöscht werden: {2}", ["ru"] = "Не удалось удалить транскрипт «{0}» от {1}: {2}" },
+        ["ProgressDownloadingModel"] = new() { ["es"] = "Descargando modelo Whisper ({0})...", ["en"] = "Downloading Whisper model ({0})...", ["pt"] = "Baixando modelo Whisper ({0})...", ["de"] = "Whisper-Modell wird heruntergeladen ({0})...", ["ru"] = "Загрузка модели Whisper ({0})..." },
+        ["ProgressModelDownloaded"] = new() { ["es"] = "Modelo descargado.", ["en"] = "Model downloaded.", ["pt"] = "Modelo baixado.", ["de"] = "Modell heruntergeladen.", ["ru"] = "Модель загружена." },
+        ["ProgressDownloadingWithPercent"] = new() { ["es"] = "Descargando modelo ({0}): {1}% ({2} / {3})", ["en"] = "Downloading model ({0}): {1}% ({2} / {3})", ["pt"] = "Baixando modelo ({0}): {1}% ({2} / {3})", ["de"] = "Modell wird heruntergeladen ({0}): {1}% ({2} / {3})", ["ru"] = "Загрузка модели ({0}): {1}% ({2} / {3})" },
+        ["ProgressDownloadingBytes"] = new() { ["es"] = "Descargando modelo ({0}): {1} descargados...", ["en"] = "Downloading model ({0}): {1} downloaded...", ["pt"] = "Baixando modelo ({0}): {1} baixados...", ["de"] = "Modell wird heruntergeladen ({0}): {1} heruntergeladen...", ["ru"] = "Загрузка модели ({0}): {1} загружено..." },
+    };
+}
