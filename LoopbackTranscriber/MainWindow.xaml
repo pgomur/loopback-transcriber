@@ -185,6 +185,7 @@
                 <Grid Visibility="{Binding IsHistoryViewActive, Converter={StaticResource BoolToVis}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -194,12 +195,28 @@
                                    Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <ScrollViewer Grid.Row="1" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
+                    <Border Grid.Row="1" Height="260" Margin="0,16,0,0" CornerRadius="10" Padding="14"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
+                                     IsReadOnly="True" IsUndoEnabled="False" TextWrapping="Wrap" AcceptsReturn="True"
+                                     BorderThickness="0" Background="Transparent"
+                                     IsReadOnlyCaretVisible="False" VerticalScrollBarVisibility="Disabled" />
+                        </ScrollViewer>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="2" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
                         <ItemsControl ItemsSource="{Binding TranscriptHistory}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
-                                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                            Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick"
+                                                          Command="{Binding DataContext.ViewHistoryTranscriptCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                          CommandParameter="{Binding}" />
+                                        </Border.InputBindings>
                                         <StackPanel>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>

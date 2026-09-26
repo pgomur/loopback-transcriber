@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 namespace LoopbackTranscriber.Models;
 
@@ -16,13 +17,30 @@ public sealed class AppSettings
 
     public string Language { get; set; } = "auto";
 
-    public string UiLanguage { get; set; } = "es";
+    public string UiLanguage { get; set; } = DetectSystemLanguage();
 
     public bool AutoSaveTranscripts { get; set; } = true;
+
+    public bool SaveMarkdownTranscripts { get; set; } = true;
 
     public List<CustomTargetAppSettings> CustomApps { get; set; } = [];
 
     public string GetModelFileName() => $"ggml-{ModelSize}.bin";
 
     public string GetModelFilePath() => Path.Combine(ModelsFolder, GetModelFileName());
+
+    private static string DetectSystemLanguage()
+    {
+        var systemCode = CultureInfo.InstalledUICulture.TwoLetterISOLanguageName.ToLowerInvariant();
+
+        return systemCode switch
+        {
+            "es" => "es",
+            "en" => "en",
+            "pt" => "pt",
+            "de" => "de",
+            "ru" => "ru",
+            _ => "en"
+        };
+    }
 }

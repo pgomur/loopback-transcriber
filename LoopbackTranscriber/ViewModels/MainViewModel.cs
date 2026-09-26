@@ -427,11 +427,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (settings.AutoSaveTranscripts && !string.IsNullOrWhiteSpace(text))
             {
-                var baseName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                var recordedAt = DateTime.Now;
+                var baseName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{recordedAt:yyyyMMdd_HHmmss}";
                 var recordingFolder = Path.Combine(settings.TranscriptsFolder, baseName);
                 Directory.CreateDirectory(recordingFolder);
 
                 File.WriteAllText(Path.Combine(recordingFolder, baseName + ".txt"), text);
+
+                if (settings.SaveMarkdownTranscripts)
+                {
+                    var markdownTitle = SelectedTarget?.DisplayName ?? "Reunion";
+                    var markdown = $"# {markdownTitle} - {recordedAt:dd/MM/yyyy HH:mm}\n\n{text}";
+                    File.WriteAllText(Path.Combine(recordingFolder, baseName + ".md"), markdown);
+                }
 
                 if (whisperWavPath is not null && File.Exists(whisperWavPath))
                 {

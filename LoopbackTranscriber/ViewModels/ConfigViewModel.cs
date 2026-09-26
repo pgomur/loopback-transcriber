@@ -50,6 +50,9 @@ public partial class ConfigViewModel : ObservableObject
     private bool _autoSaveTranscripts;
 
     [ObservableProperty]
+    private bool _saveMarkdownTranscripts;
+
+    [ObservableProperty]
     private string _downloadStatus = string.Empty;
 
     [ObservableProperty]
@@ -82,6 +85,7 @@ public partial class ConfigViewModel : ObservableObject
         _modelsFolder = settings.ModelsFolder;
         _transcriptsFolder = settings.TranscriptsFolder;
         _autoSaveTranscripts = settings.AutoSaveTranscripts;
+        _saveMarkdownTranscripts = settings.SaveMarkdownTranscripts;
         _uiLanguage = AvailableUiLanguages.Any(l => string.Equals(l.Code, settings.UiLanguage, StringComparison.OrdinalIgnoreCase))
             ? settings.UiLanguage
             : "es";
@@ -129,6 +133,7 @@ public partial class ConfigViewModel : ObservableObject
         settings.ModelsFolder = ModelsFolder;
         settings.TranscriptsFolder = TranscriptsFolder;
         settings.AutoSaveTranscripts = AutoSaveTranscripts;
+        settings.SaveMarkdownTranscripts = SaveMarkdownTranscripts;
         settings.Language = Language;
         settings.UiLanguage = UiLanguage;
 
@@ -155,6 +160,11 @@ public partial class ConfigViewModel : ObservableObject
     }
 
     partial void OnAutoSaveTranscriptsChanged(bool value)
+    {
+        SaveSettings();
+    }
+
+    partial void OnSaveMarkdownTranscriptsChanged(bool value)
     {
         SaveSettings();
     }
