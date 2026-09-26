@@ -20,7 +20,7 @@ public sealed class TranscriptHistoryService
 
         var items = new List<TranscriptHistoryItem>();
 
-        foreach (var path in Directory.GetFiles(transcriptsFolder, "*.txt"))
+        foreach (var path in Directory.GetFiles(transcriptsFolder, "*.txt", SearchOption.AllDirectories))
         {
             var item = TryReadTranscriptFile(path);
             if (item is not null)
@@ -81,9 +81,22 @@ public sealed class TranscriptHistoryService
     {
         try
         {
-            if (File.Exists(item.FilePath))
+            var directory = Path.GetDirectoryName(item.FilePath);
+            var baseName = Path.GetFileNameWithoutExtension(item.FilePath);
+
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory) &&
+                string.Equals(Path.GetFileName(directory), baseName, StringComparison.OrdinalIgnoreCase))
             {
-                File.Delete(item.FilePath);
+                Directory.Delete(directory, recursive: true);
+            }
+            else
+            {
+                if (File.Exists(item.FilePath))
+                {
+                    File.Delete(item.FilePath);
+                }
+
+                TryDeleteFile(Path.ChangeExtension(item.FilePath, ".wav"));
             }
         }
         catch (Exception ex)
@@ -91,8 +104,6 @@ public sealed class TranscriptHistoryService
             error = ex;
             return false;
         }
-
-        TryDeleteFile(Path.ChangeExtension(item.FilePath, ".wav"));
 
         error = null;
         return true;

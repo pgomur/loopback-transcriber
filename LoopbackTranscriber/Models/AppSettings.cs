@@ -4,7 +4,7 @@ namespace LoopbackTranscriber.Models;
 public sealed class AppSettings
 {
 
-    public string ModelSize { get; set; } = "small";
+    public string ModelSize { get; set; } = "medium";
 
     public string ModelsFolder { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -14,7 +14,7 @@ public sealed class AppSettings
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LoopbackTranscriber", "Transcripciones");
 
-    public string Language { get; set; } = "es";
+    public string Language { get; set; } = "auto";
 
     public bool AutoSaveTranscripts { get; set; } = true;
 

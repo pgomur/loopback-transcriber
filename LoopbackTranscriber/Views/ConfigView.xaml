@@ -48,6 +48,17 @@
                                Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
 
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="Idioma de la reunion" Margin="0,0,0,6" Opacity="0.8" />
+                    <ComboBox Width="260" HorizontalAlignment="Left"
+                              ItemsSource="{Binding AvailableLanguages}"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Code"
+                              SelectedValue="{Binding Language, Mode=TwoWay}" />
+                    <TextBlock Text="Si en la misma reunion se habla en varios idiomas, deja &quot;Automatico&quot;: Whisper detecta el idioma de cada tramo."
+                               Opacity="0.6" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+
                 <TextBlock Text="Modelos instalados" Margin="0,0,0,6" Opacity="0.8" />
 
                 <TextBlock Text="Todavia no hay ningun modelo descargado."

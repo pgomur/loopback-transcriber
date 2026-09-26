@@ -413,13 +413,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (settings.AutoSaveTranscripts && !string.IsNullOrWhiteSpace(text))
             {
-                Directory.CreateDirectory(settings.TranscriptsFolder);
                 var baseName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{DateTime.Now:yyyyMMdd_HHmmss}";
-                File.WriteAllText(Path.Combine(settings.TranscriptsFolder, baseName + ".txt"), text);
+                var recordingFolder = Path.Combine(settings.TranscriptsFolder, baseName);
+                Directory.CreateDirectory(recordingFolder);
+
+                File.WriteAllText(Path.Combine(recordingFolder, baseName + ".txt"), text);
 
                 if (whisperWavPath is not null && File.Exists(whisperWavPath))
                 {
-                    File.Copy(whisperWavPath, Path.Combine(settings.TranscriptsFolder, baseName + ".wav"), overwrite: true);
+                    File.Copy(whisperWavPath, Path.Combine(recordingFolder, baseName + ".wav"), overwrite: true);
                 }
 
                 StatusText = "Transcripcion lista y guardada";

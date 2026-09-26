@@ -161,9 +161,12 @@ public sealed class WhisperTranscriptionService
     public async Task<string> TranscribeAsync(string wavPath, string modelPath, string language,
         IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
+        var threadCount = Math.Clamp(Environment.ProcessorCount, 1, 8);
+
         using var whisperFactory = WhisperFactory.FromPath(modelPath);
         using var processor = whisperFactory.CreateBuilder()
             .WithLanguage(language)
+            .WithThreads(threadCount)
             .Build();
 
         await using var fileStream = File.OpenRead(wavPath);

@@ -16,12 +16,22 @@ public partial class ConfigViewModel : ObservableObject
     private readonly SettingsService _settingsService;
     private readonly WhisperTranscriptionService _whisper;
 
-    public List<string> AvailableModelSizes { get; } = ["tiny", "base", "small", "medium", "large"];
+    public List<string> AvailableModelSizes { get; } = ["medium", "large"];
+
+    public List<LanguageOption> AvailableLanguages { get; } =
+    [
+        new LanguageOption { Code = "auto", DisplayName = "Automatico (detecta el idioma)" },
+        new LanguageOption { Code = "es", DisplayName = "Español" },
+        new LanguageOption { Code = "en", DisplayName = "English" }
+    ];
 
     public ObservableCollection<InstalledModelInfo> InstalledModels { get; } = [];
 
     [ObservableProperty]
     private string _modelSize;
+
+    [ObservableProperty]
+    private string _language;
 
     [ObservableProperty]
     private string _modelsFolder;
@@ -59,10 +69,15 @@ public partial class ConfigViewModel : ObservableObject
         _whisper = whisper;
 
         var settings = _settingsService.Load();
-        _modelSize = settings.ModelSize;
+        _modelSize = AvailableModelSizes.Contains(settings.ModelSize, StringComparer.OrdinalIgnoreCase)
+            ? settings.ModelSize
+            : AvailableModelSizes[0];
         _modelsFolder = settings.ModelsFolder;
         _transcriptsFolder = settings.TranscriptsFolder;
         _autoSaveTranscripts = settings.AutoSaveTranscripts;
+        _language = AvailableLanguages.Any(l => string.Equals(l.Code, settings.Language, StringComparison.OrdinalIgnoreCase))
+            ? settings.Language
+            : "auto";
 
         RefreshModelStatus();
         RefreshInstalledModels();
@@ -81,6 +96,7 @@ public partial class ConfigViewModel : ObservableObject
         settings.ModelsFolder = ModelsFolder;
         settings.TranscriptsFolder = TranscriptsFolder;
         settings.AutoSaveTranscripts = AutoSaveTranscripts;
+        settings.Language = Language;
 
         _settingsService.Save(settings);
     }
@@ -105,6 +121,11 @@ public partial class ConfigViewModel : ObservableObject
     }
 
     partial void OnAutoSaveTranscriptsChanged(bool value)
+    {
+        SaveSettings();
+    }
+
+    partial void OnLanguageChanged(string value)
     {
         SaveSettings();
     }
