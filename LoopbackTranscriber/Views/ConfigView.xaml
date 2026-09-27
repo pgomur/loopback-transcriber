@@ -142,13 +142,6 @@
                         <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenTranscriptsFolderCommand}" />
                     </Grid>
                 </StackPanel>
-
-                <CheckBox Content="{Binding Path=[ConfigAutoSave], Source={x:Static services:Strings.Instance}}"
-                          IsChecked="{Binding AutoSaveTranscripts, Mode=TwoWay}" Margin="0,0,0,10" />
-
-                <CheckBox Content="{Binding Path=[ConfigSaveMarkdown], Source={x:Static services:Strings.Instance}}"
-                          IsChecked="{Binding SaveMarkdownTranscripts, Mode=TwoWay}"
-                          IsEnabled="{Binding AutoSaveTranscripts}" Margin="0,0,0,4" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -8,6 +8,9 @@ public sealed partial class TranscriptHistoryItem : ObservableObject
     public required DateTime Timestamp { get; init; }
     public required string Preview { get; init; }
     public required string FilePath { get; init; }
+    public required bool HasTxt { get; init; }
+    public required bool HasMarkdown { get; init; }
+    public required bool HasAudio { get; init; }
 
     public string TimestampText => Timestamp.ToString("dd/MM HH:mm");
 

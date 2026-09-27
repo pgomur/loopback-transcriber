@@ -28,6 +28,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private string? _currentRawWavPath;
     private FileSystemWatcher? _transcriptsWatcher;
     private string? _watchedTranscriptsFolderPath;
+    private string? _viewedTranscriptFilePath;
     private readonly DispatcherTimer _transcriptsRefreshTimer;
 
     public ObservableCollection<TargetItemViewModel> Targets { get; } = [];
@@ -172,13 +173,65 @@ public partial class MainViewModel : ObservableObject, IDisposable
             vm?.UpdateFrom(status);
         }
 
+        if (IsRecording && SelectedTarget is not null && !SelectedTarget.IsRunning)
+        {
+            _ = CancelRecordingAsync(SelectedTarget.DisplayName);
+            return;
+        }
+
+        if (!IsRecording && !IsBusy && SelectedTarget is not null)
+        {
+            StatusText = SelectedTarget.IsRunning
+                ? Strings.Instance.Format("StatusDetected", SelectedTarget.DisplayName, Strings.Instance.Get("RecordStart"))
+                : Strings.Instance.Format("StatusNotRunning", SelectedTarget.DisplayName);
+        }
+
         OnPropertyChanged(nameof(CanToggleRecording));
         ToggleRecordingCommand.NotifyCanExecuteChanged();
     }
 
+    private async Task CancelRecordingAsync(string closedAppName)
+    {
+        _elapsedTimer.Stop();
+        IsRecording = false;
+
+        string? rawWavPath = null;
+        var deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
+
+        try
+        {
+            rawWavPath = await _recorder.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("MainViewModel.CancelRecordingAsync: fallo al parar la captura por proceso", ex);
+        }
+
+        try
+        {
+            deviceTracks = await Task.Run(() => _deviceRecorder.Stop());
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("MainViewModel.CancelRecordingAsync: fallo al parar la captura por dispositivo", ex);
+        }
+
+        TryDelete(rawWavPath);
+        foreach (var track in deviceTracks)
+        {
+            TryDelete(track.WavPath);
+        }
+
+        StatusText = Strings.Instance.Format("StatusRecordingCancelledAppClosed", closedAppName);
+
+        OnPropertyChanged(nameof(CanToggleRecording));
+        ToggleRecordingCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(RecordButtonText));
+    }
+
     private void AddTargetInternal(TargetApp app)
     {
-        Targets.Add(new TargetItemViewModel(app));
+        Targets.Add(new TargetItemViewModel(app, _settingsService));
         _watcher.AddTarget(app);
     }
 
@@ -217,6 +270,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     partial void OnSelectedTargetChanged(TargetItemViewModel? value)
     {
         TranscriptText = string.Empty;
+        _viewedTranscriptFilePath = null;
 
         ApplyTargetSelection(value);
     }
@@ -372,6 +426,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ShowHistory()
     {
+        TranscriptText = string.Empty;
+        _viewedTranscriptFilePath = null;
+
         LoadTranscriptHistoryFromDisk();
         CurrentView = MainViewMode.History;
     }
@@ -552,26 +609,39 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 ? Strings.Instance.Get("StatusNoTextDetected")
                 : text;
 
-            if (settings.AutoSaveTranscripts && !string.IsNullOrWhiteSpace(text))
+            var saveAudio = SelectedTarget?.SaveAudio ?? true;
+            var saveTxt = SelectedTarget?.SaveTxt ?? true;
+            var saveMarkdown = SelectedTarget?.SaveMarkdown ?? true;
+
+            if (!string.IsNullOrWhiteSpace(text) && (saveAudio || saveTxt || saveMarkdown))
             {
                 var recordedAt = DateTime.Now;
                 var baseName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{recordedAt:yyyyMMdd_HHmmss}";
                 var recordingFolder = Path.Combine(settings.TranscriptsFolder, baseName);
                 Directory.CreateDirectory(recordingFolder);
 
-                File.WriteAllText(Path.Combine(recordingFolder, baseName + ".txt"), text);
+                if (saveTxt)
+                {
+                    File.WriteAllText(Path.Combine(recordingFolder, baseName + ".txt"), text);
+                }
 
-                if (settings.SaveMarkdownTranscripts)
+                if (saveMarkdown)
                 {
                     var markdownTitle = SelectedTarget?.DisplayName ?? "Reunion";
                     var markdown = $"# {markdownTitle} - {recordedAt:dd/MM/yyyy HH:mm}\n\n{text}";
                     File.WriteAllText(Path.Combine(recordingFolder, baseName + ".md"), markdown);
                 }
 
-                if (whisperWavPath is not null && File.Exists(whisperWavPath))
+                if (saveAudio && whisperWavPath is not null && File.Exists(whisperWavPath))
                 {
                     File.Copy(whisperWavPath, Path.Combine(recordingFolder, baseName + ".wav"), overwrite: true);
                 }
+
+                _viewedTranscriptFilePath = saveTxt
+                    ? Path.Combine(recordingFolder, baseName + ".txt")
+                    : saveMarkdown
+                        ? Path.Combine(recordingFolder, baseName + ".md")
+                        : Path.Combine(recordingFolder, baseName + ".wav");
 
                 StatusText = Strings.Instance.Get("StatusTranscriptReadySaved");
                 LoadTranscriptHistoryFromDisk();
@@ -638,6 +708,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        _viewedTranscriptFilePath = item.FilePath;
+
+        if (!item.HasTxt && !item.HasMarkdown)
+        {
+            TranscriptText = Strings.Instance.Get("HistoryAudioOnlyText");
+            return;
+        }
+
         try
         {
             TranscriptText = File.Exists(item.FilePath)
@@ -648,6 +726,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             AppLog.Warn($"MainViewModel.ViewHistoryTranscript: no se pudo leer \"{item.FilePath}\", se muestra el resumen", ex);
             TranscriptText = item.Preview;
+        }
+    }
+
+    private void ClearViewedTranscriptIfDeleted(TranscriptHistoryItem item)
+    {
+        if (_viewedTranscriptFilePath is not null &&
+            string.Equals(_viewedTranscriptFilePath, item.FilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            TranscriptText = string.Empty;
+            _viewedTranscriptFilePath = null;
         }
     }
 
@@ -689,6 +777,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         TranscriptHistory.Remove(item);
+        ClearViewedTranscriptIfDeleted(item);
         HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
         RefreshAppTranscriptHistory();
     }
@@ -719,6 +808,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (DeleteTranscriptFile(item))
             {
                 TranscriptHistory.Remove(item);
+                ClearViewedTranscriptIfDeleted(item);
             }
         }
 
@@ -752,6 +842,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (DeleteTranscriptFile(item))
             {
                 TranscriptHistory.Remove(item);
+                ClearViewedTranscriptIfDeleted(item);
             }
         }
 

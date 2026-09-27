@@ -20,9 +20,9 @@ public sealed class TranscriptHistoryService
 
         var items = new List<TranscriptHistoryItem>();
 
-        foreach (var path in Directory.GetFiles(transcriptsFolder, "*.txt", SearchOption.AllDirectories))
+        foreach (var directory in Directory.GetDirectories(transcriptsFolder))
         {
-            var item = TryReadTranscriptFile(path);
+            var item = TryReadRecordingFolder(directory);
             if (item is not null)
             {
                 items.Add(item);
@@ -32,12 +32,26 @@ public sealed class TranscriptHistoryService
         return items.OrderByDescending(i => i.Timestamp).ToList();
     }
 
-    private static TranscriptHistoryItem? TryReadTranscriptFile(string path)
+    private static TranscriptHistoryItem? TryReadRecordingFolder(string directory)
     {
         try
         {
-            var fileName = Path.GetFileNameWithoutExtension(path);
-            var match = TranscriptFileNamePattern.Match(fileName);
+            var baseName = Path.GetFileName(directory);
+
+            var txtPath = Path.Combine(directory, baseName + ".txt");
+            var mdPath = Path.Combine(directory, baseName + ".md");
+            var wavPath = Path.Combine(directory, baseName + ".wav");
+
+            var hasTxt = File.Exists(txtPath);
+            var hasMarkdown = File.Exists(mdPath);
+            var hasAudio = File.Exists(wavPath);
+
+            if (!hasTxt && !hasMarkdown && !hasAudio)
+            {
+                return null;
+            }
+
+            var match = TranscriptFileNamePattern.Match(baseName);
 
             string appName;
             DateTime timestamp;
@@ -51,15 +65,27 @@ public sealed class TranscriptHistoryService
             }
             else
             {
-                appName = fileName;
-                timestamp = File.GetLastWriteTime(path);
+                appName = baseName;
+                timestamp = Directory.GetLastWriteTime(directory);
             }
 
-            var content = File.ReadAllText(path).Trim();
-            var preview = content.Length > 160 ? content[..160].TrimEnd() + "..." : content;
-            if (string.IsNullOrWhiteSpace(preview))
+            string filePath;
+            string preview;
+
+            if (hasTxt)
             {
-                preview = "(Transcripcion vacia)";
+                filePath = txtPath;
+                preview = BuildPreview(File.ReadAllText(txtPath).Trim());
+            }
+            else if (hasMarkdown)
+            {
+                filePath = mdPath;
+                preview = BuildPreview(StripMarkdownHeader(File.ReadAllText(mdPath).Trim()));
+            }
+            else
+            {
+                filePath = wavPath;
+                preview = Strings.Instance.Get("HistoryAudioOnlyText");
             }
 
             return new TranscriptHistoryItem
@@ -67,14 +93,35 @@ public sealed class TranscriptHistoryService
                 AppName = appName,
                 Timestamp = timestamp,
                 Preview = preview,
-                FilePath = path
+                FilePath = filePath,
+                HasTxt = hasTxt,
+                HasMarkdown = hasMarkdown,
+                HasAudio = hasAudio
             };
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"TranscriptHistoryService: no se pudo leer/parsear \"{path}\", se omite del historial", ex);
+            AppLog.Warn($"TranscriptHistoryService: no se pudo leer \"{directory}\", se omite del historial", ex);
             return null;
         }
+    }
+
+    private static string BuildPreview(string content)
+    {
+        var preview = content.Length > 160 ? content[..160].TrimEnd() + "..." : content;
+        return string.IsNullOrWhiteSpace(preview) ? "(Transcripcion vacia)" : preview;
+    }
+
+    private static string StripMarkdownHeader(string content)
+    {
+        var lines = content.Split('\n');
+        if (lines.Length > 0 && lines[0].TrimStart().StartsWith("# ", StringComparison.Ordinal))
+        {
+            var rest = string.Join('\n', lines.Skip(1)).TrimStart('\n', '\r').Trim();
+            return string.IsNullOrWhiteSpace(rest) ? content : rest;
+        }
+
+        return content;
     }
 
     public bool TryDeleteTranscriptFile(TranscriptHistoryItem item, out Exception? error)

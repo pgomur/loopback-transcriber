@@ -49,19 +49,19 @@
             </ui:NavigationView.Resources>
 
             <ui:NavigationView.FooterMenuItems>
-                <ui:NavigationViewItem Content="{Binding Path=[NavApplications], Source={x:Static services:Strings.Instance}}"
-                                        Command="{Binding ShowApplicationsCommand}"
-                                        IsActive="{Binding IsApplicationsViewActive}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="AppsList24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{Binding Path=[NavHistory], Source={x:Static services:Strings.Instance}}"
                                         Command="{Binding ShowHistoryCommand}"
                                         IsActive="{Binding IsHistoryViewActive}"
                                         IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="History24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{Binding Path=[NavApplications], Source={x:Static services:Strings.Instance}}"
+                                        Command="{Binding ShowApplicationsCommand}"
+                                        IsActive="{Binding IsApplicationsViewActive}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="AppsList24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{Binding Path=[NavConfig], Source={x:Static services:Strings.Instance}}"
@@ -80,6 +80,7 @@
             <Grid>
                 <Grid Visibility="{Binding IsAppViewActive, Converter={StaticResource BoolToVis}}">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -110,7 +111,85 @@
                                    Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
 
-                    <Border Grid.Row="2" Height="230" Margin="0,18,14,0" CornerRadius="10" Padding="14"
+                    <StackPanel Grid.Row="2" Margin="0,18,14,0">
+                        <TextBlock Text="{Binding Path=[AppSaveSectionTitle], Source={x:Static services:Strings.Instance}}"
+                                   FontWeight="SemiBold" Opacity="0.85" Margin="0,0,0,6" />
+
+                        <Grid HorizontalAlignment="Left">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" CornerRadius="8" Padding="10,7" Cursor="Hand"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding SelectedTarget.ToggleSaveAudioCommand}" />
+                                </Border.InputBindings>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:SymbolIcon Grid.Column="0" Symbol="Headphones20" FontSize="18" Opacity="1"
+                                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Path=[AppSaveAudio], Source={x:Static services:Strings.Instance}}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
+                                    <CheckBox Grid.Column="2" IsChecked="{Binding SelectedTarget.SaveAudio, Mode=TwoWay}"
+                                              IsEnabled="{Binding SelectedTarget.CanToggleSaveAudio}" IsHitTestVisible="False"
+                                              VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="2" CornerRadius="8" Padding="10,7" Cursor="Hand"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding SelectedTarget.ToggleSaveTxtCommand}" />
+                                </Border.InputBindings>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:SymbolIcon Grid.Column="0" Symbol="Document20" FontSize="18" Opacity="1"
+                                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Path=[AppSaveTxt], Source={x:Static services:Strings.Instance}}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
+                                    <CheckBox Grid.Column="2" IsChecked="{Binding SelectedTarget.SaveTxt, Mode=TwoWay}"
+                                              IsEnabled="{Binding SelectedTarget.CanToggleSaveTxt}" IsHitTestVisible="False"
+                                              VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="4" CornerRadius="8" Padding="10,7" Cursor="Hand"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding SelectedTarget.ToggleSaveMarkdownCommand}" />
+                                </Border.InputBindings>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:SymbolIcon Grid.Column="0" Symbol="CodeText20" FontSize="18" Opacity="1"
+                                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Path=[AppSaveMarkdown], Source={x:Static services:Strings.Instance}}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
+                                    <CheckBox Grid.Column="2" IsChecked="{Binding SelectedTarget.SaveMarkdown, Mode=TwoWay}"
+                                              IsEnabled="{Binding SelectedTarget.CanToggleSaveMarkdown}" IsHitTestVisible="False"
+                                              VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+
+                    <Border Grid.Row="3" Height="230" Margin="0,18,14,0" CornerRadius="10" Padding="14"
                             Background="{DynamicResource ControlFillColorSecondaryBrush}">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
@@ -120,7 +199,7 @@
                         </ScrollViewer>
                     </Border>
 
-                    <Grid Grid.Row="3" Margin="0,16,0,0">
+                    <Grid Grid.Row="4" Margin="0,16,0,0">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
@@ -175,8 +254,19 @@
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Grid.Column="0" Text="{Binding AppName}"
                                                                FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding TimestampText}"
-                                                               Opacity="0.55" FontSize="12" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <ui:SymbolIcon Symbol="Document20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
+                                                                       ToolTip="{Binding Path=[HistoryIconTxtTooltip], Source={x:Static services:Strings.Instance}}"
+                                                                       Visibility="{Binding HasTxt, Converter={StaticResource BoolToVis}}" />
+                                                        <ui:SymbolIcon Symbol="CodeText20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
+                                                                       ToolTip="{Binding Path=[HistoryIconMdTooltip], Source={x:Static services:Strings.Instance}}"
+                                                                       Visibility="{Binding HasMarkdown, Converter={StaticResource BoolToVis}}" />
+                                                        <ui:SymbolIcon Symbol="Headphones20" FontSize="13" Opacity="0.55" Margin="0,0,14,0"
+                                                                       ToolTip="{Binding Path=[HistoryIconAudioTooltip], Source={x:Static services:Strings.Instance}}"
+                                                                       Visibility="{Binding HasAudio, Converter={StaticResource BoolToVis}}" />
+                                                        <TextBlock Text="{Binding TimestampText}"
+                                                                   Opacity="0.55" FontSize="12" VerticalAlignment="Center" />
+                                                    </StackPanel>
                                                 </Grid>
 
                                                 <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Preview}"
@@ -264,8 +354,19 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding AppName}"
                                                            FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding TimestampText}"
-                                                           Opacity="0.55" FontSize="12" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <ui:SymbolIcon Symbol="Document20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
+                                                                   ToolTip="{Binding Path=[HistoryIconTxtTooltip], Source={x:Static services:Strings.Instance}}"
+                                                                   Visibility="{Binding HasTxt, Converter={StaticResource BoolToVis}}" />
+                                                    <ui:SymbolIcon Symbol="CodeText20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
+                                                                   ToolTip="{Binding Path=[HistoryIconMdTooltip], Source={x:Static services:Strings.Instance}}"
+                                                                   Visibility="{Binding HasMarkdown, Converter={StaticResource BoolToVis}}" />
+                                                    <ui:SymbolIcon Symbol="Headphones20" FontSize="13" Opacity="0.55" Margin="0,0,14,0"
+                                                                   ToolTip="{Binding Path=[HistoryIconAudioTooltip], Source={x:Static services:Strings.Instance}}"
+                                                                   Visibility="{Binding HasAudio, Converter={StaticResource BoolToVis}}" />
+                                                    <TextBlock Text="{Binding TimestampText}"
+                                                               Opacity="0.55" FontSize="12" VerticalAlignment="Center" />
+                                                </StackPanel>
                                             </Grid>
 
                                             <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Preview}"

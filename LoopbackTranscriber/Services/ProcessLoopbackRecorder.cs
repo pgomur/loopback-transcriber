@@ -291,7 +291,8 @@ public sealed class ProcessLoopbackRecorder : IDisposable
             {
                 IsRecording = false;
                 _stopEvent?.Set();
-                FinishStop();
+                var abandonedPath = FinishStop();
+                TryDeleteFile(abandonedPath);
             }
             catch (Exception ex)
             {
@@ -304,5 +305,25 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         _sampleEvent?.Dispose();
         _stopEvent?.Dispose();
         ReleaseAudioObjects();
+    }
+
+    private static void TryDeleteFile(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"ProcessLoopbackRecorder: no se pudo borrar \"{path}\"", ex);
+        }
     }
 }

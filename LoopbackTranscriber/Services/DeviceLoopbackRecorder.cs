@@ -240,6 +240,8 @@ public sealed class DeviceLoopbackRecorder : IDisposable
             }
 
             channel.StoppedEvent.Dispose();
+
+            TryDeleteFile(channel.WavPath);
         }
 
         _channels.Clear();
