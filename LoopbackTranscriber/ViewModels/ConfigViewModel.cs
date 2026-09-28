@@ -15,6 +15,7 @@ public partial class ConfigViewModel : ObservableObject
 {
     private readonly SettingsService _settingsService;
     private readonly WhisperTranscriptionService _whisper;
+    private readonly SummarizationService _summarizer;
 
     public List<string> AvailableModelSizes { get; } = ["medium", "large"];
 
@@ -67,10 +68,29 @@ public partial class ConfigViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasNoInstalledModels = true;
 
-    public ConfigViewModel(SettingsService settingsService, WhisperTranscriptionService whisper)
+    [ObservableProperty]
+    private string _summaryDownloadStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _isDownloadingSummaryModel;
+
+    [ObservableProperty]
+    private double _summaryDownloadProgressPercent;
+
+    [ObservableProperty]
+    private bool _isSummaryProgressIndeterminate;
+
+    [ObservableProperty]
+    private bool _isSummaryModelDownloaded;
+
+    [ObservableProperty]
+    private string _summaryModelStatusText = string.Empty;
+
+    public ConfigViewModel(SettingsService settingsService, WhisperTranscriptionService whisper, SummarizationService summarizer)
     {
         _settingsService = settingsService;
         _whisper = whisper;
+        _summarizer = summarizer;
 
         var settings = _settingsService.Load();
         _modelSize = AvailableModelSizes.Contains(settings.ModelSize, StringComparer.OrdinalIgnoreCase)
@@ -92,12 +112,14 @@ public partial class ConfigViewModel : ObservableObject
 
         RefreshModelStatus();
         RefreshInstalledModels();
+        RefreshSummaryModelStatus();
     }
 
     public void RefreshFromDisk()
     {
         RefreshModelStatus();
         RefreshInstalledModels();
+        RefreshSummaryModelStatus();
     }
 
     private void OnAppLanguageChanged(object? sender, EventArgs e)
@@ -141,6 +163,7 @@ public partial class ConfigViewModel : ObservableObject
     {
         RefreshModelStatus();
         RefreshInstalledModels();
+        RefreshSummaryModelStatus();
         SaveSettings();
     }
 
@@ -181,42 +204,38 @@ public partial class ConfigViewModel : ObservableObject
     {
         InstalledModels.Clear();
 
-        if (!Directory.Exists(ModelsFolder))
+        if (Directory.Exists(ModelsFolder))
         {
-            HasNoInstalledModels = true;
-            return;
-        }
-
-        IEnumerable<FileInfo> files;
-        try
-        {
-            files = Directory.GetFiles(ModelsFolder, "ggml-*.bin")
-                .Select(path => new FileInfo(path))
-                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn($"ConfigViewModel.RefreshInstalledModels: no se pudo listar \"{ModelsFolder}\"", ex);
-            HasNoInstalledModels = true;
-            return;
-        }
-
-        foreach (var file in files)
-        {
-            var sizeName = Path.GetFileNameWithoutExtension(file.Name);
-            if (sizeName.StartsWith("ggml-", StringComparison.OrdinalIgnoreCase))
+            IEnumerable<FileInfo> files;
+            try
             {
-                sizeName = sizeName["ggml-".Length..];
+                files = Directory.GetFiles(ModelsFolder, "ggml-*.bin")
+                    .Select(path => new FileInfo(path))
+                    .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn($"ConfigViewModel.RefreshInstalledModels: no se pudo listar \"{ModelsFolder}\"", ex);
+                files = [];
             }
 
-            InstalledModels.Add(new InstalledModelInfo
+            foreach (var file in files)
             {
-                ModelSize = sizeName,
-                FilePath = file.FullName,
-                FileSizeBytes = file.Length,
-                FileSizeText = WhisperTranscriptionService.FormatBytes(file.Length),
-                IsActive = string.Equals(sizeName, ModelSize, StringComparison.OrdinalIgnoreCase)
-            });
+                var sizeName = Path.GetFileNameWithoutExtension(file.Name);
+                if (sizeName.StartsWith("ggml-", StringComparison.OrdinalIgnoreCase))
+                {
+                    sizeName = sizeName["ggml-".Length..];
+                }
+
+                InstalledModels.Add(new InstalledModelInfo
+                {
+                    ModelSize = sizeName,
+                    FilePath = file.FullName,
+                    FileSizeBytes = file.Length,
+                    FileSizeText = WhisperTranscriptionService.FormatBytes(file.Length),
+                    IsActive = string.Equals(sizeName, ModelSize, StringComparison.OrdinalIgnoreCase)
+                });
+            }
         }
 
         HasNoInstalledModels = InstalledModels.Count == 0;
@@ -311,6 +330,7 @@ public partial class ConfigViewModel : ObservableObject
 
         RefreshInstalledModels();
         RefreshModelStatus();
+        RefreshSummaryModelStatus();
     }
 
     [RelayCommand]
@@ -325,5 +345,107 @@ public partial class ConfigViewModel : ObservableObject
     {
         Directory.CreateDirectory(TranscriptsFolder);
         Process.Start(new ProcessStartInfo(TranscriptsFolder) { UseShellExecute = true });
+    }
+
+    private void RefreshSummaryModelStatus()
+    {
+        var path = new AppSettings { ModelsFolder = ModelsFolder }.GetSummaryModelFilePath();
+
+        if (File.Exists(path))
+        {
+            IsSummaryModelDownloaded = true;
+            var sizeText = WhisperTranscriptionService.FormatBytes(new FileInfo(path).Length);
+            SummaryModelStatusText = Strings.Instance.Format("SummaryModelStatusDownloaded", sizeText);
+        }
+        else
+        {
+            IsSummaryModelDownloaded = false;
+            SummaryModelStatusText = Strings.Instance.Get("SummaryModelStatusNotDownloaded");
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadSummaryModelNowAsync()
+    {
+        if (IsDownloadingSummaryModel)
+        {
+            return;
+        }
+
+        IsDownloadingSummaryModel = true;
+        IsSummaryProgressIndeterminate = true;
+        SummaryDownloadProgressPercent = 0;
+        try
+        {
+            var settings = new AppSettings { ModelsFolder = ModelsFolder };
+            var progress = new Progress<string>(text => SummaryDownloadStatus = text);
+            var percentProgress = new Progress<double>(percent =>
+            {
+                IsSummaryProgressIndeterminate = false;
+                SummaryDownloadProgressPercent = percent;
+            });
+
+            var path = settings.GetSummaryModelFilePath();
+            await _summarizer.EnsureModelDownloadedAsync(path, progress, percentProgress);
+
+            SummaryDownloadProgressPercent = 100;
+            SummaryDownloadStatus = File.Exists(path)
+                ? Strings.Instance.Get("DownloadStatusReady")
+                : Strings.Instance.Get("DownloadStatusFailed");
+        }
+        catch (Exception ex)
+        {
+            SummaryDownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.Message);
+        }
+        finally
+        {
+            IsDownloadingSummaryModel = false;
+            RefreshSummaryModelStatus();
+            RefreshInstalledModels();
+        }
+    }
+
+    [RelayCommand]
+    private void OpenSummaryModelFolder()
+    {
+        var folder = Path.GetDirectoryName(new AppSettings { ModelsFolder = ModelsFolder }.GetSummaryModelFilePath())!;
+        Directory.CreateDirectory(folder);
+        Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    private void DeleteSummaryModel()
+    {
+        var path = new AppSettings { ModelsFolder = ModelsFolder }.GetSummaryModelFilePath();
+
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        var result = MessageBox.Show(
+            Strings.Instance.Get("ConfirmDeleteSummaryModel"),
+            Strings.Instance.Get("ConfirmDeleteModelTitle"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(Strings.Instance.Format("ErrorDeleteModel", ex.Message), Strings.Instance.Get("ErrorTitle"),
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        RefreshSummaryModelStatus();
+        RefreshInstalledModels();
     }
 }

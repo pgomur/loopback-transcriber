@@ -7,14 +7,17 @@ public sealed class InstalledModelInfo
     public required long FileSizeBytes { get; init; }
     public required string FileSizeText { get; init; }
     public required bool IsActive { get; init; }
+    public bool IsSummaryModel { get; init; }
 
-    public string DisplayName => ModelSize switch
-    {
-        "tiny" => "Tiny",
-        "base" => "Base",
-        "small" => "Small",
-        "medium" => "Medium",
-        "large" => "Large",
-        _ => ModelSize
-    };
+    public string DisplayName => IsSummaryModel
+        ? "Qwen3-4B"
+        : ModelSize switch
+        {
+            "tiny" => "Tiny",
+            "base" => "Base",
+            "small" => "Small",
+            "medium" => "Medium",
+            "large" => "Large",
+            _ => ModelSize
+        };
 }

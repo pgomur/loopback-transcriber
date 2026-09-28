@@ -38,6 +38,10 @@ public sealed class AppSettings
 
     public string GetModelFilePath() => Path.Combine(ModelsFolder, GetModelFileName());
 
+    public const string SummaryModelFileName = "Qwen3-4B-Q4_K_M.gguf";
+
+    public string GetSummaryModelFilePath() => Path.Combine(ModelsFolder, "llm", SummaryModelFileName);
+
     private static string DetectSystemLanguage()
     {
         var systemCode = CultureInfo.InstalledUICulture.TwoLetterISOLanguageName.ToLowerInvariant();

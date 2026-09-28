@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using LoopbackTranscriber.Models;
 
@@ -41,6 +42,7 @@ public sealed class TranscriptHistoryService
             var txtPath = Path.Combine(directory, baseName + ".txt");
             var mdPath = Path.Combine(directory, baseName + ".md");
             var wavPath = Path.Combine(directory, baseName + ".wav");
+            var summaryPath = Path.Combine(directory, baseName + ".summary.json");
 
             var hasTxt = File.Exists(txtPath);
             var hasMarkdown = File.Exists(mdPath);
@@ -50,6 +52,8 @@ public sealed class TranscriptHistoryService
             {
                 return null;
             }
+
+            var summary = TryReadSummary(summaryPath);
 
             var match = TranscriptFileNamePattern.Match(baseName);
 
@@ -96,7 +100,11 @@ public sealed class TranscriptHistoryService
                 FilePath = filePath,
                 HasTxt = hasTxt,
                 HasMarkdown = hasMarkdown,
-                HasAudio = hasAudio
+                HasAudio = hasAudio,
+                HasSummary = summary is not null,
+                SummaryTitle = summary?.Title,
+                SummaryText = summary?.Summary,
+                SummaryFilePath = summaryPath
             };
         }
         catch (Exception ex)
@@ -104,6 +112,33 @@ public sealed class TranscriptHistoryService
             AppLog.Warn($"TranscriptHistoryService: no se pudo leer \"{directory}\", se omite del historial", ex);
             return null;
         }
+    }
+
+    private static readonly JsonSerializerOptions SummaryJsonOptions = new() { WriteIndented = true };
+
+    private static RecordingSummary? TryReadSummary(string summaryPath)
+    {
+        if (!File.Exists(summaryPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(summaryPath);
+            return JsonSerializer.Deserialize<RecordingSummary>(json);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"TranscriptHistoryService: no se pudo leer el resumen \"{summaryPath}\"", ex);
+            return null;
+        }
+    }
+
+    public void SaveSummary(string summaryFilePath, RecordingSummary summary)
+    {
+        var json = JsonSerializer.Serialize(summary, SummaryJsonOptions);
+        File.WriteAllText(summaryFilePath, json);
     }
 
     private static string BuildPreview(string content)

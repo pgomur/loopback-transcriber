@@ -9,7 +9,7 @@
         xmlns:views="clr-namespace:LoopbackTranscriber.Views"
         xmlns:services="clr-namespace:LoopbackTranscriber.Services"
         mc:Ignorable="d"
-        Title="LoopbackTranscriber" Height="800" Width="1240" MinHeight="600" MinWidth="900"
+        Title="LoopbackTranscriber" Height="900" Width="1400" MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
@@ -19,6 +19,31 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
         <conv:InverseBooleanConverter x:Key="InverseBoolConverter" />
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+
+        <Style x:Key="SpinningIconStyle" TargetType="ui:SymbolIcon">
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <RotateTransform Angle="0" />
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsGeneratingSummary}" Value="True">
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="SpinningIconStoryboard">
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle"
+                                                 From="0" To="360" Duration="0:0:1" RepeatBehavior="Forever" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="SpinningIconStoryboard" />
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </ui:FluentWindow.Resources>
 
     <Grid>
@@ -189,15 +214,63 @@
                         </Grid>
                     </StackPanel>
 
-                    <Border Grid.Row="3" Height="230" Margin="0,18,14,0" CornerRadius="10" Padding="14"
-                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
-                                     IsReadOnly="True" IsUndoEnabled="False" TextWrapping="Wrap" AcceptsReturn="True"
-                                     BorderThickness="0" Background="Transparent"
-                                     IsReadOnlyCaretVisible="False" VerticalScrollBarVisibility="Disabled" />
-                        </ScrollViewer>
-                    </Border>
+                    <StackPanel Grid.Row="3" Margin="0,18,14,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:Button Content="{Binding Path=[TabTranscript], Source={x:Static services:Strings.Instance}}"
+                                       Appearance="Transparent" Padding="10,5" Margin="0,0,6,0"
+                                       Command="{Binding ShowTranscriptTabCommand}">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Opacity" Value="0.55" />
+                                        <Setter Property="FontWeight" Value="Normal" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsShowingSummaryTab}" Value="False">
+                                                <Setter Property="Opacity" Value="1" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                            <ui:Button Content="{Binding Path=[TabSummary], Source={x:Static services:Strings.Instance}}"
+                                       Appearance="Transparent" Padding="10,5"
+                                       Command="{Binding ShowSummaryTabCommand}">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Opacity" Value="0.55" />
+                                        <Setter Property="FontWeight" Value="Normal" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsShowingSummaryTab}" Value="True">
+                                                <Setter Property="Opacity" Value="1" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                        </StackPanel>
+
+                        <Border Height="230" CornerRadius="10" Padding="14"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                            <Grid>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource InverseBoolToVis}}">
+                                    <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
+                                             IsReadOnly="True" IsUndoEnabled="False" TextWrapping="Wrap" AcceptsReturn="True"
+                                             BorderThickness="0" Background="Transparent"
+                                             IsReadOnlyCaretVisible="False" VerticalScrollBarVisibility="Disabled" />
+                                </ScrollViewer>
+
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding ViewedSummaryTitle}" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding ViewedSummaryText}" Opacity="0.85" FontSize="13" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
 
                     <Grid Grid.Row="4" Margin="0,16,0,0">
                         <Grid.RowDefinitions>
@@ -236,6 +309,7 @@
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto" />
@@ -252,8 +326,9 @@
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{Binding AppName}"
-                                                               FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}"
+                                                               FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" />
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                                         <ui:SymbolIcon Symbol="Document20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
                                                                        ToolTip="{Binding Path=[HistoryIconTxtTooltip], Source={x:Static services:Strings.Instance}}"
@@ -269,9 +344,30 @@
                                                     </StackPanel>
                                                 </Grid>
 
-                                                <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Preview}"
-                                                           Opacity="0.7" FontSize="12" Margin="0,3,0,0"
+                                                <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,4,0,0" Text="{Binding Preview}"
+                                                           Opacity="0.7" FontSize="12" VerticalAlignment="Center"
                                                            TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+
+                                                <ui:Button Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Margin="10,0,0,0" Padding="8,4" FontSize="12"
+                                                           VerticalAlignment="Center"
+                                                           IsEnabled="{Binding IsGeneratingSummary, Converter={StaticResource InverseBoolConverter}}"
+                                                           Command="{Binding DataContext.GenerateSummaryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                           CommandParameter="{Binding}">
+                                                    <Grid>
+                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding ShowIdleGenerate, Converter={StaticResource BoolToVis}}">
+                                                            <ui:SymbolIcon Symbol="Sparkle20" FontSize="13" Margin="0,0,6,0" />
+                                                            <TextBlock Text="{Binding Path=[GenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding IsGeneratingSummary, Converter={StaticResource BoolToVis}}">
+                                                            <ui:SymbolIcon Symbol="ArrowSync20" FontSize="13" Margin="0,0,6,0" Style="{StaticResource SpinningIconStyle}" />
+                                                            <TextBlock Text="{Binding Path=[GenerateSummaryButtonBusy], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding ShowRegenerate, Converter={StaticResource BoolToVis}}">
+                                                            <ui:SymbolIcon Symbol="CheckmarkCircle20" FontSize="13" Margin="0,0,6,0" Opacity="0.7" />
+                                                            <TextBlock Text="{Binding Path=[RegenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </ui:Button>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -295,15 +391,63 @@
                                    Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <Border Grid.Row="1" Height="260" Margin="0,16,14,0" CornerRadius="10" Padding="14"
-                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
-                                     IsReadOnly="True" IsUndoEnabled="False" TextWrapping="Wrap" AcceptsReturn="True"
-                                     BorderThickness="0" Background="Transparent"
-                                     IsReadOnlyCaretVisible="False" VerticalScrollBarVisibility="Disabled" />
-                        </ScrollViewer>
-                    </Border>
+                    <StackPanel Grid.Row="1" Margin="0,16,14,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:Button Content="{Binding Path=[TabTranscript], Source={x:Static services:Strings.Instance}}"
+                                       Appearance="Transparent" Padding="10,5" Margin="0,0,6,0"
+                                       Command="{Binding ShowTranscriptTabCommand}">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Opacity" Value="0.55" />
+                                        <Setter Property="FontWeight" Value="Normal" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsShowingSummaryTab}" Value="False">
+                                                <Setter Property="Opacity" Value="1" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                            <ui:Button Content="{Binding Path=[TabSummary], Source={x:Static services:Strings.Instance}}"
+                                       Appearance="Transparent" Padding="10,5"
+                                       Command="{Binding ShowSummaryTabCommand}">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Opacity" Value="0.55" />
+                                        <Setter Property="FontWeight" Value="Normal" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsShowingSummaryTab}" Value="True">
+                                                <Setter Property="Opacity" Value="1" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                        </StackPanel>
+
+                        <Border Height="260" CornerRadius="10" Padding="14"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                            <Grid>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource InverseBoolToVis}}">
+                                    <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
+                                             IsReadOnly="True" IsUndoEnabled="False" TextWrapping="Wrap" AcceptsReturn="True"
+                                             BorderThickness="0" Background="Transparent"
+                                             IsReadOnlyCaretVisible="False" VerticalScrollBarVisibility="Disabled" />
+                                </ScrollViewer>
+
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding ViewedSummaryTitle}" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding ViewedSummaryText}" Opacity="0.85" FontSize="13" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
 
                     <Grid Grid.Row="2" Margin="0,16,0,0">
                         <Grid.ColumnDefinitions>
@@ -336,6 +480,7 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
@@ -352,8 +497,9 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding AppName}"
-                                                           FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}"
+                                                           FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
                                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                                     <ui:SymbolIcon Symbol="Document20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
                                                                    ToolTip="{Binding Path=[HistoryIconTxtTooltip], Source={x:Static services:Strings.Instance}}"
@@ -369,9 +515,30 @@
                                                 </StackPanel>
                                             </Grid>
 
-                                            <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Preview}"
-                                                       Opacity="0.7" FontSize="12" Margin="0,3,0,0"
+                                            <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,4,0,0" Text="{Binding Preview}"
+                                                       Opacity="0.7" FontSize="12" VerticalAlignment="Center"
                                                        TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+
+                                            <ui:Button Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Margin="10,0,0,0" Padding="8,4" FontSize="12"
+                                                       VerticalAlignment="Center"
+                                                       IsEnabled="{Binding IsGeneratingSummary, Converter={StaticResource InverseBoolConverter}}"
+                                                       Command="{Binding DataContext.GenerateSummaryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding}">
+                                                <Grid>
+                                                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowIdleGenerate, Converter={StaticResource BoolToVis}}">
+                                                        <ui:SymbolIcon Symbol="Sparkle20" FontSize="13" Margin="0,0,6,0" />
+                                                        <TextBlock Text="{Binding Path=[GenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsGeneratingSummary, Converter={StaticResource BoolToVis}}">
+                                                        <ui:SymbolIcon Symbol="ArrowSync20" FontSize="13" Margin="0,0,6,0" Style="{StaticResource SpinningIconStyle}" />
+                                                        <TextBlock Text="{Binding Path=[GenerateSummaryButtonBusy], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowRegenerate, Converter={StaticResource BoolToVis}}">
+                                                        <ui:SymbolIcon Symbol="CheckmarkCircle20" FontSize="13" Margin="0,0,6,0" Opacity="0.7" />
+                                                        <TextBlock Text="{Binding Path=[RegenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </ui:Button>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

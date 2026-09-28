@@ -38,7 +38,7 @@ public sealed class WhisperTranscriptionService
     };
 
     private static string GetModelUrl(GgmlType type) =>
-        $"{HuggingFaceRepository}/{ModelVersion}/classic/{GetModelFileName(type)}.bin";
+        $"{HuggingFaceRepository}/{ModelVersion}/q5_1/{GetModelFileName(type)}.bin";
 
     internal static string FormatBytes(long bytes)
     {
@@ -162,7 +162,8 @@ public sealed class WhisperTranscriptionService
         IProgress<string>? progress = null, IProgress<int>? percentProgress = null,
         CancellationToken cancellationToken = default)
     {
-        var threadCount = Math.Clamp(Environment.ProcessorCount, 1, 8);
+
+        var threadCount = Math.Clamp(Environment.ProcessorCount / 2, 2, 6);
 
         using var whisperFactory = WhisperFactory.FromPath(modelPath);
         using var processor = whisperFactory.CreateBuilder()

@@ -26,6 +26,7 @@ namespace LoopbackTranscriber
             InitializeComponent();
 
             var whisper = new WhisperTranscriptionService();
+            var summarizer = new SummarizationService();
             var transcriptHistoryService = new TranscriptHistoryService();
             var customAppsService = new CustomAppsService(settingsService);
 
@@ -34,6 +35,7 @@ namespace LoopbackTranscriber
                 new ProcessLoopbackRecorder(),
                 new DeviceLoopbackRecorder(),
                 whisper,
+                summarizer,
                 settingsService,
                 transcriptHistoryService,
                 customAppsService);

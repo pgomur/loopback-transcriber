@@ -11,6 +11,7 @@
         <conv:InverseBooleanConverter x:Key="InverseDownloadConverter" />
         <conv:InverseBooleanConverter x:Key="InverseBoolConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
         <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
     </UserControl.Resources>
 
@@ -74,6 +75,41 @@
 
                 <Border Height="1" Margin="0,20,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
 
+                <TextBlock Text="{Binding Path=[ConfigSummarySection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="{Binding Path=[ConfigSummaryModelName], Source={x:Static services:Strings.Instance}}"
+                               FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4" />
+                    <TextBlock Text="{Binding Path=[ConfigSummaryModelLabel], Source={x:Static services:Strings.Instance}}"
+                               Margin="0,0,0,10" Opacity="0.8" TextWrapping="Wrap" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button Content="{Binding Path=[ConfigDownloadSummaryModel], Source={x:Static services:Strings.Instance}}"
+                                   Command="{Binding DownloadSummaryModelNowCommand}"
+                                   IsEnabled="{Binding IsDownloadingSummaryModel, Converter={StaticResource InverseDownloadConverter}}" />
+                        <ui:Button Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenSummaryModelFolderCommand}" />
+                        <ui:Button Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
+                                   Command="{Binding DeleteSummaryModelCommand}"
+                                   Visibility="{Binding IsSummaryModelDownloaded, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                 Fill="{Binding IsSummaryModelDownloaded, Converter={StaticResource BoolToStatusBrush}}" />
+                        <TextBlock Text="{Binding SummaryModelStatusText}" Opacity="0.8" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <ProgressBar Margin="0,10,0,0" Height="6" Width="220" HorizontalAlignment="Left"
+                                 Minimum="0" Maximum="100" Value="{Binding SummaryDownloadProgressPercent, Mode=OneWay}"
+                                 IsIndeterminate="{Binding IsSummaryProgressIndeterminate}"
+                                 Visibility="{Binding IsDownloadingSummaryModel, Converter={StaticResource BoolToVis}}" />
+
+                    <TextBlock Text="{Binding SummaryDownloadStatus}" Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Visibility="{Binding IsDownloadingSummaryModel, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+
+                <Border Height="1" Margin="0,0,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
                 <TextBlock Text="{Binding Path=[ConfigInstalledModelsSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
 
                 <TextBlock Text="{Binding Path=[ConfigNoModelsInstalled], Source={x:Static services:Strings.Instance}}"
@@ -103,6 +139,7 @@
 
                                     <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigUse], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
                                                IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}"
+                                               Visibility="{Binding IsSummaryModel, Converter={StaticResource InverseBoolToVis}}"
                                                Command="{Binding DataContext.UseModelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                CommandParameter="{Binding}" />
 
