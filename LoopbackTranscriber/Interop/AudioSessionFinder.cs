@@ -111,8 +111,6 @@ internal interface IAudioSessionEnumerator
     int GetSession(int sessionIndex, out IAudioSessionControl2 session);
 }
 
-// Interfaz "plana" (no heredada de IAudioSessionControl) con los 14 metodos en el orden real
-// de su vtable nativa: los 9 de IAudioSessionControl seguidos de los 5 propios de la version 2.
 [ComImport]
 [Guid("BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D")]
 [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

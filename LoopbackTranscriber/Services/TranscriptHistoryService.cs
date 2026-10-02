@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using LoopbackTranscriber.Models;
+using NAudio.Wave;
 
 namespace LoopbackTranscriber.Services;
 
@@ -54,6 +55,7 @@ public sealed class TranscriptHistoryService
             }
 
             var summary = TryReadSummary(summaryPath);
+            var duration = hasAudio ? TryGetAudioDuration(wavPath) : null;
 
             var match = TranscriptFileNamePattern.Match(baseName);
 
@@ -74,23 +76,29 @@ public sealed class TranscriptHistoryService
             }
 
             string filePath;
-            string preview;
+            string transcriptPreviewSource;
 
             if (hasTxt)
             {
                 filePath = txtPath;
-                preview = BuildPreview(File.ReadAllText(txtPath).Trim());
+                transcriptPreviewSource = File.ReadAllText(txtPath).Trim();
             }
             else if (hasMarkdown)
             {
                 filePath = mdPath;
-                preview = BuildPreview(StripMarkdownHeader(File.ReadAllText(mdPath).Trim()));
+                transcriptPreviewSource = StripMarkdownHeader(File.ReadAllText(mdPath).Trim());
             }
             else
             {
                 filePath = wavPath;
-                preview = Strings.Instance.Get("HistoryAudioOnlyText");
+                transcriptPreviewSource = string.Empty;
             }
+
+            var preview = summary is not null && !string.IsNullOrWhiteSpace(summary.Summary)
+                ? BuildPreview(summary.Summary)
+                : !string.IsNullOrWhiteSpace(transcriptPreviewSource)
+                    ? BuildPreview(TimestampSpeakerPrefixRegex.Replace(transcriptPreviewSource, string.Empty))
+                    : Strings.Instance.Get("HistoryAudioOnlyText");
 
             return new TranscriptHistoryItem
             {
@@ -104,12 +112,27 @@ public sealed class TranscriptHistoryService
                 HasSummary = summary is not null,
                 SummaryTitle = summary?.Title,
                 SummaryText = summary?.Summary,
-                SummaryFilePath = summaryPath
+                SummaryFilePath = summaryPath,
+                Duration = duration
             };
         }
         catch (Exception ex)
         {
             AppLog.Warn($"TranscriptHistoryService: no se pudo leer \"{directory}\", se omite del historial", ex);
+            return null;
+        }
+    }
+
+    private static TimeSpan? TryGetAudioDuration(string wavPath)
+    {
+        try
+        {
+            using var reader = new WaveFileReader(wavPath);
+            return reader.TotalTime;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"TranscriptHistoryService: no se pudo leer la duracion de \"{wavPath}\"", ex);
             return null;
         }
     }
@@ -141,9 +164,15 @@ public sealed class TranscriptHistoryService
         File.WriteAllText(summaryFilePath, json);
     }
 
+    private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
+
+    private static readonly Regex TimestampSpeakerPrefixRegex =
+        new(@"^(?:Tu|Interlocutor)\s*:\s*", RegexOptions.Multiline | RegexOptions.Compiled);
+
     private static string BuildPreview(string content)
     {
-        var preview = content.Length > 160 ? content[..160].TrimEnd() + "..." : content;
+        var singleLine = WhitespaceRegex.Replace(content, " ").Trim();
+        var preview = singleLine.Length > 100 ? singleLine[..100].TrimEnd() + "..." : singleLine;
         return string.IsNullOrWhiteSpace(preview) ? "(Transcripcion vacia)" : preview;
     }
 

@@ -12,8 +12,14 @@ public sealed partial class TranscriptHistoryItem : ObservableObject
     public required bool HasMarkdown { get; init; }
     public required bool HasAudio { get; init; }
     public required string SummaryFilePath { get; init; }
+    public required TimeSpan? Duration { get; init; }
 
-    public string TimestampText => Timestamp.ToString("dd/MM HH:mm");
+    public string TimestampText => Duration is { } duration
+        ? $"{Timestamp:dd/MM HH:mm} \u00b7 {FormatDuration(duration)}"
+        : Timestamp.ToString("dd/MM HH:mm");
+
+    private static string FormatDuration(TimeSpan duration) =>
+        duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"m\:ss");
 
     [ObservableProperty]
     private bool _isSelected;

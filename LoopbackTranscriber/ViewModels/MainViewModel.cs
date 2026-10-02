@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Threading;
@@ -9,6 +10,8 @@ using LoopbackTranscriber.Models;
 using LoopbackTranscriber.Services;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.ViewModels;
@@ -18,6 +21,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly TargetProcessWatcher _watcher;
     private readonly ProcessLoopbackRecorder _recorder;
     private readonly DeviceLoopbackRecorder _deviceRecorder;
+    private readonly MicrophoneRecorder _microphoneRecorder;
     private readonly WhisperTranscriptionService _whisper;
     private readonly SummarizationService _summarizer;
     private readonly SettingsService _settingsService;
@@ -27,6 +31,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private DateTime _recordingStartedAt;
     private string? _currentRawWavPath;
+
+    private DateTime? _processLoopbackStartedAt;
+    private DateTime? _deviceLoopbackStartedAt;
+    private DateTime? _microphoneStartedAt;
     private FileSystemWatcher? _transcriptsWatcher;
     private string? _watchedTranscriptsFolderPath;
     private string? _viewedTranscriptFilePath;
@@ -40,6 +48,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _hasSelectedAppHistoryItems;
+
+    [ObservableProperty]
+    private bool _hasAppHistoryItems;
+
+    [ObservableProperty]
+    private bool _hasHistoryItems;
 
     [ObservableProperty]
     private bool _hasSelectedHistoryItems;
@@ -85,6 +99,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private string _transcriptText = string.Empty;
 
     [ObservableProperty]
+    private ObservableCollection<TranscriptMessage> _transcriptMessages = new();
+
+    [ObservableProperty]
     private bool _hasViewedSummary;
 
     [ObservableProperty]
@@ -105,9 +122,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private double _transcriptionProgressPercent;
 
-    [ObservableProperty]
-    private string _transcriptionProgressText = string.Empty;
-
     public bool CanToggleRecording => IsBusy == false && (IsRecording || (SelectedTarget?.IsRunning ?? false));
 
     public string RecordButtonText => IsRecording ? Strings.Instance.Get("RecordStop") : Strings.Instance.Get("RecordStart");
@@ -116,6 +130,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         TargetProcessWatcher watcher,
         ProcessLoopbackRecorder recorder,
         DeviceLoopbackRecorder deviceRecorder,
+        MicrophoneRecorder microphoneRecorder,
         WhisperTranscriptionService whisper,
         SummarizationService summarizer,
         SettingsService settingsService,
@@ -125,6 +140,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _watcher = watcher;
         _recorder = recorder;
         _deviceRecorder = deviceRecorder;
+        _microphoneRecorder = microphoneRecorder;
         _whisper = whisper;
         _summarizer = summarizer;
         _settingsService = settingsService;
@@ -137,6 +153,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         _customAppsService.Changed += OnCustomAppsChanged;
+
+        AppTranscriptHistory.CollectionChanged += (_, _) => HasAppHistoryItems = AppTranscriptHistory.Count > 0;
+        TranscriptHistory.CollectionChanged += (_, _) => HasHistoryItems = TranscriptHistory.Count > 0;
 
         _watcher.StatusesChanged += OnWatcherStatusesChanged;
 
@@ -231,7 +250,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
             AppLog.Warn("MainViewModel.CancelRecordingAsync: fallo al parar la captura por dispositivo", ex);
         }
 
+        string? micWavPath = null;
+        try
+        {
+            micWavPath = await Task.Run(() => _microphoneRecorder.Stop());
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("MainViewModel.CancelRecordingAsync: fallo al parar la captura del microfono", ex);
+        }
+
         TryDelete(rawWavPath);
+        TryDelete(micWavPath);
         foreach (var track in deviceTracks)
         {
             TryDelete(track.WavPath);
@@ -246,7 +276,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void AddTargetInternal(TargetApp app)
     {
-        Targets.Add(new TargetItemViewModel(app, _settingsService));
+        Targets.Add(new TargetItemViewModel(app));
         _watcher.AddTarget(app);
     }
 
@@ -352,11 +382,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    public void ClearAppHistorySelection()
+    {
+        foreach (var item in AppTranscriptHistory)
+        {
+            item.IsSelected = false;
+        }
+    }
+
     private void OnHistoryItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(TranscriptHistoryItem.IsSelected))
         {
             HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
+        }
+    }
+
+    public void ClearHistorySelection()
+    {
+        foreach (var item in TranscriptHistory)
+        {
+            item.IsSelected = false;
         }
     }
 
@@ -501,6 +547,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        _processLoopbackStartedAt = null;
+        _deviceLoopbackStartedAt = null;
+        _microphoneStartedAt = null;
+
         try
         {
             var wavPath = Path.Combine(Path.GetTempPath(), "LoopbackTranscriber",
@@ -508,16 +558,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             await _recorder.StartAsync(SelectedTarget.ProcessId, wavPath);
             _currentRawWavPath = wavPath;
+            _processLoopbackStartedAt = DateTime.UtcNow;
 
             try
             {
                 var deviceDir = Path.GetDirectoryName(wavPath)!;
                 var deviceBaseName = Path.GetFileNameWithoutExtension(wavPath);
                 _deviceRecorder.Start(deviceDir, deviceBaseName);
+                _deviceLoopbackStartedAt = DateTime.UtcNow;
             }
             catch (Exception ex)
             {
                 AppLog.Warn("MainViewModel.StartRecordingAsync: fallo al iniciar la captura por dispositivo, se continua solo con la captura por proceso", ex);
+            }
+
+            try
+            {
+                var micWavPath = Path.Combine(Path.GetDirectoryName(wavPath)!,
+                    Path.GetFileNameWithoutExtension(wavPath) + "_mic.wav");
+                _microphoneRecorder.Start(micWavPath);
+                _microphoneStartedAt = DateTime.UtcNow;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("MainViewModel.StartRecordingAsync: fallo al iniciar la captura del microfono, el resumen solo identificara al interlocutor", ex);
             }
 
             IsRecording = true;
@@ -542,6 +606,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _elapsedTimer.Stop();
         IsRecording = false;
+
+        var recordingDuration = DateTime.Now - _recordingStartedAt;
         IsBusy = true;
         StatusText = Strings.Instance.Get("StatusProcessingAudio");
         OnPropertyChanged(nameof(CanToggleRecording));
@@ -550,6 +616,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         string? rawWavPath = null;
         string? whisperWavPath = null;
+        string? micRawWavPath = null;
+        string? micWhisperWavPath = null;
         var deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
 
         try
@@ -564,6 +632,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 AppLog.Warn("MainViewModel.StopAndTranscribeAsync: fallo al parar la captura por dispositivo, se usa solo la captura por proceso", ex);
                 deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
+            }
+
+            try
+            {
+                micRawWavPath = await Task.Run(() => _microphoneRecorder.Stop());
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("MainViewModel.StopAndTranscribeAsync: fallo al parar la captura del microfono, el resumen solo tendra el audio del interlocutor", ex);
+                micRawWavPath = null;
             }
 
             const double deviceSignalThreshold = 0.01;
@@ -584,83 +662,202 @@ public partial class MainViewModel : ObservableObject, IDisposable
             StatusText = Strings.Instance.Get("StatusCheckingModel");
             await _whisper.EnsureModelDownloadedAsync(settings.ModelSize, modelPath, progress);
 
-            StatusText = Strings.Instance.Get("StatusTranscribing");
-
             IsTranscribingActive = true;
             TranscriptionProgressPercent = 0;
-            TranscriptionProgressText = Strings.Instance.Format("TranscriptionProgressText", 0, "--:--");
-            var transcriptionStopwatch = Stopwatch.StartNew();
+            StatusText = Strings.Instance.Format("StatusTranscribingWithPercent", 0);
 
             whisperWavPath = Path.Combine(Path.GetDirectoryName(transcriptionSourceWavPath)!,
                 Path.GetFileNameWithoutExtension(transcriptionSourceWavPath) + ".16k.wav");
             AudioConverter.ConvertToWhisperFormat(transcriptionSourceWavPath, whisperWavPath);
 
-            var transcriptProgress = new Progress<string>(text => TranscriptText = text);
-
-            var transcriptPercentProgress = new Progress<int>(percent =>
+            var hasMicTrack = micRawWavPath is not null;
+            if (hasMicTrack)
             {
-                TranscriptionProgressPercent = percent;
+                micWhisperWavPath = Path.Combine(Path.GetDirectoryName(micRawWavPath)!,
+                    Path.GetFileNameWithoutExtension(micRawWavPath) + ".16k.wav");
+                AudioConverter.ConvertToWhisperFormat(micRawWavPath!, micWhisperWavPath);
 
-                if (percent <= 0)
+                try
                 {
-                    return;
+                    AudioConverter.ApplyNoiseGate(micWhisperWavPath);
                 }
-
-                var elapsed = transcriptionStopwatch.Elapsed;
-                var estimatedTotal = TimeSpan.FromTicks((long)(elapsed.Ticks * 100.0 / percent));
-                var remaining = estimatedTotal - elapsed;
-                if (remaining < TimeSpan.Zero)
+                catch (Exception ex)
                 {
-                    remaining = TimeSpan.Zero;
+                    AppLog.Warn("MainViewModel.StopAndTranscribeAsync: fallo al aplicar la puerta de ruido al microfono, se transcribe sin filtrar", ex);
                 }
+            }
 
-                TranscriptionProgressText = Strings.Instance.Format("TranscriptionProgressText", percent,
-                    remaining.ToString(@"mm\:ss"));
-            });
+            var threadCount = WhisperTranscriptionService.GetRecommendedThreadCount(hasMicTrack ? 2 : 1);
 
-            var text = await _whisper.TranscribeAsync(whisperWavPath, modelPath, settings.Language,
-                transcriptProgress, transcriptPercentProgress);
+            var otherPercent = 0;
+            var micPercent = 0;
+
+            void ReportCombinedPercent()
+            {
+                var combined = hasMicTrack ? (otherPercent + micPercent) / 2 : otherPercent;
+                TranscriptionProgressPercent = combined;
+                StatusText = Strings.Instance.Format("StatusTranscribingWithPercent", combined);
+            }
+
+            var otherPercentProgress = new Progress<int>(percent => { otherPercent = percent; ReportCombinedPercent(); });
+            var micPercentProgress = new Progress<int>(percent => { micPercent = percent; ReportCombinedPercent(); });
+
+            var otherTask = _whisper.TranscribeSegmentsAsync(whisperWavPath, modelPath, settings.Language,
+                threadCount, useGpu: true, percentProgress: otherPercentProgress);
+            var micTask = hasMicTrack
+                ? _whisper.TranscribeSegmentsAsync(micWhisperWavPath!, modelPath, settings.Language,
+                    threadCount, useGpu: true, percentProgress: micPercentProgress)
+                : Task.FromResult(new List<WhisperTranscriptionService.TranscriptSegment>());
+
+            var transcriptionStopwatch = Stopwatch.StartNew();
+            await Task.WhenAll(otherTask, micTask);
+            transcriptionStopwatch.Stop();
+
+            var otherSegments = await otherTask;
+            var micSegments = await micTask;
+
             IsTranscribingActive = false;
+
+            var otherTrackStartedAt = bestDeviceTrack is not null
+                ? _deviceLoopbackStartedAt
+                : _processLoopbackStartedAt;
+            var micStartOffset = TimeSpan.Zero;
+            if (hasMicTrack && otherTrackStartedAt is not null && _microphoneStartedAt is not null)
+            {
+                micStartOffset = _microphoneStartedAt.Value - otherTrackStartedAt.Value;
+            }
+
+            const double echoSimilarityThreshold = 0.6;
+            const int echoMinWordCount = 3;
+
+            var echoTimeMargin = TimeSpan.FromSeconds(3);
+
+            bool IsLikelyMeetingEcho(WhisperTranscriptionService.TranscriptSegment micSegment)
+            {
+                var micWordCount = micSegment.Text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+                if (micWordCount < echoMinWordCount)
+                {
+                    return false;
+                }
+
+                var adjustedStart = micSegment.Start + micStartOffset;
+                var adjustedEnd = micSegment.End + micStartOffset;
+
+                var overlappingText = string.Join(" ", otherSegments
+                    .Where(o => adjustedStart - echoTimeMargin < o.End && o.Start < adjustedEnd + echoTimeMargin)
+                    .Select(o => o.Text));
+
+                if (string.IsNullOrWhiteSpace(overlappingText))
+                {
+                    return false;
+                }
+
+                var otherWordCount = overlappingText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+                if (otherWordCount < echoMinWordCount)
+                {
+                    return false;
+                }
+
+                return WhisperTranscriptionService.WordOverlapRatio(micSegment.Text, overlappingText) >= echoSimilarityThreshold;
+            }
+
+            var filteredMicSegments = hasMicTrack
+                ? micSegments.Where(s => !IsLikelyMeetingEcho(s)).ToList()
+                : micSegments;
+
+            var orderedSegments = otherSegments
+                .Select(s => (s.Start, Speaker: "Interlocutor", s.Text))
+                .Concat(filteredMicSegments.Select(s => (Start: s.Start + micStartOffset, Speaker: "Tu", s.Text)))
+                .OrderBy(s => s.Start)
+                .Where(s => s.Text.Trim().Length > 0)
+                .ToList();
+
+            var distinctSpeakers = orderedSegments.Select(s => s.Speaker).Distinct().Count();
+
+            var textBuilder = new StringBuilder();
+
+            if (distinctSpeakers <= 1)
+            {
+                foreach (var segment in orderedSegments)
+                {
+                    if (textBuilder.Length > 0)
+                    {
+                        textBuilder.Append(' ');
+                    }
+
+                    textBuilder.Append(segment.Text.Trim());
+                }
+            }
+            else
+            {
+                string? currentSpeaker = null;
+
+                foreach (var segment in orderedSegments)
+                {
+                    var segmentText = segment.Text.Trim();
+
+                    if (segment.Speaker != currentSpeaker)
+                    {
+                        if (currentSpeaker is not null)
+                        {
+                            textBuilder.Append('\n').Append('\n');
+                        }
+
+                        textBuilder.Append(segment.Speaker).Append(": ");
+                        currentSpeaker = segment.Speaker;
+                    }
+                    else
+                    {
+                        textBuilder.Append(' ');
+                    }
+
+                    textBuilder.Append(segmentText);
+                }
+            }
+
+            var text = textBuilder.ToString();
 
             TranscriptText = string.IsNullOrWhiteSpace(text)
                 ? Strings.Instance.Get("StatusNoTextDetected")
                 : text;
 
-            var saveAudio = SelectedTarget?.SaveAudio ?? true;
-            var saveTxt = SelectedTarget?.SaveTxt ?? true;
-            var saveMarkdown = SelectedTarget?.SaveMarkdown ?? true;
-
-            if (!string.IsNullOrWhiteSpace(text) && (saveAudio || saveTxt || saveMarkdown))
+            if (!string.IsNullOrWhiteSpace(text))
             {
                 var recordedAt = DateTime.Now;
                 var baseName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{recordedAt:yyyyMMdd_HHmmss}";
                 var recordingFolder = Path.Combine(settings.TranscriptsFolder, baseName);
                 Directory.CreateDirectory(recordingFolder);
 
-                if (saveTxt)
+                var markdownTitle = SelectedTarget?.DisplayName ?? "Reunion";
+                var markdown = $"# {markdownTitle} - {recordedAt:dd/MM/yyyy HH:mm}\n\n{text}";
+                File.WriteAllText(Path.Combine(recordingFolder, baseName + ".md"), markdown);
+
+                if (transcriptionSourceWavPath is not null && File.Exists(transcriptionSourceWavPath))
                 {
-                    File.WriteAllText(Path.Combine(recordingFolder, baseName + ".txt"), text);
+                    File.Copy(transcriptionSourceWavPath, Path.Combine(recordingFolder, baseName + ".wav"), overwrite: true);
                 }
 
-                if (saveMarkdown)
+                if (micRawWavPath is not null && File.Exists(micRawWavPath))
                 {
-                    var markdownTitle = SelectedTarget?.DisplayName ?? "Reunion";
-                    var markdown = $"# {markdownTitle} - {recordedAt:dd/MM/yyyy HH:mm}\n\n{text}";
-                    File.WriteAllText(Path.Combine(recordingFolder, baseName + ".md"), markdown);
+                    File.Copy(micRawWavPath, Path.Combine(recordingFolder, baseName + "_tu.wav"), overwrite: true);
                 }
 
-                if (saveAudio && whisperWavPath is not null && File.Exists(whisperWavPath))
-                {
-                    File.Copy(whisperWavPath, Path.Combine(recordingFolder, baseName + ".wav"), overwrite: true);
-                }
+                _viewedTranscriptFilePath = Path.Combine(recordingFolder, baseName + ".md");
 
-                _viewedTranscriptFilePath = saveTxt
-                    ? Path.Combine(recordingFolder, baseName + ".txt")
-                    : saveMarkdown
-                        ? Path.Combine(recordingFolder, baseName + ".md")
-                        : Path.Combine(recordingFolder, baseName + ".wav");
+                StatusText = hasMicTrack
+                    ? Strings.Instance.Get("StatusTranscriptReadySaved")
+                    : Strings.Instance.Get("StatusTranscriptReadySavedNoMic");
 
-                StatusText = Strings.Instance.Get("StatusTranscriptReadySaved");
+                AppendTranscriptionBenchmarkLog(settings, recordingDuration, transcriptionStopwatch.Elapsed, hasMicTrack, _microphoneRecorder.LastUsedDeviceName);
+                var speedFactor = transcriptionStopwatch.Elapsed.TotalSeconds > 0.1
+                    ? recordingDuration.TotalSeconds / transcriptionStopwatch.Elapsed.TotalSeconds
+                    : 0;
+                StatusText += " " + Strings.Instance.Format("StatusTranscriptionTiming",
+                    settings.ModelSize,
+                    (int)recordingDuration.TotalSeconds,
+                    (int)transcriptionStopwatch.Elapsed.TotalSeconds,
+                    speedFactor.ToString("0.0", CultureInfo.InvariantCulture));
+
                 LoadTranscriptHistoryFromDisk();
             }
             else
@@ -682,6 +879,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             TryDelete(rawWavPath);
             TryDelete(whisperWavPath);
+            TryDelete(micRawWavPath);
+            TryDelete(micWhisperWavPath);
             foreach (var track in deviceTracks)
             {
                 TryDelete(track.WavPath);
@@ -771,6 +970,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ViewedSummaryTitle = string.Empty;
         ViewedSummaryText = string.Empty;
         IsShowingSummaryTab = false;
+    }
+
+    [RelayCommand]
+    private void ClearViewedTranscript()
+    {
+        TranscriptText = string.Empty;
+        _viewedTranscriptFilePath = null;
+        ClearViewedSummary();
     }
 
     [RelayCommand]
@@ -968,6 +1175,91 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshAppTranscriptHistory();
     }
 
+    private static void AppendTranscriptionBenchmarkLog(AppSettings settings, TimeSpan recordingDuration,
+        TimeSpan transcriptionElapsed, bool hasMicTrack, string? micDeviceName)
+    {
+        try
+        {
+            var speedFactor = transcriptionElapsed.TotalSeconds > 0.1
+                ? recordingDuration.TotalSeconds / transcriptionElapsed.TotalSeconds
+                : 0;
+
+            var logPath = Path.Combine(settings.TranscriptsFolder, "benchmarks_transcripcion.log");
+            var line = string.Join("\t",
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                $"modelo={settings.ModelSize}",
+                $"con_microfono={hasMicTrack}",
+                $"dispositivo_microfono={micDeviceName ?? "(ninguno)"}",
+                $"audio_segundos={(int)recordingDuration.TotalSeconds}",
+                $"transcripcion_segundos={(int)transcriptionElapsed.TotalSeconds}",
+                $"veces_tiempo_real={speedFactor.ToString("0.0", CultureInfo.InvariantCulture)}");
+
+            Directory.CreateDirectory(settings.TranscriptsFolder);
+            File.AppendAllText(logPath, line + Environment.NewLine);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("MainViewModel.AppendTranscriptionBenchmarkLog: no se pudo escribir el log de tiempos", ex);
+        }
+    }
+
+    private static readonly Regex ChatSpeakerPrefixRegex =
+        new(@"^(Tu|Interlocutor)\s*:\s*", RegexOptions.Compiled);
+
+    partial void OnTranscriptTextChanged(string value)
+    {
+        TranscriptMessages = ParseTranscriptMessages(value);
+    }
+
+    private static ObservableCollection<TranscriptMessage> ParseTranscriptMessages(string text)
+    {
+        var messages = new ObservableCollection<TranscriptMessage>();
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return messages;
+        }
+
+        var lines = text.Split('\n');
+        if (lines.Length > 0 && lines[0].TrimStart().StartsWith("# ", StringComparison.Ordinal))
+        {
+            text = string.Join('\n', lines.Skip(1)).TrimStart('\n', '\r').Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return messages;
+        }
+
+        var paragraphs = text.Split(new[] { "\n\n" }, StringSplitOptions.None);
+
+        foreach (var rawParagraph in paragraphs)
+        {
+            var paragraph = rawParagraph.Trim();
+            if (paragraph.Length == 0)
+            {
+                continue;
+            }
+
+            var match = ChatSpeakerPrefixRegex.Match(paragraph);
+            if (match.Success)
+            {
+                var speaker = match.Groups[1].Value;
+                var body = paragraph.Substring(match.Length).Trim();
+                if (body.Length > 0)
+                {
+                    messages.Add(new TranscriptMessage { Speaker = speaker, Text = body });
+                }
+            }
+            else
+            {
+                messages.Add(new TranscriptMessage { Speaker = null, Text = paragraph });
+            }
+        }
+
+        return messages;
+    }
+
     public void Dispose()
     {
         _watcher.StatusesChanged -= OnWatcherStatusesChanged;
@@ -978,6 +1270,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _watcher.Dispose();
         _recorder.Dispose();
         _deviceRecorder.Dispose();
+        _microphoneRecorder.Dispose();
         _summarizer.Dispose();
     }
 }

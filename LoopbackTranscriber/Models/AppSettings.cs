@@ -19,20 +19,9 @@ public sealed class AppSettings
 
     public string UiLanguage { get; set; } = DetectSystemLanguage();
 
+    public bool TranslucentUi { get; set; } = true;
+
     public List<CustomTargetAppSettings> CustomApps { get; set; } = [];
-
-    public Dictionary<string, AppSaveSettings> AppSaveSettings { get; set; } = new();
-
-    public AppSaveSettings GetAppSaveSettings(string appId)
-    {
-        if (!AppSaveSettings.TryGetValue(appId, out var saveSettings))
-        {
-            saveSettings = new AppSaveSettings();
-            AppSaveSettings[appId] = saveSettings;
-        }
-
-        return saveSettings;
-    }
 
     public string GetModelFileName() => $"ggml-{ModelSize}.bin";
 

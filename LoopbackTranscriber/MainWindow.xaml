@@ -14,12 +14,17 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
-        TextOptions.TextRenderingMode="ClearType">
+        TextOptions.TextRenderingMode="ClearType"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica">
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
         <conv:InverseBooleanConverter x:Key="InverseBoolConverter" />
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+        <conv:BoolToDimOpacityConverter x:Key="BoolToDimOpacityConverter" />
+        <conv:BoolToChatAlignmentConverter x:Key="BoolToChatAlignment" />
+        <conv:BoolToChatBubbleBrushConverter x:Key="BoolToChatBubbleBrush" />
 
         <Style x:Key="SpinningIconStyle" TargetType="ui:SymbolIcon">
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
@@ -52,17 +57,17 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="LoopbackTranscriber"
-                     Background="{DynamicResource ApplicationBackgroundBrush}" />
+        <ui:TitleBar x:Name="RootTitleBar" Grid.Row="0" Title="LoopbackTranscriber"
+                     Background="Transparent" />
 
-        <Grid Grid.Row="1" Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid x:Name="ContentBackgroundGrid" Grid.Row="1" Background="Transparent">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <ui:NavigationView x:Name="AppsNavigationView" Grid.Column="0"
-                            Background="{DynamicResource ApplicationBackgroundBrush}"
+                            Background="Transparent"
                             PaneDisplayMode="Left"
                             OpenPaneLength="230"
                             IsPaneOpen="True"
@@ -108,8 +113,8 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
@@ -122,8 +127,6 @@
                             <ProgressBar Height="6" Width="260" HorizontalAlignment="Left"
                                          Minimum="0" Maximum="100"
                                          Value="{Binding TranscriptionProgressPercent, Mode=OneWay}" />
-                            <TextBlock Text="{Binding TranscriptionProgressText}" Opacity="0.7" FontSize="12"
-                                       Margin="0,6,0,0" />
                         </StackPanel>
                     </StackPanel>
 
@@ -136,86 +139,18 @@
                                    Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
 
-                    <StackPanel Grid.Row="2" Margin="0,18,14,0">
-                        <TextBlock Text="{Binding Path=[AppSaveSectionTitle], Source={x:Static services:Strings.Instance}}"
-                                   FontWeight="SemiBold" Opacity="0.85" Margin="0,0,0,6" />
+                    <Grid Grid.Row="3" Margin="0,18,14,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
 
-                        <Grid HorizontalAlignment="Left">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <Border Grid.Column="0" CornerRadius="8" Padding="10,7" Cursor="Hand"
-                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                                <Border.InputBindings>
-                                    <MouseBinding MouseAction="LeftClick" Command="{Binding SelectedTarget.ToggleSaveAudioCommand}" />
-                                </Border.InputBindings>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <ui:SymbolIcon Grid.Column="0" Symbol="Headphones20" FontSize="18" Opacity="1"
-                                                   VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <TextBlock Grid.Column="1" Text="{Binding Path=[AppSaveAudio], Source={x:Static services:Strings.Instance}}"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
-                                    <CheckBox Grid.Column="2" IsChecked="{Binding SelectedTarget.SaveAudio, Mode=TwoWay}"
-                                              IsEnabled="{Binding SelectedTarget.CanToggleSaveAudio}" IsHitTestVisible="False"
-                                              VerticalAlignment="Center" />
-                                </Grid>
-                            </Border>
-
-                            <Border Grid.Column="2" CornerRadius="8" Padding="10,7" Cursor="Hand"
-                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                                <Border.InputBindings>
-                                    <MouseBinding MouseAction="LeftClick" Command="{Binding SelectedTarget.ToggleSaveTxtCommand}" />
-                                </Border.InputBindings>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <ui:SymbolIcon Grid.Column="0" Symbol="Document20" FontSize="18" Opacity="1"
-                                                   VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <TextBlock Grid.Column="1" Text="{Binding Path=[AppSaveTxt], Source={x:Static services:Strings.Instance}}"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
-                                    <CheckBox Grid.Column="2" IsChecked="{Binding SelectedTarget.SaveTxt, Mode=TwoWay}"
-                                              IsEnabled="{Binding SelectedTarget.CanToggleSaveTxt}" IsHitTestVisible="False"
-                                              VerticalAlignment="Center" />
-                                </Grid>
-                            </Border>
-
-                            <Border Grid.Column="4" CornerRadius="8" Padding="10,7" Cursor="Hand"
-                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                                <Border.InputBindings>
-                                    <MouseBinding MouseAction="LeftClick" Command="{Binding SelectedTarget.ToggleSaveMarkdownCommand}" />
-                                </Border.InputBindings>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <ui:SymbolIcon Grid.Column="0" Symbol="CodeText20" FontSize="18" Opacity="1"
-                                                   VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <TextBlock Grid.Column="1" Text="{Binding Path=[AppSaveMarkdown], Source={x:Static services:Strings.Instance}}"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
-                                    <CheckBox Grid.Column="2" IsChecked="{Binding SelectedTarget.SaveMarkdown, Mode=TwoWay}"
-                                              IsEnabled="{Binding SelectedTarget.CanToggleSaveMarkdown}" IsHitTestVisible="False"
-                                              VerticalAlignment="Center" />
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="3" Margin="0,18,14,0">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:Button Padding="6" Appearance="Transparent" Margin="0,0,6,0"
+                                       Command="{Binding ClearViewedTranscriptCommand}"
+                                       ToolTip="{Binding Path=[ClearTranscriptViewerTooltip], Source={x:Static services:Strings.Instance}}">
+                                <ui:SymbolIcon Symbol="Eraser20" FontSize="14" />
+                            </ui:Button>
                             <ui:Button Content="{Binding Path=[TabTranscript], Source={x:Static services:Strings.Instance}}"
                                        Appearance="Transparent" Padding="10,5" Margin="0,0,6,0"
                                        Command="{Binding ShowTranscriptTabCommand}">
@@ -250,15 +185,22 @@
                             </ui:Button>
                         </StackPanel>
 
-                        <Border Height="230" CornerRadius="10" Padding="14"
+                        <Border Grid.Row="1" MinHeight="230" CornerRadius="10" Padding="14"
                                 Background="{DynamicResource ControlFillColorSecondaryBrush}">
                             <Grid>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                                               Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource InverseBoolToVis}}">
-                                    <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
-                                             IsReadOnly="True" IsUndoEnabled="False" TextWrapping="Wrap" AcceptsReturn="True"
-                                             BorderThickness="0" Background="Transparent"
-                                             IsReadOnlyCaretVisible="False" VerticalScrollBarVisibility="Disabled" />
+                                    <ItemsControl ItemsSource="{Binding TranscriptMessages}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,4" MaxWidth="480" CornerRadius="14" Padding="12,8"
+                                                        HorizontalAlignment="{Binding IsSelf, Converter={StaticResource BoolToChatAlignment}}"
+                                                        Background="{Binding IsSelf, Converter={StaticResource BoolToChatBubbleBrush}}">
+                                                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13" Foreground="White" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </ScrollViewer>
 
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -270,119 +212,118 @@
                                 </ScrollViewer>
                             </Grid>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <Grid Grid.Row="4" Margin="0,16,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
+                    <Border Grid.Row="4" Margin="0,16,14,0" CornerRadius="8"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                        <StackPanel>
+                            <Border x:Name="HistoryExpanderHeader" Background="Transparent" Cursor="Hand"
+                                    Padding="16,14" MouseLeftButtonUp="HistoryExpanderHeader_MouseLeftButtonUp">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Path=[HistoryOfAppTitle], Source={x:Static services:Strings.Instance}}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Opacity="{Binding HasAppHistoryItems, Converter={StaticResource BoolToDimOpacityConverter}}" />
+                                    <ui:Button Grid.Column="1" Margin="0,0,10,0" Padding="12,7" FontSize="13" VerticalAlignment="Center"
+                                               Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}"
+                                               Command="{Binding DeleteSelectedAppTranscriptsCommand}"
+                                               Visibility="{Binding HasSelectedAppHistoryItems, Converter={StaticResource BoolToVis}}" />
+                                    <ui:Button Grid.Column="2" Margin="0,0,10,0" Padding="12,7" FontSize="13" VerticalAlignment="Center"
+                                               Content="{Binding Path=[OpenFolder], Source={x:Static services:Strings.Instance}}"
+                                               Command="{Binding OpenTranscriptsFolderCommand}" />
+                                    <ui:SymbolIcon x:Name="HistoryExpanderChevron" Grid.Column="3" Symbol="ChevronDown20"
+                                                   VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                        <ui:SymbolIcon.RenderTransform>
+                                            <RotateTransform x:Name="HistoryExpanderChevronRotation" Angle="0" />
+                                        </ui:SymbolIcon.RenderTransform>
+                                    </ui:SymbolIcon>
+                                </Grid>
+                            </Border>
 
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding Path=[HistoryOfAppTitle], Source={x:Static services:Strings.Instance}}" FontWeight="SemiBold"
-                                       Opacity="0.85" VerticalAlignment="Center" />
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,14,0">
-                                <ui:Button Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}" Margin="0,0,8,0"
-                                           Command="{Binding DeleteSelectedAppTranscriptsCommand}"
-                                           Visibility="{Binding HasSelectedAppHistoryItems, Converter={StaticResource BoolToVis}}" />
-                                <ui:Button Content="{Binding Path=[OpenFolder], Source={x:Static services:Strings.Instance}}" Command="{Binding OpenTranscriptsFolderCommand}" />
-                            </StackPanel>
-                        </Grid>
-
-                        <ScrollViewer Grid.Row="1" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
-                            <ItemsControl ItemsSource="{Binding AppTranscriptHistory}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
-                                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                                Cursor="Hand">
-                                            <Border.InputBindings>
-                                                <MouseBinding MouseAction="LeftClick"
-                                                              Command="{Binding DataContext.ViewHistoryTranscriptCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                              CommandParameter="{Binding}" />
-                                            </Border.InputBindings>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <CheckBox Grid.Column="0" Grid.Row="0" Grid.RowSpan="2"
-                                                          VerticalAlignment="Center" Margin="0,0,10,0"
-                                                          Padding="0" MinWidth="0" MinHeight="0"
-                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-
-                                                <Grid Grid.Column="1" Grid.Row="0">
+                            <Grid x:Name="HistoryExpanderContent" Height="0" ClipToBounds="True">
+                                <Grid Margin="14,0,14,14">
+                                    <ScrollViewer Margin="0,0,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
+                                <ItemsControl ItemsSource="{Binding AppTranscriptHistory}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
+                                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                    Cursor="Hand">
+                                                <Border.InputBindings>
+                                                    <MouseBinding MouseAction="LeftClick"
+                                                                  Command="{Binding DataContext.ViewHistoryTranscriptCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                  CommandParameter="{Binding}" />
+                                                </Border.InputBindings>
+                                                <Grid>
                                                     <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}"
-                                                               FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <ui:SymbolIcon Symbol="Document20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
-                                                                       ToolTip="{Binding Path=[HistoryIconTxtTooltip], Source={x:Static services:Strings.Instance}}"
-                                                                       Visibility="{Binding HasTxt, Converter={StaticResource BoolToVis}}" />
-                                                        <ui:SymbolIcon Symbol="CodeText20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
-                                                                       ToolTip="{Binding Path=[HistoryIconMdTooltip], Source={x:Static services:Strings.Instance}}"
-                                                                       Visibility="{Binding HasMarkdown, Converter={StaticResource BoolToVis}}" />
-                                                        <ui:SymbolIcon Symbol="Headphones20" FontSize="13" Opacity="0.55" Margin="0,0,14,0"
-                                                                       ToolTip="{Binding Path=[HistoryIconAudioTooltip], Source={x:Static services:Strings.Instance}}"
-                                                                       Visibility="{Binding HasAudio, Converter={StaticResource BoolToVis}}" />
-                                                        <TextBlock Text="{Binding TimestampText}"
-                                                                   Opacity="0.55" FontSize="12" VerticalAlignment="Center" />
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <CheckBox Grid.Column="0" Grid.Row="0" Grid.RowSpan="2"
+                                                              VerticalAlignment="Center" Margin="0,0,10,0"
+                                                              Padding="0" MinWidth="0" MinHeight="0"
+                                                              IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+
+                                                    <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DisplayTitle}"
+                                                                   FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"
+                                                                   MaxWidth="260" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding TimestampText}" Margin="8,0,0,0"
+                                                                   Opacity="0.55" FontSize="11" VerticalAlignment="Center" />
                                                     </StackPanel>
+
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,4,0,0" Text="{Binding Preview}"
+                                                               Opacity="0.7" FontSize="12" VerticalAlignment="Center"
+                                                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+
+                                                    <ui:Button Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Margin="10,0,0,0" Padding="8,4" FontSize="12"
+                                                               VerticalAlignment="Center"
+                                                               IsEnabled="{Binding IsGeneratingSummary, Converter={StaticResource InverseBoolConverter}}"
+                                                               Command="{Binding DataContext.GenerateSummaryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                               CommandParameter="{Binding}">
+                                                        <Grid>
+                                                            <StackPanel Orientation="Horizontal" Visibility="{Binding ShowIdleGenerate, Converter={StaticResource BoolToVis}}">
+                                                                <ui:SymbolIcon Symbol="Sparkle20" FontSize="13" Margin="0,0,6,0" />
+                                                                <TextBlock Text="{Binding Path=[GenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsGeneratingSummary, Converter={StaticResource BoolToVis}}">
+                                                                <ui:SymbolIcon Symbol="ArrowSync20" FontSize="13" Margin="0,0,6,0" Style="{StaticResource SpinningIconStyle}" />
+                                                                <TextBlock Text="{Binding Path=[GenerateSummaryButtonBusy], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                            <StackPanel Orientation="Horizontal" Visibility="{Binding ShowRegenerate, Converter={StaticResource BoolToVis}}">
+                                                                <ui:SymbolIcon Symbol="CheckmarkCircle20" FontSize="13" Margin="0,0,6,0" Opacity="0.7" />
+                                                                <TextBlock Text="{Binding Path=[RegenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </ui:Button>
                                                 </Grid>
-
-                                                <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,4,0,0" Text="{Binding Preview}"
-                                                           Opacity="0.7" FontSize="12" VerticalAlignment="Center"
-                                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-
-                                                <ui:Button Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Margin="10,0,0,0" Padding="8,4" FontSize="12"
-                                                           VerticalAlignment="Center"
-                                                           IsEnabled="{Binding IsGeneratingSummary, Converter={StaticResource InverseBoolConverter}}"
-                                                           Command="{Binding DataContext.GenerateSummaryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                           CommandParameter="{Binding}">
-                                                    <Grid>
-                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding ShowIdleGenerate, Converter={StaticResource BoolToVis}}">
-                                                            <ui:SymbolIcon Symbol="Sparkle20" FontSize="13" Margin="0,0,6,0" />
-                                                            <TextBlock Text="{Binding Path=[GenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
-                                                        </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding IsGeneratingSummary, Converter={StaticResource BoolToVis}}">
-                                                            <ui:SymbolIcon Symbol="ArrowSync20" FontSize="13" Margin="0,0,6,0" Style="{StaticResource SpinningIconStyle}" />
-                                                            <TextBlock Text="{Binding Path=[GenerateSummaryButtonBusy], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
-                                                        </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding ShowRegenerate, Converter={StaticResource BoolToVis}}">
-                                                            <ui:SymbolIcon Symbol="CheckmarkCircle20" FontSize="13" Margin="0,0,6,0" Opacity="0.7" />
-                                                            <TextBlock Text="{Binding Path=[RegenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </ui:Button>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </Grid>
 
                 <Grid Visibility="{Binding IsHistoryViewActive, Converter={StaticResource BoolToVis}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
@@ -391,8 +332,18 @@
                                    Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <StackPanel Grid.Row="1" Margin="0,16,14,0">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Grid Grid.Row="1" Margin="0,16,14,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:Button Padding="6" Appearance="Transparent" Margin="0,0,6,0"
+                                       Command="{Binding ClearViewedTranscriptCommand}"
+                                       ToolTip="{Binding Path=[ClearTranscriptViewerTooltip], Source={x:Static services:Strings.Instance}}">
+                                <ui:SymbolIcon Symbol="Eraser20" FontSize="14" />
+                            </ui:Button>
                             <ui:Button Content="{Binding Path=[TabTranscript], Source={x:Static services:Strings.Instance}}"
                                        Appearance="Transparent" Padding="10,5" Margin="0,0,6,0"
                                        Command="{Binding ShowTranscriptTabCommand}">
@@ -427,15 +378,22 @@
                             </ui:Button>
                         </StackPanel>
 
-                        <Border Height="260" CornerRadius="10" Padding="14"
+                        <Border Grid.Row="1" MinHeight="230" CornerRadius="10" Padding="14"
                                 Background="{DynamicResource ControlFillColorSecondaryBrush}">
                             <Grid>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                                               Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource InverseBoolToVis}}">
-                                    <TextBox Text="{Binding TranscriptText, Mode=OneWay}"
-                                             IsReadOnly="True" IsUndoEnabled="False" TextWrapping="Wrap" AcceptsReturn="True"
-                                             BorderThickness="0" Background="Transparent"
-                                             IsReadOnlyCaretVisible="False" VerticalScrollBarVisibility="Disabled" />
+                                    <ItemsControl ItemsSource="{Binding TranscriptMessages}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,4" MaxWidth="480" CornerRadius="14" Padding="12,8"
+                                                        HorizontalAlignment="{Binding IsSelf, Converter={StaticResource BoolToChatAlignment}}"
+                                                        Background="{Binding IsSelf, Converter={StaticResource BoolToChatBubbleBrush}}">
+                                                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13" Foreground="White" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </ScrollViewer>
 
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -447,25 +405,43 @@
                                 </ScrollViewer>
                             </Grid>
                         </Border>
-                    </StackPanel>
-
-                    <Grid Grid.Row="2" Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding Path=[HistoryListTitle], Source={x:Static services:Strings.Instance}}" FontWeight="SemiBold"
-                                   Opacity="0.85" VerticalAlignment="Center" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,14,0">
-                            <ui:Button Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}" Margin="0,0,8,0"
-                                       Command="{Binding DeleteSelectedTranscriptsCommand}"
-                                       Visibility="{Binding HasSelectedHistoryItems, Converter={StaticResource BoolToVis}}" />
-                            <ui:Button Content="{Binding Path=[OpenFolder], Source={x:Static services:Strings.Instance}}" Command="{Binding OpenTranscriptsFolderCommand}" />
-                        </StackPanel>
                     </Grid>
 
-                    <ScrollViewer Grid.Row="3" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
-                        <ItemsControl ItemsSource="{Binding TranscriptHistory}">
+                    <Border Grid.Row="2" Margin="0,16,14,0" CornerRadius="8"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                        <StackPanel>
+                            <Border x:Name="HistoryPageExpanderHeader" Background="Transparent" Cursor="Hand"
+                                    Padding="16,14" MouseLeftButtonUp="HistoryPageExpanderHeader_MouseLeftButtonUp">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Path=[HistoryListTitle], Source={x:Static services:Strings.Instance}}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Opacity="{Binding HasHistoryItems, Converter={StaticResource BoolToDimOpacityConverter}}" />
+                                    <ui:Button Grid.Column="1" Margin="0,0,10,0" Padding="12,7" FontSize="13" VerticalAlignment="Center"
+                                               Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}"
+                                               Command="{Binding DeleteSelectedTranscriptsCommand}"
+                                               Visibility="{Binding HasSelectedHistoryItems, Converter={StaticResource BoolToVis}}" />
+                                    <ui:Button Grid.Column="2" Margin="0,0,10,0" Padding="12,7" FontSize="13" VerticalAlignment="Center"
+                                               Content="{Binding Path=[OpenFolder], Source={x:Static services:Strings.Instance}}"
+                                               Command="{Binding OpenTranscriptsFolderCommand}" />
+                                    <ui:SymbolIcon x:Name="HistoryPageExpanderChevron" Grid.Column="3" Symbol="ChevronDown20"
+                                                   VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                        <ui:SymbolIcon.RenderTransform>
+                                            <RotateTransform x:Name="HistoryPageExpanderChevronRotation" Angle="0" />
+                                        </ui:SymbolIcon.RenderTransform>
+                                    </ui:SymbolIcon>
+                                </Grid>
+                            </Border>
+
+                            <Grid x:Name="HistoryPageExpanderContent" Height="0" ClipToBounds="True">
+                                <Grid Margin="14,0,14,14">
+                                    <ScrollViewer Margin="0,0,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
+                                        <ItemsControl ItemsSource="{Binding TranscriptHistory}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
@@ -492,28 +468,13 @@
                                                       Padding="0" MinWidth="0" MinHeight="0"
                                                       IsChecked="{Binding IsSelected, Mode=TwoWay}" />
 
-                                            <Grid Grid.Column="1" Grid.Row="0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}"
+                                            <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayTitle}"
                                                            FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <ui:SymbolIcon Symbol="Document20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
-                                                                   ToolTip="{Binding Path=[HistoryIconTxtTooltip], Source={x:Static services:Strings.Instance}}"
-                                                                   Visibility="{Binding HasTxt, Converter={StaticResource BoolToVis}}" />
-                                                    <ui:SymbolIcon Symbol="CodeText20" FontSize="13" Opacity="0.55" Margin="0,0,6,0"
-                                                                   ToolTip="{Binding Path=[HistoryIconMdTooltip], Source={x:Static services:Strings.Instance}}"
-                                                                   Visibility="{Binding HasMarkdown, Converter={StaticResource BoolToVis}}" />
-                                                    <ui:SymbolIcon Symbol="Headphones20" FontSize="13" Opacity="0.55" Margin="0,0,14,0"
-                                                                   ToolTip="{Binding Path=[HistoryIconAudioTooltip], Source={x:Static services:Strings.Instance}}"
-                                                                   Visibility="{Binding HasAudio, Converter={StaticResource BoolToVis}}" />
-                                                    <TextBlock Text="{Binding TimestampText}"
-                                                               Opacity="0.55" FontSize="12" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Grid>
+                                                           MaxWidth="260" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding TimestampText}" Margin="8,0,0,0"
+                                                           Opacity="0.55" FontSize="11" VerticalAlignment="Center" />
+                                            </StackPanel>
 
                                             <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,4,0,0" Text="{Binding Preview}"
                                                        Opacity="0.7" FontSize="12" VerticalAlignment="Center"
@@ -543,8 +504,12 @@
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </Grid>
 
                 <Grid Visibility="{Binding IsApplicationsViewActive, Converter={StaticResource BoolToVis}}">

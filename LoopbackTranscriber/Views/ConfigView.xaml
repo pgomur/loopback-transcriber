@@ -31,6 +31,11 @@
                               SelectedValue="{Binding UiLanguage, Mode=TwoWay}" />
                 </StackPanel>
 
+                <StackPanel Margin="0,0,0,16">
+                    <ui:ToggleSwitch Content="{Binding Path=[ConfigTranslucentUiLabel], Source={x:Static services:Strings.Instance}}"
+                                     IsChecked="{Binding TranslucentUi, Mode=TwoWay}" />
+                </StackPanel>
+
                 <Border Height="1" Margin="0,0,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
 
                 <TextBlock Text="{Binding Path=[ConfigTranscriptionSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
@@ -178,6 +183,8 @@
                         <TextBox Grid.Column="0" Text="{Binding TranscriptsFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenTranscriptsFolderCommand}" />
                     </Grid>
+                    <TextBlock Text="{Binding Path=[ConfigSavedFilesHint], Source={x:Static services:Strings.Instance}}"
+                               Opacity="0.6" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" />
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

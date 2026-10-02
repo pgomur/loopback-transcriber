@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using Whisper.net;
 using Whisper.net.Ggml;
 using System.IO;
@@ -24,6 +26,7 @@ public sealed class WhisperTranscriptionService
         "small" => GgmlType.Small,
         "medium" => GgmlType.Medium,
         "large" => GgmlType.LargeV3,
+        "turbo" => GgmlType.LargeV3Turbo,
         _ => GgmlType.Small
     };
 
@@ -34,6 +37,7 @@ public sealed class WhisperTranscriptionService
         GgmlType.Small => "ggml-small",
         GgmlType.Medium => "ggml-medium",
         GgmlType.LargeV3 => "ggml-large-v3",
+        GgmlType.LargeV3Turbo => "ggml-large-v3-turbo",
         _ => "ggml-small"
     };
 
@@ -158,40 +162,138 @@ public sealed class WhisperTranscriptionService
         }
     }
 
-    public async Task<string> TranscribeAsync(string wavPath, string modelPath, string language,
-        IProgress<string>? progress = null, IProgress<int>? percentProgress = null,
+    public sealed record TranscriptSegment(TimeSpan Start, TimeSpan End, string Text);
+
+    private static readonly Regex NonSpeechTagRegex =
+        new(@"^[\[\(][A-Za-z_ ]+[\]\)]$", RegexOptions.Compiled);
+
+    private const float NoSpeechProbThreshold = 0.6f;
+
+    private static readonly TimeSpan MaxMergeGap = TimeSpan.FromSeconds(2);
+    private const int MaxMergedSegmentLength = 400;
+
+    private static readonly char[] WordTrimChars = ['.', ',', '!', '?', '¡', '¿', ':', ';', '"', '\''];
+
+    private static bool IsRepeatedWordLoop(string text)
+    {
+        var words = text
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim(WordTrimChars).ToLowerInvariant())
+            .Where(w => w.Length > 0)
+            .ToList();
+
+        if (words.Count < 4)
+        {
+            return false;
+        }
+
+        var mostRepeatedCount = words.GroupBy(w => w).Max(g => g.Count());
+        return mostRepeatedCount >= Math.Max(4, (int)(words.Count * 0.6));
+    }
+
+    public static double WordOverlapRatio(string a, string b)
+    {
+        var wordsA = new HashSet<string>(NormalizeWords(a));
+        var wordsB = new HashSet<string>(NormalizeWords(b));
+        if (wordsA.Count == 0 || wordsB.Count == 0)
+        {
+            return 0.0;
+        }
+
+        var intersection = wordsA.Intersect(wordsB).Count();
+        var union = wordsA.Union(wordsB).Count();
+        return union == 0 ? 0.0 : (double)intersection / union;
+    }
+
+    private static List<string> NormalizeWords(string text)
+    {
+        return text
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim(WordTrimChars).ToLowerInvariant())
+            .Where(w => w.Length > 0)
+            .ToList();
+    }
+
+    private static List<TranscriptSegment> MergeCloseSegments(List<TranscriptSegment> segments)
+    {
+        var merged = new List<TranscriptSegment>();
+
+        foreach (var segment in segments)
+        {
+            if (merged.Count > 0)
+            {
+                var previous = merged[^1];
+                var gap = segment.Start - previous.End;
+
+                if (gap <= MaxMergeGap && previous.Text.Length < MaxMergedSegmentLength)
+                {
+                    merged[^1] = previous with { End = segment.End, Text = previous.Text + " " + segment.Text };
+                    continue;
+                }
+            }
+
+            merged.Add(segment);
+        }
+
+        return merged;
+    }
+
+    public static int GetRecommendedThreadCount(int concurrentTranscriptions = 1)
+    {
+        var perInstance = Environment.ProcessorCount / 2 / Math.Max(1, concurrentTranscriptions);
+        return Math.Clamp(perInstance, 2, 16);
+    }
+
+    public async Task<List<TranscriptSegment>> TranscribeSegmentsAsync(string wavPath, string modelPath,
+        string language, int threadCount, bool useGpu = true, IProgress<int>? percentProgress = null,
         CancellationToken cancellationToken = default)
     {
+        using var whisperFactory = WhisperFactory.FromPath(modelPath, new WhisperFactoryOptions { UseGpu = useGpu });
 
-        var threadCount = Math.Clamp(Environment.ProcessorCount / 2, 2, 6);
+        var lastReportedPercent = -1;
 
-        using var whisperFactory = WhisperFactory.FromPath(modelPath);
         using var processor = whisperFactory.CreateBuilder()
             .WithLanguage(language)
             .WithThreads(threadCount)
-            .WithProgressHandler(percent => percentProgress?.Report(percent))
+            .WithNoContext()
+            .WithNoSpeechThreshold(NoSpeechProbThreshold)
+            .WithProbabilities()
+            .WithProgressHandler(percent =>
+            {
+                if (percent == lastReportedPercent)
+                {
+                    return;
+                }
+
+                lastReportedPercent = percent;
+                percentProgress?.Report(percent);
+            })
             .Build();
 
         await using var fileStream = File.OpenRead(wavPath);
 
-        var builder = new StringBuilder();
+        var segments = new List<TranscriptSegment>();
         await foreach (var result in processor.ProcessAsync(fileStream, cancellationToken).ConfigureAwait(false))
         {
             var text = result.Text?.Trim();
-            if (string.IsNullOrEmpty(text))
+            if (string.IsNullOrEmpty(text) || NonSpeechTagRegex.IsMatch(text))
             {
                 continue;
             }
 
-            if (builder.Length > 0)
+            if (result.NoSpeechProbability >= NoSpeechProbThreshold)
             {
-                builder.Append(' ');
+                continue;
             }
 
-            builder.Append(text);
-            progress?.Report(builder.ToString());
+            if (IsRepeatedWordLoop(text))
+            {
+                continue;
+            }
+
+            segments.Add(new TranscriptSegment(result.Start, result.End, text));
         }
 
-        return builder.ToString();
+        return MergeCloseSegments(segments);
     }
 }

@@ -17,7 +17,7 @@ public partial class ConfigViewModel : ObservableObject
     private readonly WhisperTranscriptionService _whisper;
     private readonly SummarizationService _summarizer;
 
-    public List<string> AvailableModelSizes { get; } = ["medium", "large"];
+    public List<string> AvailableModelSizes { get; } = ["medium", "turbo", "large"];
 
     public ObservableCollection<LanguageOption> AvailableLanguages { get; } = [];
 
@@ -40,6 +40,9 @@ public partial class ConfigViewModel : ObservableObject
 
     [ObservableProperty]
     private string _uiLanguage;
+
+    [ObservableProperty]
+    private bool _translucentUi;
 
     [ObservableProperty]
     private string _modelsFolder;
@@ -101,6 +104,7 @@ public partial class ConfigViewModel : ObservableObject
         _uiLanguage = AvailableUiLanguages.Any(l => string.Equals(l.Code, settings.UiLanguage, StringComparison.OrdinalIgnoreCase))
             ? settings.UiLanguage
             : "es";
+        _translucentUi = settings.TranslucentUi;
 
         RefreshLanguageOptions();
 
@@ -148,6 +152,7 @@ public partial class ConfigViewModel : ObservableObject
         settings.TranscriptsFolder = TranscriptsFolder;
         settings.Language = Language;
         settings.UiLanguage = UiLanguage;
+        settings.TranslucentUi = TranslucentUi;
 
         _settingsService.Save(settings);
     }
@@ -181,6 +186,12 @@ public partial class ConfigViewModel : ObservableObject
     {
         SaveSettings();
         Strings.Instance.SetLanguage(value);
+    }
+
+    partial void OnTranslucentUiChanged(bool value)
+    {
+        SaveSettings();
+        UiPreferences.NotifyTranslucentUiChanged(value);
     }
 
     private void RefreshModelStatus()
