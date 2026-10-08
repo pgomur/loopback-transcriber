@@ -1,0 +1,204 @@
+<UserControl x:Class="LoopbackTranscriber.Views.FirstRunView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:conv="clr-namespace:LoopbackTranscriber.Converters"
+             xmlns:services="clr-namespace:LoopbackTranscriber.Services"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <conv:InverseBooleanConverter x:Key="InverseDownloadConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+        <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
+
+        <Style x:Key="FirstRunModelTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style x:Key="FirstRunModelDescriptionStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+        </Style>
+        <Style x:Key="FirstRunModelStatusStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Opacity" Value="0.8" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,8,0,0" />
+        </Style>
+
+        <Style x:Key="FirstRunPageTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+        <Style x:Key="FirstRunPageSubtitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,0,28" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource ControlFillColorDefaultBrush}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalAlignment="Center" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Width="560" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="28,40">
+                <TextBlock Style="{StaticResource FirstRunPageTitleStyle}"
+                           Text="{Binding Path=[FirstRunTitle], Source={x:Static services:Strings.Instance}}" />
+
+                <TextBlock Style="{StaticResource FirstRunPageSubtitleStyle}"
+                           Text="{Binding Path=[FirstRunSubtitle], Source={x:Static services:Strings.Instance}}" />
+
+                <Border CornerRadius="10" BorderThickness="2" Margin="0,0,0,24"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <StackPanel>
+                        <Grid Margin="18,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Ellipse Grid.Column="0" Width="10" Height="10" Margin="0,4,14,0" VerticalAlignment="Top">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{Binding IsModelDownloaded, Converter={StaticResource BoolToStatusBrush}}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsModelDownloadPaused}" Value="True">
+                                                <Setter Property="Fill" Value="#FFA726" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+
+                            <StackPanel Grid.Column="1">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                                    <TextBlock Style="{StaticResource FirstRunModelTitleStyle}"
+                                               Text="{Binding Path=[FirstRunTranscriptionModelTitle], Source={x:Static services:Strings.Instance}}" />
+                                    <TextBlock Text="{Binding Path=[FirstRunTranscriptionModelSize], Source={x:Static services:Strings.Instance}}"
+                                               FontSize="12" Opacity="0.6" VerticalAlignment="Bottom" Margin="0,0,0,2" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource FirstRunModelDescriptionStyle}"
+                                           Text="{Binding Path=[FirstRunTranscriptionModelDescription], Source={x:Static services:Strings.Instance}}" />
+                                <TextBlock Style="{StaticResource FirstRunModelStatusStyle}"
+                                           Text="{Binding ModelStatusText}"
+                                           Visibility="{Binding IsModelDownloadIdle, Converter={StaticResource BoolToVis}}" />
+
+                                <StackPanel Visibility="{Binding IsModelDownloadActive, Converter={StaticResource BoolToVis}}">
+                                    <ProgressBar Height="5" Margin="0,10,0,0" Minimum="0" Maximum="100"
+                                                 Value="{Binding DownloadProgressPercent, Mode=OneWay}"
+                                                 IsIndeterminate="{Binding IsProgressIndeterminate}" />
+                                    <TextBlock Style="{StaticResource FirstRunModelStatusStyle}" Margin="0,6,0,0"
+                                               Text="{Binding DownloadStatus}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <ui:Button Content="{Binding Path=[FirstRunPause], Source={x:Static services:Strings.Instance}}"
+                                                   Padding="14,4" Margin="0,0,8,0" FontSize="12"
+                                                   Command="{Binding PauseModelDownloadCommand}"
+                                                   Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
+                                        <ui:Button Content="{Binding Path=[FirstRunResume], Source={x:Static services:Strings.Instance}}"
+                                                   Padding="14,4" Margin="0,0,8,0" FontSize="12"
+                                                   Command="{Binding ResumeModelDownloadCommand}"
+                                                   Visibility="{Binding IsModelDownloadPaused, Converter={StaticResource BoolToVis}}" />
+                                        <ui:Button Content="{Binding Path=[FirstRunCancel], Source={x:Static services:Strings.Instance}}"
+                                                   Padding="14,4" FontSize="12"
+                                                   Command="{Binding CancelModelDownloadCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Height="1" Margin="18,0" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+                        <Grid Margin="18,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Ellipse Grid.Column="0" Width="10" Height="10" Margin="0,4,14,0" VerticalAlignment="Top">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{Binding IsSummaryModelDownloaded, Converter={StaticResource BoolToStatusBrush}}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSummaryModelDownloadPaused}" Value="True">
+                                                <Setter Property="Fill" Value="#FFA726" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+
+                            <StackPanel Grid.Column="1">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                                    <TextBlock Style="{StaticResource FirstRunModelTitleStyle}"
+                                               Text="{Binding Path=[FirstRunSummaryModelTitle], Source={x:Static services:Strings.Instance}}" />
+                                    <TextBlock Text="{Binding Path=[FirstRunSummaryModelSize], Source={x:Static services:Strings.Instance}}"
+                                               FontSize="12" Opacity="0.6" VerticalAlignment="Bottom" Margin="0,0,0,2" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource FirstRunModelDescriptionStyle}"
+                                           Text="{Binding Path=[FirstRunSummaryModelDescription], Source={x:Static services:Strings.Instance}}" />
+                                <TextBlock Style="{StaticResource FirstRunModelStatusStyle}"
+                                           Text="{Binding SummaryModelStatusText}"
+                                           Visibility="{Binding IsSummaryModelDownloadIdle, Converter={StaticResource BoolToVis}}" />
+
+                                <StackPanel Visibility="{Binding IsSummaryModelDownloadActive, Converter={StaticResource BoolToVis}}">
+                                    <ProgressBar Height="5" Margin="0,10,0,0" Minimum="0" Maximum="100"
+                                                 Value="{Binding SummaryDownloadProgressPercent, Mode=OneWay}"
+                                                 IsIndeterminate="{Binding IsSummaryProgressIndeterminate}" />
+                                    <TextBlock Style="{StaticResource FirstRunModelStatusStyle}" Margin="0,6,0,0"
+                                               Text="{Binding SummaryDownloadStatus}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <ui:Button Content="{Binding Path=[FirstRunPause], Source={x:Static services:Strings.Instance}}"
+                                                   Padding="14,4" Margin="0,0,8,0" FontSize="12"
+                                                   Command="{Binding PauseSummaryModelDownloadCommand}"
+                                                   Visibility="{Binding IsDownloadingSummaryModel, Converter={StaticResource BoolToVis}}" />
+                                        <ui:Button Content="{Binding Path=[FirstRunResume], Source={x:Static services:Strings.Instance}}"
+                                                   Padding="14,4" Margin="0,0,8,0" FontSize="12"
+                                                   Command="{Binding ResumeSummaryModelDownloadCommand}"
+                                                   Visibility="{Binding IsSummaryModelDownloadPaused, Converter={StaticResource BoolToVis}}" />
+                                        <ui:Button Content="{Binding Path=[FirstRunCancel], Source={x:Static services:Strings.Instance}}"
+                                                   Padding="14,4" FontSize="12"
+                                                   Command="{Binding CancelSummaryModelDownloadCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <ui:Button Content="{Binding Path=[FirstRunDownloadModels], Source={x:Static services:Strings.Instance}}"
+                               Padding="22,8" Margin="0,0,10,0"
+                               Command="{Binding DownloadModelsNowCommand}"
+                               IsEnabled="{Binding IsDownloadingAny, Converter={StaticResource InverseDownloadConverter}}"
+                               Visibility="{Binding CanContinue, Converter={StaticResource InverseBoolToVis}}" />
+                    <ui:Button Content="{Binding Path=[FirstRunContinue], Source={x:Static services:Strings.Instance}}"
+                               Padding="26,8" Appearance="Primary" FontWeight="SemiBold"
+                               Command="{Binding ContinueCommand}">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Foreground" Value="Black" />
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Foreground" Value="#8C8C8C" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                </StackPanel>
+
+                <TextBlock Text="{Binding Path=[FirstRunContinueHint], Source={x:Static services:Strings.Instance}}"
+                           Opacity="0.6" FontSize="12" Margin="0,10,0,0" HorizontalAlignment="Center" TextAlignment="Center"
+                           Visibility="{Binding CanContinue, Converter={StaticResource InverseBoolToVis}}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

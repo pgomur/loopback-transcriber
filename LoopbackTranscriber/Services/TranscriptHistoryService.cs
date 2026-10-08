@@ -28,10 +28,40 @@ public sealed class TranscriptHistoryService
             if (item is not null)
             {
                 items.Add(item);
+                continue;
+            }
+
+            foreach (var recordingDirectory in SafeGetDirectories(directory))
+            {
+                var nested = TryReadRecordingFolder(recordingDirectory);
+                if (nested is not null)
+                {
+                    items.Add(nested);
+                }
             }
         }
 
         return items.OrderByDescending(i => i.Timestamp).ToList();
+    }
+
+    public static string GetAppFolderName(string appName)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleaned = new string(appName.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim().TrimEnd('.');
+        return cleaned.Length == 0 ? "_" : cleaned;
+    }
+
+    private static string[] SafeGetDirectories(string directory)
+    {
+        try
+        {
+            return Directory.GetDirectories(directory);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"TranscriptHistoryService: no se pudo listar \"{directory}\"", ex);
+            return [];
+        }
     }
 
     private static TranscriptHistoryItem? TryReadRecordingFolder(string directory)
@@ -167,7 +197,7 @@ public sealed class TranscriptHistoryService
     private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
 
     private static readonly Regex TimestampSpeakerPrefixRegex =
-        new(@"^(?:Tu|Interlocutor)\s*:\s*", RegexOptions.Multiline | RegexOptions.Compiled);
+        new(@"^(?:Tu|Participantes|[^\r\n:]+? \(Tú\))\s*:\s*", RegexOptions.Multiline | RegexOptions.Compiled);
 
     private static string BuildPreview(string content)
     {
@@ -199,6 +229,14 @@ public sealed class TranscriptHistoryService
                 string.Equals(Path.GetFileName(directory), baseName, StringComparison.OrdinalIgnoreCase))
             {
                 Directory.Delete(directory, recursive: true);
+
+                var parent = Path.GetDirectoryName(directory);
+                if (!string.IsNullOrEmpty(parent) && Directory.Exists(parent) &&
+                    string.Equals(Path.GetFileName(parent), GetAppFolderName(item.AppName), StringComparison.OrdinalIgnoreCase) &&
+                    !Directory.EnumerateFileSystemEntries(parent).Any())
+                {
+                    Directory.Delete(parent);
+                }
             }
             else
             {

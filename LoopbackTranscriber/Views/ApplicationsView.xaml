@@ -33,18 +33,9 @@
                         <DataTemplate>
                             <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
                                     Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                <Grid MinHeight="32">
+                                    <TextBlock Text="{Binding DisplayName}"
                                                FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
-
-                                    <ui:Button Grid.Column="1" Content="{Binding Path=[AppsRemove], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
-                                               Command="{Binding DataContext.RemoveAppCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                               CommandParameter="{Binding}" />
                                 </Grid>
                             </Border>
                         </DataTemplate>

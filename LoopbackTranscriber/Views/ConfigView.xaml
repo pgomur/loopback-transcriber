@@ -8,11 +8,42 @@
              xmlns:services="clr-namespace:LoopbackTranscriber.Services"
              mc:Ignorable="d">
     <UserControl.Resources>
-        <conv:InverseBooleanConverter x:Key="InverseDownloadConverter" />
-        <conv:InverseBooleanConverter x:Key="InverseBoolConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
         <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
+
+        <Style x:Key="ConfigSectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="2,0,0,10" />
+        </Style>
+        <Style x:Key="ConfigSubsectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        <Style x:Key="ConfigSectionCardStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="Margin" Value="0,0,0,24" />
+        </Style>
+        <Style x:Key="ConfigFieldLabelStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Opacity" Value="0.8" />
+        </Style>
+        <Style x:Key="ConfigHintStyle" TargetType="TextBlock">
+            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="ConfigInnerDividerStyle" TargetType="Border">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="0,16,0,16" />
+            <Setter Property="Background" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -20,172 +51,142 @@
             <StackPanel Margin="0,0,20,0">
                 <TextBlock Text="{Binding Path=[ConfigTitle], Source={x:Static services:Strings.Instance}}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,20" />
 
-                <TextBlock Text="{Binding Path=[ConfigGeneralSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
+                <TextBlock Style="{StaticResource ConfigSectionHeaderStyle}"
+                           Text="{Binding Path=[ConfigGeneralSection], Source={x:Static services:Strings.Instance}}" />
+                <Border Style="{StaticResource ConfigSectionCardStyle}">
+                    <StackPanel>
+                        <StackPanel Margin="0,0,0,16">
+                            <TextBlock Style="{StaticResource ConfigFieldLabelStyle}"
+                                       Text="{Binding Path=[ConfigAppLanguageLabel], Source={x:Static services:Strings.Instance}}" />
+                            <ComboBox Width="200" HorizontalAlignment="Left"
+                                      ItemsSource="{Binding AvailableUiLanguages}"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectedValuePath="Code"
+                                      SelectedValue="{Binding UiLanguage, Mode=TwoWay}" />
+                        </StackPanel>
 
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="{Binding Path=[ConfigAppLanguageLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
-                    <ComboBox Width="200" HorizontalAlignment="Left"
-                              ItemsSource="{Binding AvailableUiLanguages}"
-                              DisplayMemberPath="DisplayName"
-                              SelectedValuePath="Code"
-                              SelectedValue="{Binding UiLanguage, Mode=TwoWay}" />
-                </StackPanel>
+                        <StackPanel Margin="0,0,0,16">
+                            <TextBlock Style="{StaticResource ConfigFieldLabelStyle}"
+                                       Text="{Binding Path=[ConfigUserNameLabel], Source={x:Static services:Strings.Instance}}" />
+                            <ui:TextBox Width="260" HorizontalAlignment="Left" MaxLength="20"
+                                        Text="{Binding UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="{Binding Path=[ConfigUserNamePlaceholder], Source={x:Static services:Strings.Instance}}" />
+                            <TextBlock Style="{StaticResource ConfigHintStyle}"
+                                       Text="{Binding Path=[ConfigUserNameHint], Source={x:Static services:Strings.Instance}}" />
+                        </StackPanel>
 
-                <StackPanel Margin="0,0,0,16">
-                    <ui:ToggleSwitch Content="{Binding Path=[ConfigTranslucentUiLabel], Source={x:Static services:Strings.Instance}}"
-                                     IsChecked="{Binding TranslucentUi, Mode=TwoWay}" />
-                </StackPanel>
-
-                <Border Height="1" Margin="0,0,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
-
-                <TextBlock Text="{Binding Path=[ConfigTranscriptionSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
-
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="{Binding Path=[ConfigModelLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
-
-                    <StackPanel Orientation="Horizontal">
-                        <ComboBox Width="150" HorizontalAlignment="Left"
-                                  ItemsSource="{Binding AvailableModelSizes}"
-                                  SelectedItem="{Binding ModelSize, Mode=TwoWay}" />
-                        <ui:Button Content="{Binding Path=[ConfigDownloadModel], Source={x:Static services:Strings.Instance}}" Margin="10,0,0,0"
-                                   Command="{Binding DownloadModelNowCommand}"
-                                   IsEnabled="{Binding IsDownloading, Converter={StaticResource InverseDownloadConverter}}" />
+                        <ui:ToggleSwitch Content="{Binding Path=[ConfigTranslucentUiLabel], Source={x:Static services:Strings.Instance}}"
+                                         IsChecked="{Binding TranslucentUi, Mode=TwoWay}" />
                     </StackPanel>
+                </Border>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
-                                 Fill="{Binding IsModelDownloaded, Converter={StaticResource BoolToStatusBrush}}" />
-                        <TextBlock Text="{Binding ModelStatusText}" Opacity="0.8" TextWrapping="Wrap" />
+                <TextBlock Style="{StaticResource ConfigSectionHeaderStyle}"
+                           Text="{Binding Path=[ConfigModelsSection], Source={x:Static services:Strings.Instance}}" />
+                <Border Style="{StaticResource ConfigSectionCardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource ConfigSubsectionHeaderStyle}"
+                                   Text="{Binding Path=[ConfigTranscriptionSection], Source={x:Static services:Strings.Instance}}" />
+
+                        <StackPanel>
+                            <TextBlock Text="{Binding Path=[ConfigTranscriptionModelName], Source={x:Static services:Strings.Instance}}"
+                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4" />
+                            <TextBlock Text="{Binding Path=[ConfigTranscriptionModelDescription], Source={x:Static services:Strings.Instance}}"
+                                       Margin="0,0,0,14" Opacity="0.8" TextWrapping="Wrap" />
+
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                         Fill="{Binding IsModelDownloaded, Converter={StaticResource BoolToStatusBrush}}" />
+                                <TextBlock Text="{Binding ModelStatusText}" Opacity="0.8" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <ui:Button x:Name="TranscriptionDownloadButton"
+                                           Content="{Binding Path=[ConfigDownloadModel], Source={x:Static services:Strings.Instance}}"
+                                           Command="{Binding DownloadModelNowCommand}"
+                                           IsEnabled="{Binding CanDownloadModel}" />
+                            </StackPanel>
+
+                            <ProgressBar Margin="0,10,0,0" Height="6" Width="{Binding ActualWidth, ElementName=TranscriptionDownloadButton}" HorizontalAlignment="Left"
+                                         Minimum="0" Maximum="100" Value="{Binding DownloadProgressPercent, Mode=OneWay}"
+                                         IsIndeterminate="{Binding IsProgressIndeterminate}"
+                                         Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
+
+                            <TextBlock Text="{Binding DownloadStatus}" Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+
+                        <Border Style="{StaticResource ConfigInnerDividerStyle}" />
+
+                        <TextBlock Style="{StaticResource ConfigSubsectionHeaderStyle}"
+                                   Text="{Binding Path=[ConfigSummarySection], Source={x:Static services:Strings.Instance}}" />
+
+                        <StackPanel>
+                            <TextBlock Text="{Binding Path=[ConfigSummaryModelName], Source={x:Static services:Strings.Instance}}"
+                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4" />
+                            <TextBlock Text="{Binding Path=[ConfigSummaryModelLabel], Source={x:Static services:Strings.Instance}}"
+                                       Margin="0,0,0,14" Opacity="0.8" TextWrapping="Wrap" />
+
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                         Fill="{Binding IsSummaryModelDownloaded, Converter={StaticResource BoolToStatusBrush}}" />
+                                <TextBlock Text="{Binding SummaryModelStatusText}" Opacity="0.8" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <ui:Button x:Name="SummaryDownloadButton"
+                                           Content="{Binding Path=[ConfigDownloadSummaryModel], Source={x:Static services:Strings.Instance}}"
+                                           Command="{Binding DownloadSummaryModelNowCommand}"
+                                           IsEnabled="{Binding CanDownloadSummaryModel}" />
+                            </StackPanel>
+
+                            <ProgressBar Margin="0,10,0,0" Height="6" Width="{Binding ActualWidth, ElementName=SummaryDownloadButton}" HorizontalAlignment="Left"
+                                         Minimum="0" Maximum="100" Value="{Binding SummaryDownloadProgressPercent, Mode=OneWay}"
+                                         IsIndeterminate="{Binding IsSummaryProgressIndeterminate}"
+                                         Visibility="{Binding IsDownloadingSummaryModel, Converter={StaticResource BoolToVis}}" />
+
+                            <TextBlock Text="{Binding SummaryDownloadStatus}" Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Visibility="{Binding IsDownloadingSummaryModel, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
                     </StackPanel>
+                </Border>
 
-                    <ProgressBar Margin="0,10,0,0" Height="6" Width="220" HorizontalAlignment="Left"
-                                 Minimum="0" Maximum="100" Value="{Binding DownloadProgressPercent, Mode=OneWay}"
-                                 IsIndeterminate="{Binding IsProgressIndeterminate}"
-                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
+                <TextBlock Style="{StaticResource ConfigSectionHeaderStyle}"
+                           Text="{Binding Path=[ConfigFoldersSection], Source={x:Static services:Strings.Instance}}" />
+                <Border Style="{StaticResource ConfigSectionCardStyle}" Margin="0,0,0,0">
+                    <StackPanel>
+                        <StackPanel Margin="0,0,0,16">
+                            <TextBlock Style="{StaticResource ConfigFieldLabelStyle}"
+                                       Text="{Binding Path=[ConfigModelsFolderLabel], Source={x:Static services:Strings.Instance}}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" IsReadOnly="True" Focusable="False" IsHitTestVisible="False" Text="{Binding ModelsFolder, Mode=OneWay}" />
+                                <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenModelsFolderCommand}" />
+                                <ui:Button Grid.Column="2" Content="{Binding Path=[ConfigChange], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding ChangeModelsFolderCommand}" />
+                            </Grid>
+                        </StackPanel>
 
-                    <TextBlock Text="{Binding DownloadStatus}" Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap"
-                               Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
-                </StackPanel>
-
-                <StackPanel Margin="0,0,0,4">
-                    <TextBlock Text="{Binding Path=[ConfigMeetingLanguageLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
-                    <ComboBox Width="260" HorizontalAlignment="Left"
-                              ItemsSource="{Binding AvailableLanguages}"
-                              DisplayMemberPath="DisplayName"
-                              SelectedValuePath="Code"
-                              SelectedValue="{Binding Language, Mode=TwoWay}" />
-                    <TextBlock Text="{Binding Path=[ConfigMeetingLanguageHint], Source={x:Static services:Strings.Instance}}"
-                               Opacity="0.6" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" />
-                </StackPanel>
-
-                <Border Height="1" Margin="0,20,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
-
-                <TextBlock Text="{Binding Path=[ConfigSummarySection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
-
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="{Binding Path=[ConfigSummaryModelName], Source={x:Static services:Strings.Instance}}"
-                               FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4" />
-                    <TextBlock Text="{Binding Path=[ConfigSummaryModelLabel], Source={x:Static services:Strings.Instance}}"
-                               Margin="0,0,0,10" Opacity="0.8" TextWrapping="Wrap" />
-
-                    <StackPanel Orientation="Horizontal">
-                        <ui:Button Content="{Binding Path=[ConfigDownloadSummaryModel], Source={x:Static services:Strings.Instance}}"
-                                   Command="{Binding DownloadSummaryModelNowCommand}"
-                                   IsEnabled="{Binding IsDownloadingSummaryModel, Converter={StaticResource InverseDownloadConverter}}" />
-                        <ui:Button Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenSummaryModelFolderCommand}" />
-                        <ui:Button Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
-                                   Command="{Binding DeleteSummaryModelCommand}"
-                                   Visibility="{Binding IsSummaryModelDownloaded, Converter={StaticResource BoolToVis}}" />
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource ConfigFieldLabelStyle}"
+                                       Text="{Binding Path=[ConfigTranscriptsFolderLabel], Source={x:Static services:Strings.Instance}}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" IsReadOnly="True" Focusable="False" IsHitTestVisible="False" Text="{Binding TranscriptsFolder, Mode=OneWay}" />
+                                <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenTranscriptsFolderCommand}" />
+                                <ui:Button Grid.Column="2" Content="{Binding Path=[ConfigChange], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding ChangeTranscriptsFolderCommand}" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource ConfigHintStyle}"
+                                       Text="{Binding Path=[ConfigSavedFilesHint], Source={x:Static services:Strings.Instance}}" />
+                        </StackPanel>
                     </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
-                                 Fill="{Binding IsSummaryModelDownloaded, Converter={StaticResource BoolToStatusBrush}}" />
-                        <TextBlock Text="{Binding SummaryModelStatusText}" Opacity="0.8" TextWrapping="Wrap" />
-                    </StackPanel>
-
-                    <ProgressBar Margin="0,10,0,0" Height="6" Width="220" HorizontalAlignment="Left"
-                                 Minimum="0" Maximum="100" Value="{Binding SummaryDownloadProgressPercent, Mode=OneWay}"
-                                 IsIndeterminate="{Binding IsSummaryProgressIndeterminate}"
-                                 Visibility="{Binding IsDownloadingSummaryModel, Converter={StaticResource BoolToVis}}" />
-
-                    <TextBlock Text="{Binding SummaryDownloadStatus}" Opacity="0.75" Margin="0,6,0,0" TextWrapping="Wrap"
-                               Visibility="{Binding IsDownloadingSummaryModel, Converter={StaticResource BoolToVis}}" />
-                </StackPanel>
-
-                <Border Height="1" Margin="0,0,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
-
-                <TextBlock Text="{Binding Path=[ConfigInstalledModelsSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
-
-                <TextBlock Text="{Binding Path=[ConfigNoModelsInstalled], Source={x:Static services:Strings.Instance}}"
-                           Opacity="0.6" Margin="0,0,0,16"
-                           Visibility="{Binding HasNoInstalledModels, Converter={StaticResource BoolToVis}}" />
-
-                <ItemsControl ItemsSource="{Binding InstalledModels}" Margin="0,0,0,4">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
-                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" />
-                                            <TextBlock Text="{Binding Path=[ConfigInUseSuffix], Source={x:Static services:Strings.Instance}}" FontSize="12" Opacity="0.6"
-                                                       Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}" />
-                                        </StackPanel>
-                                        <TextBlock Text="{Binding FileSizeText}" Opacity="0.6" FontSize="12" />
-                                    </StackPanel>
-
-                                    <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigUse], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
-                                               IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}"
-                                               Visibility="{Binding IsSummaryModel, Converter={StaticResource InverseBoolToVis}}"
-                                               Command="{Binding DataContext.UseModelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                               CommandParameter="{Binding}" />
-
-                                    <ui:Button Grid.Column="2" Content="{Binding Path=[Delete], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0"
-                                               Command="{Binding DataContext.DeleteModelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                               CommandParameter="{Binding}" />
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <Border Height="1" Margin="0,16,0,20" Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
-
-                <TextBlock Text="{Binding Path=[ConfigFoldersSection], Source={x:Static services:Strings.Instance}}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
-
-                <StackPanel Margin="0,0,0,12">
-                    <TextBlock Text="{Binding Path=[ConfigModelsFolderLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" Text="{Binding ModelsFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenModelsFolderCommand}" />
-                    </Grid>
-                </StackPanel>
-
-                <StackPanel Margin="0,0,0,12">
-                    <TextBlock Text="{Binding Path=[ConfigTranscriptsFolderLabel], Source={x:Static services:Strings.Instance}}" Margin="0,0,0,6" Opacity="0.8" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" Text="{Binding TranscriptsFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <ui:Button Grid.Column="1" Content="{Binding Path=[ConfigOpen], Source={x:Static services:Strings.Instance}}" Margin="8,0,0,0" Command="{Binding OpenTranscriptsFolderCommand}" />
-                    </Grid>
-                    <TextBlock Text="{Binding Path=[ConfigSavedFilesHint], Source={x:Static services:Strings.Instance}}"
-                               Opacity="0.6" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" />
-                </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LoopbackTranscriber.Interop;
@@ -22,11 +23,30 @@ public partial class ApplicationsViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasNoAddedApps = true;
 
+    private static readonly TimeSpan AutoRefreshInterval = TimeSpan.FromSeconds(2);
+
+    private readonly DispatcherTimer _autoRefreshTimer;
+
     public ApplicationsViewModel(CustomAppsService customAppsService)
     {
         _customAppsService = customAppsService;
 
+        _autoRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = AutoRefreshInterval };
+        _autoRefreshTimer.Tick += (_, _) => RefreshDetectedApps();
+
         RefreshFromDisk();
+    }
+
+    public void SetActive(bool isActive)
+    {
+        if (isActive)
+        {
+            _autoRefreshTimer.Start();
+        }
+        else
+        {
+            _autoRefreshTimer.Stop();
+        }
     }
 
     public void RefreshFromDisk()
@@ -67,12 +87,20 @@ public partial class ApplicationsViewModel : ObservableObject
             }
         }
 
-        foreach (var discovered in AudioSessionFinder.ListRunningApps())
+        var found = AudioSessionFinder.ListRunningApps()
+            .Where(discovered => !alreadyTracked.Contains(discovered.ProcessName))
+            .ToList();
+
+        if (found.Select(a => a.ProcessName).SequenceEqual(
+                DiscoveredApps.Select(a => a.ProcessName), StringComparer.OrdinalIgnoreCase))
         {
-            if (!alreadyTracked.Contains(discovered.ProcessName))
-            {
-                DiscoveredApps.Add(discovered);
-            }
+            return;
+        }
+
+        DiscoveredApps.Clear();
+        foreach (var discovered in found)
+        {
+            DiscoveredApps.Add(discovered);
         }
 
         HasNoDiscoveredApps = DiscoveredApps.Count == 0;
@@ -87,18 +115,6 @@ public partial class ApplicationsViewModel : ObservableObject
         }
 
         _customAppsService.AddApp(app.ProcessName, app.DisplayName);
-        RefreshFromDisk();
-    }
-
-    [RelayCommand]
-    private void RemoveApp(TargetApp? app)
-    {
-        if (app is null)
-        {
-            return;
-        }
-
-        _customAppsService.RemoveApp(app.Id);
         RefreshFromDisk();
     }
 

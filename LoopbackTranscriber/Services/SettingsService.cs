@@ -22,6 +22,7 @@ public sealed class SettingsService
                 var settings = JsonSerializer.Deserialize<AppSettings>(json);
                 if (settings is not null)
                 {
+                    settings.Language = "auto";
                     return settings;
                 }
             }

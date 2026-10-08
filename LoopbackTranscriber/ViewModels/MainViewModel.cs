@@ -46,11 +46,137 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<TranscriptHistoryItem> AppTranscriptHistory { get; } = [];
 
+    public ObservableCollection<TranscriptHistoryItem> FilteredTranscriptHistory { get; } = [];
+
     [ObservableProperty]
     private bool _hasSelectedAppHistoryItems;
 
     [ObservableProperty]
     private bool _hasAppHistoryItems;
+
+    [ObservableProperty]
+    private bool _isAppHistoryFilterOpen;
+
+    [ObservableProperty]
+    private DateTime? _appHistoryFilterFromDate;
+
+    [ObservableProperty]
+    private DateTime? _appHistoryFilterToDate;
+
+    [ObservableProperty]
+    private double? _appHistoryFilterMinDurationMinutes;
+
+    public bool HasActiveAppHistoryFilter =>
+        AppHistoryFilterFromDate is not null ||
+        AppHistoryFilterToDate is not null ||
+        AppHistoryFilterMinDurationMinutes is not null;
+
+    partial void OnAppHistoryFilterFromDateChanged(DateTime? value) => OnAppHistoryFilterCriteriaChanged();
+
+    partial void OnAppHistoryFilterToDateChanged(DateTime? value) => OnAppHistoryFilterCriteriaChanged();
+
+    partial void OnAppHistoryFilterMinDurationMinutesChanged(double? value) => OnAppHistoryFilterCriteriaChanged();
+
+    private void OnAppHistoryFilterCriteriaChanged()
+    {
+        OnPropertyChanged(nameof(HasActiveAppHistoryFilter));
+        RefreshAppTranscriptHistory();
+    }
+
+    [RelayCommand]
+    private void ToggleAppHistoryFilter() => IsAppHistoryFilterOpen = !IsAppHistoryFilterOpen;
+
+    [RelayCommand]
+    private void ApplyAppHistoryFilter()
+    {
+        RefreshAppTranscriptHistory();
+        IsAppHistoryFilterOpen = false;
+    }
+
+    [RelayCommand]
+    private void ClearAppHistoryFilter()
+    {
+        AppHistoryFilterFromDate = null;
+        AppHistoryFilterToDate = null;
+        AppHistoryFilterMinDurationMinutes = null;
+    }
+
+    [ObservableProperty]
+    private bool _isHistoryFilterOpen;
+
+    [ObservableProperty]
+    private DateTime? _historyFilterFromDate;
+
+    [ObservableProperty]
+    private DateTime? _historyFilterToDate;
+
+    [ObservableProperty]
+    private double? _historyFilterMinDurationMinutes;
+
+    public bool HasActiveHistoryFilter =>
+        HistoryFilterFromDate is not null ||
+        HistoryFilterToDate is not null ||
+        HistoryFilterMinDurationMinutes is not null;
+
+    partial void OnHistoryFilterFromDateChanged(DateTime? value) => OnHistoryFilterCriteriaChanged();
+
+    partial void OnHistoryFilterToDateChanged(DateTime? value) => OnHistoryFilterCriteriaChanged();
+
+    partial void OnHistoryFilterMinDurationMinutesChanged(double? value) => OnHistoryFilterCriteriaChanged();
+
+    private void OnHistoryFilterCriteriaChanged()
+    {
+        OnPropertyChanged(nameof(HasActiveHistoryFilter));
+        RefreshFilteredTranscriptHistory();
+    }
+
+    [RelayCommand]
+    private void ToggleHistoryFilter() => IsHistoryFilterOpen = !IsHistoryFilterOpen;
+
+    [RelayCommand]
+    private void ApplyHistoryFilter()
+    {
+        RefreshFilteredTranscriptHistory();
+        IsHistoryFilterOpen = false;
+    }
+
+    [RelayCommand]
+    private void ClearHistoryFilter()
+    {
+        HistoryFilterFromDate = null;
+        HistoryFilterToDate = null;
+        HistoryFilterMinDurationMinutes = null;
+    }
+
+    private void RefreshFilteredTranscriptHistory()
+    {
+        FilteredTranscriptHistory.Clear();
+
+        var matches = TranscriptHistory.AsEnumerable();
+
+        if (HistoryFilterFromDate is { } fromDate)
+        {
+            matches = matches.Where(h => h.Timestamp.Date >= fromDate.Date);
+        }
+
+        if (HistoryFilterToDate is { } toDate)
+        {
+            matches = matches.Where(h => h.Timestamp.Date <= toDate.Date);
+        }
+
+        if (HistoryFilterMinDurationMinutes is { } minDurationMinutes)
+        {
+            matches = matches.Where(h => h.Duration is { } duration && duration.TotalMinutes >= minDurationMinutes);
+        }
+
+        foreach (var item in matches)
+        {
+            FilteredTranscriptHistory.Add(item);
+        }
+
+        HasSelectedHistoryItems = FilteredTranscriptHistory.Any(i => i.IsSelected);
+        NotifyDeleteAvailabilityChanged();
+    }
 
     [ObservableProperty]
     private bool _hasHistoryItems;
@@ -65,10 +191,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private MainViewMode _currentView = MainViewMode.AppView;
 
     [ObservableProperty]
+    private FirstRunViewModel? _firstRunViewModel;
+
+    [ObservableProperty]
     private ConfigViewModel? _configViewModel;
 
     [ObservableProperty]
     private ApplicationsViewModel? _applicationsViewModel;
+
+    public bool IsFirstRunActive => CurrentView == MainViewMode.FirstRun;
 
     public bool IsAppViewActive => CurrentView == MainViewMode.AppView;
 
@@ -80,10 +211,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnCurrentViewChanged(MainViewMode value)
     {
+        OnPropertyChanged(nameof(IsFirstRunActive));
         OnPropertyChanged(nameof(IsAppViewActive));
         OnPropertyChanged(nameof(IsHistoryViewActive));
         OnPropertyChanged(nameof(IsConfigViewActive));
         OnPropertyChanged(nameof(IsApplicationsViewActive));
+        ApplicationsViewModel?.SetActive(value == MainViewMode.Applications);
+        RefreshTargetActiveStates();
     }
 
     [ObservableProperty]
@@ -114,6 +248,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool _isShowingSummaryTab;
 
     [ObservableProperty]
+    private bool _isViewedSummaryGenerating;
+
+    public bool ShowViewedIdleGenerate => !IsViewedSummaryGenerating && !HasViewedSummary;
+
+    public bool ShowViewedRegenerate => !IsViewedSummaryGenerating && HasViewedSummary;
+
+    public bool ShowViewedSummaryButton =>
+        IsShowingSummaryTab && !string.IsNullOrWhiteSpace(TranscriptText);
+
+    partial void OnIsShowingSummaryTabChanged(bool value) => OnPropertyChanged(nameof(ShowViewedSummaryButton));
+
+    partial void OnHasViewedSummaryChanged(bool value) => NotifyViewedSummaryButtonState();
+
+    partial void OnIsViewedSummaryGeneratingChanged(bool value) => NotifyViewedSummaryButtonState();
+
+    private void NotifyViewedSummaryButtonState()
+    {
+        OnPropertyChanged(nameof(ShowViewedIdleGenerate));
+        OnPropertyChanged(nameof(ShowViewedRegenerate));
+    }
+
+    [ObservableProperty]
     private string _elapsedText = "00:00";
 
     [ObservableProperty]
@@ -122,7 +278,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private double _transcriptionProgressPercent;
 
-    public bool CanToggleRecording => IsBusy == false && (IsRecording || (SelectedTarget?.IsRunning ?? false));
+    public bool CanToggleRecording =>
+        IsBusy == false && !IsSummaryGenerating && (IsRecording || (SelectedTarget?.IsRunning ?? false));
+
+    private int _summaryGenerationCount;
+
+    public bool IsSummaryGenerating => _summaryGenerationCount > 0;
+
+    public string? RecordDisabledReason =>
+        IsSummaryGenerating && !IsRecording ? Strings.Instance.Get("RecordBlockedBySummary") : null;
+
+    private void NotifySummaryActivityChanged()
+    {
+        OnPropertyChanged(nameof(IsSummaryGenerating));
+        OnPropertyChanged(nameof(RecordDisabledReason));
+        OnPropertyChanged(nameof(CanToggleRecording));
+        ToggleRecordingCommand.NotifyCanExecuteChanged();
+    }
 
     public string RecordButtonText => IsRecording ? Strings.Instance.Get("RecordStop") : Strings.Instance.Get("RecordStart");
 
@@ -175,7 +347,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
             LoadTranscriptHistoryFromDisk();
         };
 
-        ShowConfig();
+        InitializeFirstRunOrShowApp();
+    }
+
+    private void InitializeFirstRunOrShowApp()
+    {
+        var settings = _settingsService.Load();
+
+        var transcriptionModelPath = new AppSettings { ModelSize = "turbo", ModelsFolder = settings.ModelsFolder }.GetModelFilePath();
+        var summaryModelPath = new AppSettings { ModelsFolder = settings.ModelsFolder }.GetSummaryModelFilePath();
+
+        if (File.Exists(transcriptionModelPath) && File.Exists(summaryModelPath))
+        {
+            if (!settings.FirstRunSetupCompleted)
+            {
+                settings.FirstRunSetupCompleted = true;
+                _settingsService.Save(settings);
+            }
+
+            SelectedTarget ??= Targets.FirstOrDefault();
+            CurrentView = MainViewMode.AppView;
+            return;
+        }
+
+        ShowFirstRunSetup();
     }
 
     public void Start()
@@ -314,11 +509,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedTargetChanged(TargetItemViewModel? value)
     {
+        RefreshTargetActiveStates();
+
         TranscriptText = string.Empty;
         _viewedTranscriptFilePath = null;
         ClearViewedSummary();
 
         ApplyTargetSelection(value);
+    }
+
+    private void RefreshTargetActiveStates()
+    {
+        var activeTarget = CurrentView == MainViewMode.AppView ? SelectedTarget : null;
+
+        foreach (var target in Targets)
+        {
+            target.IsActive = target == activeTarget;
+        }
     }
     private void ApplyTargetSelection(TargetItemViewModel? value)
     {
@@ -347,6 +554,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (CurrentView != MainViewMode.AppView)
+        {
+            TranscriptText = string.Empty;
+            _viewedTranscriptFilePath = null;
+            ClearViewedSummary();
+        }
+
         SelectedTarget = target;
         ApplyTargetSelection(target);
     }
@@ -366,7 +580,24 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        foreach (var item in TranscriptHistory.Where(h => h.AppName == SelectedTarget.DisplayName))
+        var matches = TranscriptHistory.Where(h => h.AppName == SelectedTarget.DisplayName);
+
+        if (AppHistoryFilterFromDate is { } fromDate)
+        {
+            matches = matches.Where(h => h.Timestamp.Date >= fromDate.Date);
+        }
+
+        if (AppHistoryFilterToDate is { } toDate)
+        {
+            matches = matches.Where(h => h.Timestamp.Date <= toDate.Date);
+        }
+
+        if (AppHistoryFilterMinDurationMinutes is { } minDurationMinutes)
+        {
+            matches = matches.Where(h => h.Duration is { } duration && duration.TotalMinutes >= minDurationMinutes);
+        }
+
+        foreach (var item in matches)
         {
             item.IsSelected = false;
             item.PropertyChanged += OnAppHistoryItemPropertyChanged;
@@ -379,6 +610,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (e.PropertyName == nameof(TranscriptHistoryItem.IsSelected))
         {
             HasSelectedAppHistoryItems = AppTranscriptHistory.Any(i => i.IsSelected);
+        }
+
+        if (e.PropertyName is nameof(TranscriptHistoryItem.IsSelected) or nameof(TranscriptHistoryItem.IsGeneratingSummary))
+        {
+            NotifyDeleteAvailabilityChanged();
         }
     }
 
@@ -394,7 +630,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (e.PropertyName == nameof(TranscriptHistoryItem.IsSelected))
         {
-            HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
+            HasSelectedHistoryItems = FilteredTranscriptHistory.Any(i => i.IsSelected);
+        }
+
+        if (e.PropertyName is nameof(TranscriptHistoryItem.IsSelected) or nameof(TranscriptHistoryItem.IsGeneratingSummary))
+        {
+            NotifyDeleteAvailabilityChanged();
         }
     }
 
@@ -426,6 +667,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         RefreshAppTranscriptHistory();
+        RefreshFilteredTranscriptHistory();
     }
 
     private void EnsureTranscriptsWatcher(string folder)
@@ -494,6 +736,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         LoadTranscriptHistoryFromDisk();
         CurrentView = MainViewMode.History;
+    }
+
+    private void ShowFirstRunSetup()
+    {
+        if (FirstRunViewModel is null)
+        {
+            FirstRunViewModel = new FirstRunViewModel(_settingsService, _whisper, _summarizer);
+            FirstRunViewModel.SetupCompleted += OnFirstRunSetupCompleted;
+        }
+
+        CurrentView = MainViewMode.FirstRun;
+    }
+
+    private void OnFirstRunSetupCompleted(object? sender, EventArgs e)
+    {
+        var settings = _settingsService.Load();
+        settings.FirstRunSetupCompleted = true;
+        _settingsService.Save(settings);
+
+        ShowConfig();
     }
 
     [RelayCommand]
@@ -766,8 +1028,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 : micSegments;
 
             var orderedSegments = otherSegments
-                .Select(s => (s.Start, Speaker: "Interlocutor", s.Text))
-                .Concat(filteredMicSegments.Select(s => (Start: s.Start + micStartOffset, Speaker: "Tu", s.Text)))
+                .Select(s => (s.Start, Speaker: "Participantes", s.Text))
+                .Concat(filteredMicSegments.Select(s => (Start: s.Start + micStartOffset, Speaker: SelfSpeakerLabel(settings.UserName), s.Text)))
                 .OrderBy(s => s.Start)
                 .Where(s => s.Text.Trim().Length > 0)
                 .ToList();
@@ -825,7 +1087,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 var recordedAt = DateTime.Now;
                 var baseName = $"{SelectedTarget?.DisplayName ?? "reunion"}_{recordedAt:yyyyMMdd_HHmmss}";
-                var recordingFolder = Path.Combine(settings.TranscriptsFolder, baseName);
+                var appFolderName = TranscriptHistoryService.GetAppFolderName(SelectedTarget?.DisplayName ?? "reunion");
+                var recordingFolder = Path.Combine(settings.TranscriptsFolder, appFolderName, baseName);
                 Directory.CreateDirectory(recordingFolder);
 
                 var markdownTitle = SelectedTarget?.DisplayName ?? "Reunion";
@@ -844,19 +1107,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
                 _viewedTranscriptFilePath = Path.Combine(recordingFolder, baseName + ".md");
 
-                StatusText = hasMicTrack
-                    ? Strings.Instance.Get("StatusTranscriptReadySaved")
-                    : Strings.Instance.Get("StatusTranscriptReadySavedNoMic");
-
-                AppendTranscriptionBenchmarkLog(settings, recordingDuration, transcriptionStopwatch.Elapsed, hasMicTrack, _microphoneRecorder.LastUsedDeviceName);
-                var speedFactor = transcriptionStopwatch.Elapsed.TotalSeconds > 0.1
-                    ? recordingDuration.TotalSeconds / transcriptionStopwatch.Elapsed.TotalSeconds
-                    : 0;
-                StatusText += " " + Strings.Instance.Format("StatusTranscriptionTiming",
-                    settings.ModelSize,
-                    (int)recordingDuration.TotalSeconds,
-                    (int)transcriptionStopwatch.Elapsed.TotalSeconds,
-                    speedFactor.ToString("0.0", CultureInfo.InvariantCulture));
+                StatusText = Strings.Instance.Get("StatusTranscriptReadySaved");
 
                 LoadTranscriptHistoryFromDisk();
             }
@@ -986,6 +1237,33 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ShowSummaryTab() => IsShowingSummaryTab = true;
 
+    [RelayCommand]
+    private async Task RegenerateViewedSummaryAsync()
+    {
+        if (_viewedTranscriptFilePath is null || IsViewedSummaryGenerating)
+        {
+            return;
+        }
+
+        var item = TranscriptHistory.FirstOrDefault(h =>
+            string.Equals(h.FilePath, _viewedTranscriptFilePath, StringComparison.OrdinalIgnoreCase));
+
+        if (item is null)
+        {
+            return;
+        }
+
+        IsViewedSummaryGenerating = true;
+        try
+        {
+            await GenerateSummaryAsync(item);
+        }
+        finally
+        {
+            IsViewedSummaryGenerating = false;
+        }
+    }
+
     private void ClearViewedTranscriptIfDeleted(TranscriptHistoryItem item)
     {
         if (_viewedTranscriptFilePath is not null &&
@@ -1034,6 +1312,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         item.IsGeneratingSummary = true;
+        _summaryGenerationCount++;
+        NotifySummaryActivityChanged();
 
         try
         {
@@ -1061,6 +1341,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         finally
         {
             item.IsGeneratingSummary = false;
+            _summaryGenerationCount--;
+            NotifySummaryActivityChanged();
         }
     }
 
@@ -1077,10 +1359,36 @@ public partial class MainViewModel : ObservableObject, IDisposable
         return false;
     }
 
+    private static List<TranscriptHistoryItem> ExcludeItemsBeingSummarized(List<TranscriptHistoryItem> selected) =>
+        selected.Where(i => !i.IsGeneratingSummary).ToList();
+
+    public bool CanDeleteSelectedApp => !AppTranscriptHistory.Any(i => i.IsSelected && i.IsGeneratingSummary);
+
+    public bool CanDeleteSelected => !FilteredTranscriptHistory.Any(i => i.IsSelected && i.IsGeneratingSummary);
+
+    public string? DeleteSelectedAppDisabledReason =>
+        CanDeleteSelectedApp ? null : Strings.Instance.Get("DeleteBlockedBySummaryBody");
+
+    public string? DeleteSelectedDisabledReason =>
+        CanDeleteSelected ? null : Strings.Instance.Get("DeleteBlockedBySummaryBody");
+
+    private void NotifyDeleteAvailabilityChanged()
+    {
+        OnPropertyChanged(nameof(CanDeleteSelectedApp));
+        OnPropertyChanged(nameof(CanDeleteSelected));
+        OnPropertyChanged(nameof(DeleteSelectedAppDisabledReason));
+        OnPropertyChanged(nameof(DeleteSelectedDisabledReason));
+    }
+
     [RelayCommand]
     private void DeleteTranscript(TranscriptHistoryItem? item)
     {
         if (item is null)
+        {
+            return;
+        }
+
+        if (item.IsGeneratingSummary)
         {
             return;
         }
@@ -1103,14 +1411,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         TranscriptHistory.Remove(item);
         ClearViewedTranscriptIfDeleted(item);
-        HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
         RefreshAppTranscriptHistory();
+        RefreshFilteredTranscriptHistory();
     }
 
     [RelayCommand]
     private void DeleteSelectedAppTranscripts()
     {
-        var selected = AppTranscriptHistory.Where(i => i.IsSelected).ToList();
+        var selected = ExcludeItemsBeingSummarized(AppTranscriptHistory.Where(i => i.IsSelected).ToList());
         if (selected.Count == 0)
         {
             return;
@@ -1137,14 +1445,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
         }
 
-        HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
         RefreshAppTranscriptHistory();
+        RefreshFilteredTranscriptHistory();
     }
 
     [RelayCommand]
     private void DeleteSelectedTranscripts()
     {
-        var selected = TranscriptHistory.Where(i => i.IsSelected).ToList();
+        var selected = ExcludeItemsBeingSummarized(FilteredTranscriptHistory.Where(i => i.IsSelected).ToList());
         if (selected.Count == 0)
         {
             return;
@@ -1171,44 +1479,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
         }
 
-        HasSelectedHistoryItems = TranscriptHistory.Any(i => i.IsSelected);
         RefreshAppTranscriptHistory();
+        RefreshFilteredTranscriptHistory();
     }
 
-    private static void AppendTranscriptionBenchmarkLog(AppSettings settings, TimeSpan recordingDuration,
-        TimeSpan transcriptionElapsed, bool hasMicTrack, string? micDeviceName)
+    private static string SelfSpeakerLabel(string? userName)
     {
-        try
-        {
-            var speedFactor = transcriptionElapsed.TotalSeconds > 0.1
-                ? recordingDuration.TotalSeconds / transcriptionElapsed.TotalSeconds
-                : 0;
-
-            var logPath = Path.Combine(settings.TranscriptsFolder, "benchmarks_transcripcion.log");
-            var line = string.Join("\t",
-                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                $"modelo={settings.ModelSize}",
-                $"con_microfono={hasMicTrack}",
-                $"dispositivo_microfono={micDeviceName ?? "(ninguno)"}",
-                $"audio_segundos={(int)recordingDuration.TotalSeconds}",
-                $"transcripcion_segundos={(int)transcriptionElapsed.TotalSeconds}",
-                $"veces_tiempo_real={speedFactor.ToString("0.0", CultureInfo.InvariantCulture)}");
-
-            Directory.CreateDirectory(settings.TranscriptsFolder);
-            File.AppendAllText(logPath, line + Environment.NewLine);
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("MainViewModel.AppendTranscriptionBenchmarkLog: no se pudo escribir el log de tiempos", ex);
-        }
+        var cleaned = string.Join(' ', (userName ?? string.Empty)
+            .Replace(':', ' ')
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return cleaned.Length == 0 ? "Tu" : $"{cleaned} (Tú)";
     }
 
     private static readonly Regex ChatSpeakerPrefixRegex =
-        new(@"^(Tu|Interlocutor)\s*:\s*", RegexOptions.Compiled);
+        new(@"^(Tu|Participantes|[^\r\n:]+? \(Tú\))\s*:\s*", RegexOptions.Compiled);
 
     partial void OnTranscriptTextChanged(string value)
     {
         TranscriptMessages = ParseTranscriptMessages(value);
+        OnPropertyChanged(nameof(ShowViewedSummaryButton));
     }
 
     private static ObservableCollection<TranscriptMessage> ParseTranscriptMessages(string text)

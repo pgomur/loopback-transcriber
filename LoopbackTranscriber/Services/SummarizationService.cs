@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -16,6 +18,8 @@ public sealed class SummarizationService : IDisposable
 
     private const string ModelDownloadUrl =
         "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf";
+
+    private const int DownloadBufferSize = 1024 * 1024;
 
     private const int ContextSize = 8192;
     private const int MaxTranscriptCharacters = 9000;
@@ -56,18 +60,39 @@ public sealed class SummarizationService : IDisposable
 
         try
         {
+            var resumeFrom = File.Exists(tempPath) ? new FileInfo(tempPath).Length : 0;
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, ModelDownloadUrl);
+            if (resumeFrom > 0)
+            {
+                request.Headers.Range = new RangeHeaderValue(resumeFrom, null);
+            }
+
             using var response = await HttpClient
-                .GetAsync(ModelDownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
+
+            var isResuming = resumeFrom > 0 && response.StatusCode == HttpStatusCode.PartialContent;
+            if (!isResuming)
+            {
+                resumeFrom = 0;
+            }
+
             response.EnsureSuccessStatusCode();
 
-            var totalBytes = response.Content.Headers.ContentLength;
+            long? totalBytes = isResuming
+                ? response.Content.Headers.ContentRange?.Length ?? (resumeFrom + response.Content.Headers.ContentLength)
+                : response.Content.Headers.ContentLength;
 
             await using var httpStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            await using var fileStream = File.Create(tempPath);
+            await using var fileStream = isResuming
+                ? new FileStream(tempPath, FileMode.Append, FileAccess.Write, FileShare.None, DownloadBufferSize,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan)
+                : new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, DownloadBufferSize,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-            var buffer = new byte[81920];
-            long totalRead = 0;
+            var buffer = new byte[DownloadBufferSize];
+            long totalRead = resumeFrom;
             var stopwatch = Stopwatch.StartNew();
             int read;
 
@@ -95,6 +120,10 @@ public sealed class SummarizationService : IDisposable
                     progress?.Report(Strings.Instance.Format("SummaryModelDownloadingBytes", FormatBytes(totalRead)));
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
@@ -215,8 +244,8 @@ public sealed class SummarizationService : IDisposable
         return "<|im_start|>system\n" +
                "Eres un asistente que extrae los puntos mas importantes de fragmentos de una transcripcion larga de una llamada. " +
                "Se te da UNA parte de la transcripcion completa (parte " + partNumber + " de " + totalParts + "). " +
-               "Cada turno de palabra de la transcripcion empieza con la etiqueta real de quien habla (\"Tu\" para el propio usuario, " +
-               "\"Interlocutor\" para el resto de personas, todas juntas sin distinguir entre ellas); si no hay ninguna etiqueta y es " +
+               "Cada turno de palabra de la transcripcion empieza con la etiqueta real de quien habla (\"Tu\" para el propio usuario, o \"Nombre (Tú)\" si el usuario ha indicado su nombre, " +
+               "\"Participantes\" para el resto de personas, todas juntas sin distinguir entre ellas); si no hay ninguna etiqueta y es " +
                "solo texto corrido, toda la grabacion viene de una unica fuente y no hay dos hablantes que distinguir. " +
                "Responde SOLO con una lista breve de los puntos, datos, cifras, objetivos, compromisos y proximos pasos mas relevantes de " +
                "ESTA parte, cada uno en su propia linea empezando por \"- \". " +
@@ -303,13 +332,14 @@ public sealed class SummarizationService : IDisposable
                "al estilo de un asistente de reuniones con IA: no un resumen de una linea, sino uno completo por secciones que alguien pueda " +
                "leer en vez de la transcripcion entera. " +
                "La transcripcion (o los puntos clave extraidos de ella) indica quien dijo cada cosa con una etiqueta real delante de cada " +
-               "turno de palabra: \"Tu\" para el propio usuario, \"Interlocutor\" para el resto de personas (todas juntas, sin distinguir " +
+               "turno de palabra: \"Tu\" para el propio usuario (o \"Nombre (Tú)\" si el usuario ha indicado su nombre, que es su nombre real), " +
+               "\"Participantes\" para el resto de personas (todas juntas, sin distinguir " +
                "entre ellas). Usa SIEMPRE esas dos etiquetas exactamente como aparecen en el texto para decir quien dijo o quien va a hacer " +
                "algo; nunca inventes nombres de personas ni \"Hablante 1\"/\"Hablante 2\", esas etiquetas no existen en este texto. " +
-               "Si la transcripcion NO trae ninguna etiqueta \"Tu\"/\"Interlocutor\" en absoluto y es solo texto corrido, es porque toda " +
+               "Si la transcripcion NO trae ninguna etiqueta \"Tu\"/\"Participantes\" en absoluto y es solo texto corrido, es porque toda " +
                "la grabacion viene de una unica fuente (por ejemplo el audio de un stream ajeno grabado por loopback, sin microfono " +
                "propio de por medio): en ese caso no hay dos hablantes que distinguir, asi que redacta el resumen sin asignar nada a " +
-               "\"Tu\" ni a \"Interlocutor\" (ni a ningun otro nombre inventado); simplemente describe lo que se dijo. " +
+               "\"Tu\" ni a \"Participantes\" (ni a ningun otro nombre inventado); simplemente describe lo que se dijo. " +
                "Si el texto trae puntos marcados con \"[TAREA]\", \"[OBJETIVO]\" o \"[PROXIMO_PASO]\", usalos como base para las secciones " +
                "\"Tareas:\", \"Objetivos:\" y \"Proximos pasos:\" respectivamente (sin incluir la marca en el texto final), pero aplica " +
                "igualmente el mismo criterio estricto de mas abajo. " +
@@ -351,8 +381,8 @@ public sealed class SummarizationService : IDisposable
                "aparecer en Tareas. Si la conversacion no deja claro que sigue despues, omite esta seccion por completo. " +
                "(6) SOLO si alguien se compromete EXPLICITAMENTE a hacer algo concreto o quedan en hacerlo (por ejemplo \"voy a mandarte el enlace\", " +
                "\"quedamos en llamarnos manana\"), una linea \"Tareas:\" seguida de cada una en su propia linea empezando por \"- \", con la " +
-               "etiqueta real de quien se compromete delante, tal cual aparece en la transcripcion (por ejemplo \"- Interlocutor: va a mandar el " +
-               "enlace\" o \"- Tu: vas a llamar manana\"); si la transcripcion NO trae ninguna etiqueta \"Tu\"/\"Interlocutor\" en absoluto (una unica " +
+               "etiqueta real de quien se compromete delante, tal cual aparece en la transcripcion (por ejemplo \"- Participantes: va a mandar el " +
+               "enlace\" o \"- Tu: vas a llamar manana\"); si la transcripcion NO trae ninguna etiqueta \"Tu\"/\"Participantes\" en absoluto (una unica " +
                "fuente, sin distincion de hablante), no inventes una etiqueta que no existe: escribe la tarea directamente, sin nombrar a nadie " +
                "delante (por ejemplo \"- Va a compartir unas fotos por Instagram\"). " +
                "Cuando si hay etiqueta, ponerla siempre es igual que en un acta de reunion donde cada accion tiene un responsable. " +
@@ -383,7 +413,7 @@ public sealed class SummarizationService : IDisposable
                "si la transcripcion no trae ninguna etiqueta, ver el criterio (6) de Tareas mas abajo). " +
                "Esto aplica igual a un alias generico (\"la persona\", \"el usuario\", \"el interlocutor\", \"el hablante\"...) puesto delante " +
                "de cada punto como sustituto de la etiqueta real: si vas a repetirlo en varios puntos seguidos, es el MISMO problema (una " +
-               "muletilla que se repite) aunque la palabra en si no sea \"Interlocutor\". En una conversacion de una sola persona, el sujeto " +
+               "muletilla que se repite) aunque la palabra en si no sea \"Participantes\". En una conversacion de una sola persona, el sujeto " +
                "se sobreentiende: escribe los puntos empezando directamente por lo que paso o lo que quiso decir (\"No consiguio la edicion " +
                "especial de Zelda\", \"Esta esperando un restock\"), sin necesidad de nombrar a nadie al principio de cada linea. " +
                "No uses markdown (nada de # ni **), usa solo el guion \"-\" para las listas. " +
@@ -583,6 +613,11 @@ public sealed class SummarizationService : IDisposable
         {
             AppLog.Warn($"SummarizationService: no se pudo borrar el fichero temporal \"{path}\"", ex);
         }
+    }
+
+    public static void DiscardPartialDownload(string destinationPath)
+    {
+        TryDeleteFile(destinationPath + ".download");
     }
 
     public void Dispose()

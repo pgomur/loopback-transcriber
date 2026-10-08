@@ -1,10 +1,12 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
@@ -19,14 +21,16 @@ namespace LoopbackTranscriber
 
     public partial class MainWindow
     {
+        private static readonly Brush FirstRunTitleBarBrush = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D));
+
         private readonly MainViewModel _viewModel;
-        private bool _isHistoryExpanded;
-        private bool _isHistoryPageExpanded;
+        private bool _translucentUiEnabled;
 
         public MainWindow()
         {
             var settingsService = new SettingsService();
             Strings.Instance.SetLanguage(settingsService.Load().UiLanguage);
+            ApplyCalendarCulture(Strings.Instance.Language);
 
             InitializeComponent();
 
@@ -48,7 +52,8 @@ namespace LoopbackTranscriber
 
             DataContext = _viewModel;
 
-            ApplyTranslucency(settingsService.Load().TranslucentUi);
+            _translucentUiEnabled = settingsService.Load().TranslucentUi;
+            ApplyTranslucency(_translucentUiEnabled);
             UiPreferences.TranslucentUiChanged += OnTranslucentUiChanged;
 
             foreach (var target in _viewModel.Targets)
@@ -58,34 +63,81 @@ namespace LoopbackTranscriber
 
             _viewModel.Targets.CollectionChanged += OnTargetsCollectionChanged;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            Strings.Instance.LanguageChanged += OnAppLanguageChangedForCalendar;
+
+            ApplyFirstRunTitleBarOverrideIfNeeded();
 
             _viewModel.Start();
+            Closing += (_, e) =>
+            {
+                if (_viewModel.IsSummaryGenerating)
+                {
+                    var answer = System.Windows.MessageBox.Show(
+                        Strings.Instance.Get("CloseDuringSummaryBody"),
+                        Strings.Instance.Get("CloseDuringSummaryTitle"),
+                        System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+
+                    if (answer != System.Windows.MessageBoxResult.Yes)
+                    {
+                        e.Cancel = true;
+                    }
+                }
+            };
             Closed += (_, _) =>
             {
                 _viewModel.Targets.CollectionChanged -= OnTargetsCollectionChanged;
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
                 UiPreferences.TranslucentUiChanged -= OnTranslucentUiChanged;
+                Strings.Instance.LanguageChanged -= OnAppLanguageChangedForCalendar;
                 _viewModel.Dispose();
             };
         }
 
-        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void OnAppLanguageChangedForCalendar(object? sender, EventArgs e) => ApplyCalendarCulture(Strings.Instance.Language);
+
+        private static readonly System.Collections.Generic.Dictionary<string, string> LanguageToCulture = new()
         {
-            if (e.PropertyName == nameof(MainViewModel.HasAppHistoryItems) &&
-                !_viewModel.HasAppHistoryItems && _isHistoryExpanded)
+            ["es"] = "es-ES",
+            ["en"] = "en-US",
+            ["pt"] = "pt-PT",
+            ["de"] = "de-DE",
+            ["ru"] = "ru-RU",
+        };
+
+        private void ApplyCalendarCulture(string language)
+        {
+            var cultureName = LanguageToCulture.TryGetValue(language, out var mapped) ? mapped : "en-US";
+
+            try
             {
-                _isHistoryExpanded = false;
-                AnimateExpander(HistoryExpanderContent, HistoryExpanderChevronRotation, expand: false, maxContentHeight: 280);
+                var culture = new CultureInfo(cultureName);
+                System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+                System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+
+                Language = XmlLanguage.GetLanguage(culture.IetfLanguageTag);
             }
-            else if (e.PropertyName == nameof(MainViewModel.HasHistoryItems) &&
-                     !_viewModel.HasHistoryItems && _isHistoryPageExpanded)
+            catch (CultureNotFoundException)
             {
-                _isHistoryPageExpanded = false;
-                AnimateExpander(HistoryPageExpanderContent, HistoryPageExpanderChevronRotation, expand: false, maxContentHeight: 280);
             }
         }
 
-        private void OnTranslucentUiChanged(object? sender, bool enabled) => ApplyTranslucency(enabled);
+        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MainViewModel.IsFirstRunActive))
+            {
+                ApplyFirstRunTitleBarOverrideIfNeeded();
+            }
+        }
+
+        private void OnTranslucentUiChanged(object? sender, bool enabled)
+        {
+            _translucentUiEnabled = enabled;
+
+            if (!_viewModel.IsFirstRunActive)
+            {
+                ApplyTranslucency(enabled);
+            }
+        }
 
         private void ApplyTranslucency(bool enabled)
         {
@@ -98,6 +150,19 @@ namespace LoopbackTranscriber
             RootTitleBar.Background = background;
             ContentBackgroundGrid.Background = background;
             AppsNavigationView.Background = background;
+        }
+
+        private void ApplyFirstRunTitleBarOverrideIfNeeded()
+        {
+            if (_viewModel.IsFirstRunActive)
+            {
+                WindowBackdropType = WindowBackdropType.None;
+                RootTitleBar.Background = FirstRunTitleBarBrush;
+            }
+            else
+            {
+                ApplyTranslucency(_translucentUiEnabled);
+            }
         }
 
         private void OnTargetsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -182,83 +247,94 @@ namespace LoopbackTranscriber
                 Converter = new InverseBooleanConverter()
             });
 
+            item.SetBinding(NavigationViewItem.IsActiveProperty, new Binding(nameof(TargetItemViewModel.IsActive))
+            {
+                Source = target
+            });
+
             return item;
         }
 
-        private void HistoryExpanderHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void HistoryDatePicker_CalendarOpened(object? sender, RoutedEventArgs e)
         {
-            if (!_viewModel.HasAppHistoryItems)
+            if (sender is not FrameworkElement ownerElement)
             {
                 return;
             }
 
-            _isHistoryExpanded = !_isHistoryExpanded;
+            const int maxAttempts = 10;
 
-            if (!_isHistoryExpanded)
+            void HighlightToday(int attempt)
             {
-                _viewModel.ClearAppHistorySelection();
+                var popup = FindVisualChild<System.Windows.Controls.Primitives.Popup>(ownerElement);
+                var popupContent = popup?.Child as DependencyObject;
+                var found = false;
+
+                if (popupContent is not null)
+                {
+                    var todayBrush = Application.Current.TryFindResource("AccentFillColorTertiaryBrush") as Brush
+                        ?? new SolidColorBrush(Color.FromRgb(0x4A, 0x1E, 0x98));
+                    var todayForeground = Brushes.White;
+
+                    foreach (var dayButton in FindVisualChildren<System.Windows.Controls.Primitives.CalendarDayButton>(popupContent))
+                    {
+                        if (dayButton.IsToday)
+                        {
+                            dayButton.Background = todayBrush;
+                            dayButton.Foreground = todayForeground;
+                            dayButton.FontWeight = FontWeights.Bold;
+                            found = true;
+                        }
+                    }
+                }
+
+                if (!found && attempt < maxAttempts)
+                {
+                    Dispatcher.BeginInvoke(new Action(() => HighlightToday(attempt + 1)), System.Windows.Threading.DispatcherPriority.ContextIdle);
+                }
             }
 
-            AnimateExpander(HistoryExpanderContent, HistoryExpanderChevronRotation, _isHistoryExpanded, maxContentHeight: 280);
+            Dispatcher.BeginInvoke(new Action(() => HighlightToday(0)), System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 
-        private void HistoryPageExpanderHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
-            if (!_viewModel.HasHistoryItems)
+            var childCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (var i = 0; i < childCount; i++)
             {
-                return;
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typedChild)
+                {
+                    return typedChild;
+                }
+
+                var result = FindVisualChild<T>(child);
+                if (result is not null)
+                {
+                    return result;
+                }
             }
 
-            _isHistoryPageExpanded = !_isHistoryPageExpanded;
-
-            if (!_isHistoryPageExpanded)
-            {
-                _viewModel.ClearHistorySelection();
-            }
-
-            AnimateExpander(HistoryPageExpanderContent, HistoryPageExpanderChevronRotation, _isHistoryPageExpanded, maxContentHeight: 280);
+            return null;
         }
 
-        private static void AnimateExpander(FrameworkElement content, RotateTransform chevronRotation, bool expand, double maxContentHeight)
+        private static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
         {
-            const int durationMs = 220;
-
-            content.BeginAnimation(HeightProperty, null);
-
-            var startHeight = content.ActualHeight;
-            double targetHeight;
-
-            if (expand)
+            var childCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (var i = 0; i < childCount; i++)
             {
-                content.Height = double.NaN;
-                content.Measure(new Size(
-                    content.ActualWidth > 0 ? content.ActualWidth : double.PositiveInfinity,
-                    double.PositiveInfinity));
-                targetHeight = System.Math.Min(content.DesiredSize.Height, maxContentHeight);
-                content.Height = startHeight;
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typedChild)
+                {
+                    yield return typedChild;
+                }
+
+                foreach (var descendant in FindVisualChildren<T>(child))
+                {
+                    yield return descendant;
+                }
             }
-            else
-            {
-                targetHeight = 0;
-            }
-
-            var heightAnimation = new DoubleAnimation
-            {
-                From = startHeight,
-                To = targetHeight,
-                Duration = TimeSpan.FromMilliseconds(durationMs),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut },
-                FillBehavior = FillBehavior.HoldEnd
-            };
-            content.BeginAnimation(HeightProperty, heightAnimation);
-
-            var rotateAnimation = new DoubleAnimation
-            {
-                To = expand ? 180.0 : 0.0,
-                Duration = TimeSpan.FromMilliseconds(durationMs),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
-            };
-            chevronRotation.BeginAnimation(RotateTransform.AngleProperty, rotateAnimation);
         }
+
     }
 }

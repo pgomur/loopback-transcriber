@@ -14,6 +14,9 @@ public partial class TargetItemViewModel : ObservableObject
     private bool _isRunning;
 
     [ObservableProperty]
+    private bool _isActive;
+
+    [ObservableProperty]
     private uint _processId;
 
     public TargetItemViewModel(TargetApp app)

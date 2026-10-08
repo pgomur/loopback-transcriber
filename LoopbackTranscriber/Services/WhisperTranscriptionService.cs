@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Linq;
+using NAudio.Wave;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using Whisper.net;
@@ -18,6 +21,8 @@ public sealed class WhisperTranscriptionService
 
     private const string HuggingFaceRepository = "https://huggingface.co/sandrohanea/whisper.net/resolve";
     private const string ModelVersion = "v5";
+
+    private const int DownloadBufferSize = 1024 * 1024;
 
     public static GgmlType ParseModelSize(string modelSize) => modelSize.Trim().ToLowerInvariant() switch
     {
@@ -76,7 +81,7 @@ public sealed class WhisperTranscriptionService
 
         if (!downloadedWithProgress)
         {
-            progress?.Report(Strings.Instance.Format("ProgressDownloadingModel", modelSize));
+            progress?.Report(Strings.Instance.Get("ProgressDownloadingModel"));
 
             await using (var modelStream = await WhisperGgmlDownloader.Default
                              .GetGgmlModelAsync(ggmlType, cancellationToken: cancellationToken)
@@ -98,20 +103,40 @@ public sealed class WhisperTranscriptionService
         try
         {
             var url = GetModelUrl(type);
+            var resumeFrom = File.Exists(tempPath) ? new FileInfo(tempPath).Length : 0;
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            if (resumeFrom > 0)
+            {
+                request.Headers.Range = new RangeHeaderValue(resumeFrom, null);
+            }
 
             using var response = await HttpClient
-                .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
+
+            var isResuming = resumeFrom > 0 && response.StatusCode == HttpStatusCode.PartialContent;
+            if (!isResuming)
+            {
+                resumeFrom = 0;
+            }
+
             response.EnsureSuccessStatusCode();
 
-            var totalBytes = response.Content.Headers.ContentLength;
+            long? totalBytes = isResuming
+                ? response.Content.Headers.ContentRange?.Length ?? (resumeFrom + response.Content.Headers.ContentLength)
+                : response.Content.Headers.ContentLength;
 
             await using var httpStream = await response.Content.ReadAsStreamAsync(cancellationToken)
                 .ConfigureAwait(false);
-            await using var fileStream = File.Create(tempPath);
+            await using var fileStream = isResuming
+                ? new FileStream(tempPath, FileMode.Append, FileAccess.Write, FileShare.None, DownloadBufferSize,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan)
+                : new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, DownloadBufferSize,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-            var buffer = new byte[81920];
-            long totalRead = 0;
+            var buffer = new byte[DownloadBufferSize];
+            long totalRead = resumeFrom;
             var stopwatch = Stopwatch.StartNew();
             int read;
 
@@ -131,16 +156,20 @@ public sealed class WhisperTranscriptionService
                 {
                     var percent = Math.Min(100.0, totalRead * 100.0 / totalBytes.Value);
                     percentProgress?.Report(percent);
-                    progress?.Report(Strings.Instance.Format("ProgressDownloadingWithPercent", modelSize,
+                    progress?.Report(Strings.Instance.Format("ProgressDownloadingWithPercent",
                         $"{percent:0}", FormatBytes(totalRead), FormatBytes(totalBytes.Value)));
                 }
                 else
                 {
-                    progress?.Report(Strings.Instance.Format("ProgressDownloadingBytes", modelSize, FormatBytes(totalRead)));
+                    progress?.Report(Strings.Instance.Format("ProgressDownloadingBytes", FormatBytes(totalRead)));
                 }
             }
 
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -162,12 +191,57 @@ public sealed class WhisperTranscriptionService
         }
     }
 
+    public static void DiscardPartialDownload(string destinationPath)
+    {
+        var tempPath = destinationPath + ".download";
+        try
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"WhisperTranscriptionService: no se pudo borrar el fichero temporal \"{tempPath}\"", ex);
+        }
+    }
+
     public sealed record TranscriptSegment(TimeSpan Start, TimeSpan End, string Text);
 
     private static readonly Regex NonSpeechTagRegex =
         new(@"^[\[\(][A-Za-z_ ]+[\]\)]$", RegexOptions.Compiled);
 
     private const float NoSpeechProbThreshold = 0.6f;
+
+    private const float HallucinationNoSpeechSoftThreshold = 0.3f;
+
+    private static readonly HashSet<string> KnownHallucinatedPhrases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "thank you",
+        "thank you very much",
+        "thank you so much",
+        "thanks for watching",
+        "thank you for watching",
+        "please subscribe",
+        "subscribe to my channel",
+        "like and subscribe",
+        "bye",
+        "bye bye",
+        "goodbye",
+        "gracias",
+        "muchas gracias",
+        "gracias por ver el video",
+        "subtitulos realizados por la comunidad de amara.org",
+        "subtitles by the amara.org community",
+        "you",
+    };
+
+    private static bool IsKnownHallucinatedPhrase(string text)
+    {
+        var normalized = text.Trim(WordTrimChars).Trim();
+        return KnownHallucinatedPhrases.Contains(normalized);
+    }
 
     private static readonly TimeSpan MaxMergeGap = TimeSpan.FromSeconds(2);
     private const int MaxMergedSegmentLength = 400;
@@ -244,10 +318,55 @@ public sealed class WhisperTranscriptionService
         return Math.Clamp(perInstance, 2, 16);
     }
 
+    private const double SilentAudioPeakDbfsThreshold = -50.0;
+
+    private static bool IsEffectivelySilent(string wavPath)
+    {
+        try
+        {
+            using var reader = new AudioFileReader(wavPath);
+            ISampleProvider sampleProvider = reader;
+
+            var buffer = new float[4096];
+            var peak = 0f;
+            int read;
+            while ((read = sampleProvider.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                for (var i = 0; i < read; i++)
+                {
+                    var abs = Math.Abs(buffer[i]);
+                    if (abs > peak)
+                    {
+                        peak = abs;
+                    }
+                }
+            }
+
+            if (peak <= 0f)
+            {
+                return true;
+            }
+
+            var peakDbfs = 20.0 * Math.Log10(peak);
+            return peakDbfs <= SilentAudioPeakDbfsThreshold;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"WhisperTranscriptionService.IsEffectivelySilent: no se pudo analizar el audio en {wavPath}", ex);
+            return false;
+        }
+    }
+
     public async Task<List<TranscriptSegment>> TranscribeSegmentsAsync(string wavPath, string modelPath,
         string language, int threadCount, bool useGpu = true, IProgress<int>? percentProgress = null,
         CancellationToken cancellationToken = default)
     {
+        if (IsEffectivelySilent(wavPath))
+        {
+            percentProgress?.Report(100);
+            return new List<TranscriptSegment>();
+        }
+
         using var whisperFactory = WhisperFactory.FromPath(modelPath, new WhisperFactoryOptions { UseGpu = useGpu });
 
         var lastReportedPercent = -1;
@@ -282,6 +401,11 @@ public sealed class WhisperTranscriptionService
             }
 
             if (result.NoSpeechProbability >= NoSpeechProbThreshold)
+            {
+                continue;
+            }
+
+            if (result.NoSpeechProbability >= HallucinationNoSpeechSoftThreshold && IsKnownHallucinatedPhrase(text))
             {
                 continue;
             }
