@@ -245,6 +245,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private string _viewedSummaryText = string.Empty;
 
     [ObservableProperty]
+    private IReadOnlyList<SummarySection> _viewedSummarySections = [];
+
+    partial void OnViewedSummaryTextChanged(string value) =>
+        ViewedSummarySections = SummaryFormatter.Parse(value);
+
+    [ObservableProperty]
     private bool _isShowingSummaryTab;
 
     [ObservableProperty]
@@ -385,6 +391,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private void OnAppLanguageChanged(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(RecordButtonText));
+        ViewedSummarySections = SummaryFormatter.Parse(ViewedSummaryText);
 
         if (!IsRecording && !IsBusy && SelectedTarget is not null)
         {

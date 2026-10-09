@@ -42,15 +42,22 @@ public sealed partial class TranscriptHistoryItem : ObservableObject
 
     public string DisplayTitle => HasSummary && !string.IsNullOrWhiteSpace(SummaryTitle) ? SummaryTitle! : AppName;
 
+    public bool ShowAppName => HasSummary && !string.IsNullOrWhiteSpace(SummaryTitle);
+
     partial void OnIsGeneratingSummaryChanged(bool value) => NotifySummaryButtonState();
 
     partial void OnHasSummaryChanged(bool value)
     {
         NotifySummaryButtonState();
         OnPropertyChanged(nameof(DisplayTitle));
+        OnPropertyChanged(nameof(ShowAppName));
     }
 
-    partial void OnSummaryTitleChanged(string? value) => OnPropertyChanged(nameof(DisplayTitle));
+    partial void OnSummaryTitleChanged(string? value)
+    {
+        OnPropertyChanged(nameof(DisplayTitle));
+        OnPropertyChanged(nameof(ShowAppName));
+    }
 
     private void NotifySummaryButtonState()
     {
