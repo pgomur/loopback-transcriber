@@ -35,6 +35,23 @@ public sealed class SettingsService
         return new AppSettings();
     }
 
+    public void EnsureDefaultUserName()
+    {
+        var settings = Load();
+        if (settings.UserNameInitialized)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(settings.UserName))
+        {
+            settings.UserName = SystemUserName.Detect();
+        }
+
+        settings.UserNameInitialized = true;
+        Save(settings);
+    }
+
     public void Save(AppSettings settings)
     {
         var directory = Path.GetDirectoryName(SettingsPath);

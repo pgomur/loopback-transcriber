@@ -29,6 +29,7 @@ namespace LoopbackTranscriber
         public MainWindow()
         {
             var settingsService = new SettingsService();
+            settingsService.EnsureDefaultUserName();
             Strings.Instance.SetLanguage(settingsService.Load().UiLanguage);
             ApplyCalendarCulture(Strings.Instance.Language);
 
