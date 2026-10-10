@@ -785,7 +785,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (ApplicationsViewModel is null)
         {
-            ApplicationsViewModel = new ApplicationsViewModel(_customAppsService);
+            ApplicationsViewModel = new ApplicationsViewModel(_customAppsService, _settingsService, _transcriptHistoryService);
         }
         else
         {

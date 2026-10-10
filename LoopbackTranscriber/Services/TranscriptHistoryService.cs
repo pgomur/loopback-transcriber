@@ -51,6 +51,39 @@ public sealed class TranscriptHistoryService
         return cleaned.Length == 0 ? "_" : cleaned;
     }
 
+    public bool HasTranscripts(string transcriptsFolder, string appName)
+    {
+        try
+        {
+            if (!Directory.Exists(transcriptsFolder))
+            {
+                return false;
+            }
+
+            var appFolder = Path.Combine(transcriptsFolder, GetAppFolderName(appName));
+            if (Directory.Exists(appFolder) && Directory.EnumerateDirectories(appFolder).Any())
+            {
+                return true;
+            }
+
+            foreach (var directory in Directory.EnumerateDirectories(transcriptsFolder))
+            {
+                var match = TranscriptFileNamePattern.Match(Path.GetFileName(directory));
+                if (match.Success &&
+                    string.Equals(match.Groups["app"].Value, appName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"TranscriptHistoryService.HasTranscripts: no se pudo comprobar \"{appName}\"", ex);
+        }
+
+        return false;
+    }
+
     private static string[] SafeGetDirectories(string directory)
     {
         try

@@ -12,10 +12,12 @@ namespace LoopbackTranscriber.ViewModels;
 public partial class ApplicationsViewModel : ObservableObject
 {
     private readonly CustomAppsService _customAppsService;
+    private readonly SettingsService _settingsService;
+    private readonly TranscriptHistoryService _transcriptHistoryService;
 
     public ObservableCollection<DiscoveredApp> DiscoveredApps { get; } = [];
 
-    public ObservableCollection<TargetApp> AddedApps { get; } = [];
+    public ObservableCollection<AddedAppItem> AddedApps { get; } = [];
 
     [ObservableProperty]
     private bool _hasNoDiscoveredApps = true;
@@ -27,9 +29,14 @@ public partial class ApplicationsViewModel : ObservableObject
 
     private readonly DispatcherTimer _autoRefreshTimer;
 
-    public ApplicationsViewModel(CustomAppsService customAppsService)
+    public ApplicationsViewModel(
+        CustomAppsService customAppsService,
+        SettingsService settingsService,
+        TranscriptHistoryService transcriptHistoryService)
     {
         _customAppsService = customAppsService;
+        _settingsService = settingsService;
+        _transcriptHistoryService = transcriptHistoryService;
 
         _autoRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = AutoRefreshInterval };
         _autoRefreshTimer.Tick += (_, _) => RefreshDetectedApps();
@@ -58,9 +65,24 @@ public partial class ApplicationsViewModel : ObservableObject
     private void RefreshAddedApps()
     {
         AddedApps.Clear();
+        var transcriptsFolder = _settingsService.Load().TranscriptsFolder;
+        foreach (var app in TargetApp.All)
+        {
+            AddedApps.Add(new AddedAppItem
+            {
+                App = app,
+                CanRemove = false,
+                IsBuiltIn = true
+            });
+        }
+
         foreach (var app in _customAppsService.CustomApps)
         {
-            AddedApps.Add(app);
+            AddedApps.Add(new AddedAppItem
+            {
+                App = app,
+                CanRemove = !_transcriptHistoryService.HasTranscripts(transcriptsFolder, app.DisplayName)
+            });
         }
 
         HasNoAddedApps = AddedApps.Count == 0;
@@ -68,8 +90,6 @@ public partial class ApplicationsViewModel : ObservableObject
 
     private void RefreshDetectedApps()
     {
-        DiscoveredApps.Clear();
-
         var alreadyTracked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var app in TargetApp.All)
         {
@@ -115,6 +135,24 @@ public partial class ApplicationsViewModel : ObservableObject
         }
 
         _customAppsService.AddApp(app.ProcessName, app.DisplayName);
+        RefreshFromDisk();
+    }
+
+    [RelayCommand]
+    private void RemoveApp(AddedAppItem? item)
+    {
+        if (item is null || !item.CanRemove)
+        {
+            return;
+        }
+
+        if (_transcriptHistoryService.HasTranscripts(_settingsService.Load().TranscriptsFolder, item.DisplayName))
+        {
+            RefreshFromDisk();
+            return;
+        }
+
+        _customAppsService.RemoveApp(item.App.Id);
         RefreshFromDisk();
     }
 
