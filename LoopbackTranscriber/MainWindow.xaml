@@ -10,7 +10,7 @@
         xmlns:services="clr-namespace:LoopbackTranscriber.Services"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
-        Title="Loopback Transcriber" Height="900" Width="1400" MinHeight="768" MinWidth="1024"
+        Title="Loopback Transcriber" Height="900" Width="1400" MinHeight="850" MinWidth="1300"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
@@ -91,17 +91,12 @@
 
         <Style x:Key="SpinningIconStyle" TargetType="ui:SymbolIcon">
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <RotateTransform Angle="0" />
-                </Setter.Value>
-            </Setter>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsGeneratingSummary}" Value="True">
+                <DataTrigger Binding="{Binding IsViewedSummaryGenerating}" Value="True">
                     <DataTrigger.EnterActions>
                         <BeginStoryboard x:Name="SpinningIconStoryboard">
                             <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle"
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
                                                  From="0" To="360" Duration="0:0:1" RepeatBehavior="Forever" />
                             </Storyboard>
                         </BeginStoryboard>
@@ -286,8 +281,14 @@
                                         <TextBlock Text="{Binding Path=[GenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding IsViewedSummaryGenerating, Converter={StaticResource BoolToVis}}">
-                                        <ui:SymbolIcon Symbol="ArrowSync20" FontSize="14" Margin="0,0,6,0" Style="{StaticResource SpinningIconStyle}" />
+                                        <ui:SymbolIcon Symbol="ArrowSync20" FontSize="14" Margin="0,0,6,0" Style="{StaticResource SpinningIconStyle}">
+                                            <ui:SymbolIcon.RenderTransform>
+                                                <RotateTransform Angle="0" />
+                                            </ui:SymbolIcon.RenderTransform>
+                                        </ui:SymbolIcon>
                                         <TextBlock Text="{Binding Path=[GenerateSummaryButtonBusy], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding ViewedSummaryProgressPercent, StringFormat={}{0:0}%}" VerticalAlignment="Center"
+                                                   Margin="4,0,0,0" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding ShowViewedRegenerate, Converter={StaticResource BoolToVis}}">
                                         <ui:SymbolIcon Symbol="CheckmarkCircle20" FontSize="14" Margin="0,0,6,0" Opacity="0.7" />
@@ -560,8 +561,14 @@
                                         <TextBlock Text="{Binding Path=[GenerateSummaryButton], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding IsViewedSummaryGenerating, Converter={StaticResource BoolToVis}}">
-                                        <ui:SymbolIcon Symbol="ArrowSync20" FontSize="14" Margin="0,0,6,0" Style="{StaticResource SpinningIconStyle}" />
+                                        <ui:SymbolIcon Symbol="ArrowSync20" FontSize="14" Margin="0,0,6,0" Style="{StaticResource SpinningIconStyle}">
+                                            <ui:SymbolIcon.RenderTransform>
+                                                <RotateTransform Angle="0" />
+                                            </ui:SymbolIcon.RenderTransform>
+                                        </ui:SymbolIcon>
                                         <TextBlock Text="{Binding Path=[GenerateSummaryButtonBusy], Source={x:Static services:Strings.Instance}}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding ViewedSummaryProgressPercent, StringFormat={}{0:0}%}" VerticalAlignment="Center"
+                                                   Margin="4,0,0,0" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding ShowViewedRegenerate, Converter={StaticResource BoolToVis}}">
                                         <ui:SymbolIcon Symbol="CheckmarkCircle20" FontSize="14" Margin="0,0,6,0" Opacity="0.7" />

@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Whisper.net;
 using Whisper.net.Ggml;
@@ -367,6 +368,38 @@ public sealed class WhisperTranscriptionService
             return new List<TranscriptSegment>();
         }
 
+        var job = new WhisperJob
+        {
+            WavPath = wavPath,
+            ModelPath = modelPath,
+            Language = language,
+            ThreadCount = threadCount,
+            UseGpu = useGpu
+        };
+
+        var resultJson = await WorkerProcess.RunAsync("whisper", JsonSerializer.Serialize(job),
+                value => percentProgress?.Report((int)Math.Round(value)), cancellationToken)
+            .ConfigureAwait(false);
+
+        var result = JsonSerializer.Deserialize<WhisperJobResult>(resultJson)
+                     ?? throw new InvalidOperationException(Strings.Instance.Get("ErrorBackgroundProcessStart"));
+
+        if (!string.IsNullOrEmpty(result.Error))
+        {
+            throw new InvalidOperationException(result.Error);
+        }
+
+        MemoryTrimmer.ReleaseInBackground();
+
+        return result.Segments
+            .Select(s => new TranscriptSegment(TimeSpan.FromTicks(s.StartTicks), TimeSpan.FromTicks(s.EndTicks), s.Text))
+            .ToList();
+    }
+
+    internal async Task<List<TranscriptSegment>> TranscribeSegmentsInProcessAsync(string wavPath, string modelPath,
+        string language, int threadCount, bool useGpu = true, IProgress<int>? percentProgress = null,
+        CancellationToken cancellationToken = default)
+    {
         using var whisperFactory = WhisperFactory.FromPath(modelPath, new WhisperFactoryOptions { UseGpu = useGpu });
 
         var lastReportedPercent = -1;

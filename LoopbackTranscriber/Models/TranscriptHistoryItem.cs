@@ -28,6 +28,9 @@ public sealed partial class TranscriptHistoryItem : ObservableObject
     private bool _isGeneratingSummary;
 
     [ObservableProperty]
+    private double _summaryProgressPercent;
+
+    [ObservableProperty]
     private bool _hasSummary;
 
     [ObservableProperty]

@@ -36,7 +36,7 @@ public sealed class ProcessLoopbackRecorder : IDisposable
     {
         if (IsRecording)
         {
-            throw new InvalidOperationException("Ya hay una grabacion en curso.");
+            throw new InvalidOperationException(Strings.Instance.Get("ErrorRecordingAlreadyRunning"));
         }
 
         _audioClient = await Wasapi.ActivateProcessLoopbackAsync(processId, includeProcessTree)
@@ -93,7 +93,7 @@ public sealed class ProcessLoopbackRecorder : IDisposable
     {
         if (!IsRecording)
         {
-            throw new InvalidOperationException("No hay ninguna grabacion en curso.");
+            throw new InvalidOperationException(Strings.Instance.Get("ErrorNoRecordingRunning"));
         }
 
         IsRecording = false;
@@ -105,7 +105,7 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         _captureError = null;
         if (error is not null)
         {
-            throw new InvalidOperationException("Error durante la captura de audio.", error);
+            throw new InvalidOperationException(Strings.Instance.Get("ErrorAudioCapture"), error);
         }
 
         return path;

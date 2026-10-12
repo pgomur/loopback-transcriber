@@ -25,10 +25,17 @@ namespace LoopbackTranscriber
 
         private readonly MainViewModel _viewModel;
         private bool _translucentUiEnabled;
+        private readonly SettingsService _settingsService;
+        private TrayIconService? _trayIcon;
+        private Views.TrayMenuWindow? _trayMenu;
+        private bool _allowClose;
+        private bool _hiddenToTray;
+        private WindowState _stateBeforeMinimize = WindowState.Normal;
 
         public MainWindow()
         {
             var settingsService = new SettingsService();
+            _settingsService = settingsService;
             settingsService.EnsureDefaultUserName();
             Strings.Instance.SetLanguage(settingsService.Load().UiLanguage);
             ApplyCalendarCulture(Strings.Instance.Language);
@@ -69,8 +76,22 @@ namespace LoopbackTranscriber
             ApplyFirstRunTitleBarOverrideIfNeeded();
 
             _viewModel.Start();
+
+            _trayIcon = new TrayIconService(RestoreFromTray, ShowTrayMenu, GetTrayTooltip());
+            StateChanged += OnWindowStateChanged;
+            ContentRendered += OnFirstContentRendered;
+            Strings.Instance.LanguageChanged += OnTrayLanguageChanged;
+            Application.Current.SessionEnding += OnSessionEnding;
+
             Closing += (_, e) =>
             {
+                if (!_allowClose)
+                {
+                    e.Cancel = true;
+                    HideToTray();
+                    return;
+                }
+
                 if (_viewModel.IsSummaryGenerating)
                 {
                     var answer = System.Windows.MessageBox.Show(
@@ -81,11 +102,18 @@ namespace LoopbackTranscriber
                     if (answer != System.Windows.MessageBoxResult.Yes)
                     {
                         e.Cancel = true;
+                        _allowClose = false;
                     }
                 }
             };
             Closed += (_, _) =>
             {
+                StateChanged -= OnWindowStateChanged;
+                Strings.Instance.LanguageChanged -= OnTrayLanguageChanged;
+                Application.Current.SessionEnding -= OnSessionEnding;
+                _trayMenu?.CloseMenu();
+                _trayIcon?.Dispose();
+                _trayIcon = null;
                 _viewModel.Targets.CollectionChanged -= OnTargetsCollectionChanged;
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
                 UiPreferences.TranslucentUiChanged -= OnTranslucentUiChanged;
@@ -127,6 +155,231 @@ namespace LoopbackTranscriber
             if (e.PropertyName == nameof(MainViewModel.IsFirstRunActive))
             {
                 ApplyFirstRunTitleBarOverrideIfNeeded();
+            }
+            else if (e.PropertyName is nameof(MainViewModel.IsRecording) or nameof(MainViewModel.SelectedTarget))
+            {
+                _trayIcon?.SetRecording(_viewModel.IsRecording);
+                _trayIcon?.SetTooltip(GetTrayTooltip());
+            }
+        }
+
+        private void OnFirstContentRendered(object? sender, EventArgs e)
+        {
+            ContentRendered -= OnFirstContentRendered;
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(4));
+                MemoryTrimmer.Release();
+            });
+        }
+
+        private void OnTrayLanguageChanged(object? sender, EventArgs e) => _trayIcon?.SetTooltip(GetTrayTooltip());
+
+        private void OnSessionEnding(object sender, SessionEndingCancelEventArgs e) => _allowClose = true;
+
+        private void OnWindowStateChanged(object? sender, EventArgs e)
+        {
+            if (WindowState == WindowState.Minimized)
+            {
+                _trayIcon?.SetTooltip(GetTrayTooltip());
+                _trayIcon?.Show();
+                MemoryTrimmer.ReleaseInBackground();
+            }
+            else
+            {
+                _stateBeforeMinimize = WindowState;
+
+                if (!_hiddenToTray)
+                {
+                    _trayIcon?.Hide();
+                }
+            }
+        }
+
+        private string GetTrayTooltip()
+        {
+            return _viewModel.IsRecording && _viewModel.SelectedTarget is { } target
+                ? Strings.Instance.Format("TrayTooltipRecording", target.DisplayName)
+                : Strings.Instance.Get("TrayTooltipIdle");
+        }
+
+        private void HideToTray()
+        {
+            if (_hiddenToTray)
+            {
+                return;
+            }
+
+            _hiddenToTray = true;
+            Hide();
+            MemoryTrimmer.ReleaseInBackground();
+
+            if (_trayIcon is null)
+            {
+                return;
+            }
+
+            _trayIcon.SetTooltip(GetTrayTooltip());
+            _trayIcon.Show();
+            ShowTrayHintOnce();
+        }
+
+        private void ShowTrayHintOnce()
+        {
+            var settings = _settingsService.Load();
+            if (settings.TrayHintShown)
+            {
+                return;
+            }
+
+            settings.TrayHintShown = true;
+            _settingsService.Save(settings);
+
+            _trayIcon?.ShowBalloon(
+                Strings.Instance.Get("TrayHintTitle"),
+                Strings.Instance.Get("TrayHintBody"));
+        }
+
+        private void RestoreFromTray()
+        {
+            _hiddenToTray = false;
+            _trayIcon?.Hide();
+
+            if (!IsVisible)
+            {
+                Show();
+            }
+
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = _stateBeforeMinimize;
+            }
+
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (handle != IntPtr.Zero)
+            {
+                if (IsIconic(handle))
+                {
+                    ShowWindow(handle, SwRestore);
+                }
+
+                SetForegroundWindow(handle);
+            }
+
+            Activate();
+        }
+
+        private const int SwRestore = 9;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        private void ExitFromTray()
+        {
+            if (_viewModel.IsRecording)
+            {
+                var answer = System.Windows.MessageBox.Show(
+                    Strings.Instance.Get("ExitDuringRecordingBody"),
+                    Strings.Instance.Get("ExitDuringRecordingTitle"),
+                    System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+
+                if (answer != System.Windows.MessageBoxResult.Yes)
+                {
+                    return;
+                }
+            }
+
+            _allowClose = true;
+            Close();
+        }
+
+        private void ShowTrayMenu(int cursorX, int cursorY)
+        {
+            _trayMenu?.CloseMenu();
+
+            var menu = new Views.TrayMenuWindow(BuildTrayMenu());
+            _trayMenu = menu;
+            menu.Closed += (_, _) =>
+            {
+                if (ReferenceEquals(_trayMenu, menu))
+                {
+                    _trayMenu = null;
+                }
+            };
+
+            menu.ShowAt(cursorX, cursorY);
+        }
+
+        private IReadOnlyList<TrayMenuEntry> BuildTrayMenu()
+        {
+            var entries = new List<TrayMenuEntry>
+            {
+                new(Strings.Instance.Get("TrayOpen"), true, RestoreFromTray, Icon: "WindowNew20", IsDefault: true),
+                TrayMenuEntry.Separator
+            };
+
+            if (!_viewModel.IsFirstRunActive)
+            {
+                if (_viewModel.IsRecording)
+                {
+                    var recordingName = _viewModel.SelectedTarget?.DisplayName ?? string.Empty;
+                    entries.Add(new(
+                        Strings.Instance.Format("TrayRecordingStatus", recordingName),
+                        false,
+                        null,
+                        IsStatus: true,
+                        LiveText: () => _viewModel.ElapsedText));
+                    entries.Add(new(
+                        Strings.Instance.Format("TrayStopRecording", recordingName),
+                        _viewModel.CanToggleRecording,
+                        () =>
+                        {
+                            RestoreFromTray();
+                            RunTrayAction(_viewModel.StopRecordingFromTrayAsync);
+                        },
+                        Icon: Views.TrayMenuWindow.StopGlyph));
+                }
+                else
+                {
+                    foreach (var target in _viewModel.Targets.ToList())
+                    {
+                        var captured = target;
+                        entries.Add(new(
+                            Strings.Instance.Format("TrayStartRecording", captured.DisplayName),
+                            _viewModel.CanStartRecordingFor(captured),
+                            () => RunTrayAction(() => _viewModel.StartRecordingForAsync(captured)),
+                            Icon: Views.TrayMenuWindow.RecordGlyph));
+                    }
+
+                    if (_viewModel.RecordDisabledReason is { } reason)
+                    {
+                        entries.Add(new(reason, false, null));
+                    }
+                }
+
+                entries.Add(TrayMenuEntry.Separator);
+            }
+
+            entries.Add(new(Strings.Instance.Get("TrayExit"), true, ExitFromTray, Icon: "ArrowExit20"));
+            return entries;
+        }
+
+        private static async void RunTrayAction(Func<Task> action)
+        {
+            try
+            {
+                await action();
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("MainWindow.RunTrayAction: fallo al ejecutar la accion de la bandeja", ex);
             }
         }
 
@@ -193,7 +446,7 @@ namespace LoopbackTranscriber
 
         private NavigationViewItem CreateTargetMenuItem(TargetItemViewModel target)
         {
-            var symbol = target.App.Id == "teams" ? SymbolRegular.PeopleTeam24 : SymbolRegular.AppGeneric24;
+            var symbol = target.App.Id == "teams" ? SymbolRegular.PeopleTeam24 : SymbolRegular.AppsAddIn24;
 
             var icon = new SymbolIcon
             {

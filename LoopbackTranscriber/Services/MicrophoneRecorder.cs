@@ -24,7 +24,7 @@ public sealed class MicrophoneRecorder : IDisposable
     {
         if (_isRecording)
         {
-            throw new InvalidOperationException("Ya hay una grabacion de microfono en curso.");
+            throw new InvalidOperationException(Strings.Instance.Get("ErrorRecordingAlreadyRunning"));
         }
 
         MMDevice micDevice;

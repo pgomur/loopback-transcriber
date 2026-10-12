@@ -25,6 +25,8 @@ public sealed class AppSettings
 
     public bool UserNameInitialized { get; set; }
 
+    public bool TrayHintShown { get; set; }
+
     public bool FirstRunSetupCompleted { get; set; }
 
     public List<CustomTargetAppSettings> CustomApps { get; set; } = [];

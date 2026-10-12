@@ -267,7 +267,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnHasViewedSummaryChanged(bool value) => NotifyViewedSummaryButtonState();
 
-    partial void OnIsViewedSummaryGeneratingChanged(bool value) => NotifyViewedSummaryButtonState();
+    partial void OnIsViewedSummaryGeneratingChanged(bool value)
+    {
+        if (!value)
+        {
+            ViewedSummaryProgressPercent = 0;
+        }
+
+        NotifyViewedSummaryButtonState();
+    }
+
+    [ObservableProperty]
+    private double _viewedSummaryProgressPercent;
 
     private void NotifyViewedSummaryButtonState()
     {
@@ -808,6 +819,32 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    public bool CanStartRecordingFor(TargetItemViewModel target) =>
+        !IsFirstRunActive && !IsRecording && !IsBusy && !IsSummaryGenerating && target.IsRunning;
+
+    public async Task StartRecordingForAsync(TargetItemViewModel target)
+    {
+        if (!CanStartRecordingFor(target))
+        {
+            return;
+        }
+
+        SelectTargetCommand.Execute(target);
+
+        if (ToggleRecordingCommand.CanExecute(null))
+        {
+            await ToggleRecordingCommand.ExecuteAsync(null);
+        }
+    }
+
+    public async Task StopRecordingFromTrayAsync()
+    {
+        if (IsRecording && ToggleRecordingCommand.CanExecute(null))
+        {
+            await ToggleRecordingCommand.ExecuteAsync(null);
+        }
+    }
+
     private async Task StartRecordingAsync()
     {
         if (SelectedTarget is null || !SelectedTarget.IsRunning)
@@ -1130,6 +1167,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         finally
         {
             IsBusy = false;
+            MemoryTrimmer.ReleaseInBackground();
             IsTranscribingActive = false;
             OnPropertyChanged(nameof(CanToggleRecording));
         ToggleRecordingCommand.NotifyCanExecuteChanged();
@@ -1318,13 +1356,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
             transcriptText = item.Preview;
         }
 
+        item.SummaryProgressPercent = 0;
         item.IsGeneratingSummary = true;
         _summaryGenerationCount++;
         NotifySummaryActivityChanged();
 
         try
         {
-            var summary = await _summarizer.SummarizeAsync(transcriptText, modelPath);
+            var percentProgress = new Progress<double>(percent =>
+            {
+                item.SummaryProgressPercent = percent;
+
+                if (IsViewedSummaryGenerating &&
+                    string.Equals(_viewedTranscriptFilePath, item.FilePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    ViewedSummaryProgressPercent = percent;
+                }
+            });
+
+            var summary = await _summarizer.SummarizeAsync(transcriptText, modelPath, percentProgress);
 
             _transcriptHistoryService.SaveSummary(item.SummaryFilePath, summary);
 

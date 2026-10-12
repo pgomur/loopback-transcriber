@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using LLama;
 using LLama.Common;
+using LLama.Sampling;
 using LoopbackTranscriber.Models;
 
 namespace LoopbackTranscriber.Services;
@@ -27,6 +28,17 @@ public sealed class SummarizationService : IDisposable
 
     private const int MaxChunkCharacters = 9000;
     private const int MaxChunkOutputTokens = 600;
+
+    private const double LoadProgressUnits = 150;
+    private const double PrefillProgressUnits = 100;
+    private const int ChunkExpectedTokens = 450;
+    private const int FinalExpectedTokens = 900;
+
+    private const int LoopWindowLines = 10;
+    private const int LoopRepeatedLinesLimit = 3;
+    private const double NearDuplicateSimilarity = 0.72;
+
+    private static readonly Regex WordRegex = new(@"[\p{L}\p{N}]{3,}", RegexOptions.Compiled);
 
     private static readonly TimeSpan IdleUnloadDelay = TimeSpan.FromMinutes(2);
 
@@ -136,8 +148,40 @@ public sealed class SummarizationService : IDisposable
         progress?.Report(Strings.Instance.Get("SummaryModelDownloaded"));
     }
 
-    public Task<RecordingSummary> SummarizeAsync(string transcriptText, string modelPath,
-        CancellationToken cancellationToken = default)
+    public async Task<RecordingSummary> SummarizeAsync(string transcriptText, string modelPath,
+        IProgress<double>? percentProgress = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var job = new SummaryJob
+            {
+                TranscriptText = transcriptText,
+                ModelPath = modelPath,
+                UiLanguage = Strings.Instance.Language
+            };
+
+            var resultJson = await WorkerProcess.RunAsync("summary", JsonSerializer.Serialize(job),
+                    value => percentProgress?.Report(value), cancellationToken)
+                .ConfigureAwait(false);
+
+            var result = JsonSerializer.Deserialize<SummaryJobResult>(resultJson)
+                         ?? throw new InvalidOperationException(Strings.Instance.Get("ErrorBackgroundProcessStart"));
+
+            if (!string.IsNullOrEmpty(result.Error))
+            {
+                throw new InvalidOperationException(result.Error);
+            }
+
+            return new RecordingSummary { Title = result.Title ?? string.Empty, Summary = result.Summary ?? string.Empty };
+        }
+        finally
+        {
+            MemoryTrimmer.ReleaseInBackground();
+        }
+    }
+
+    internal Task<RecordingSummary> SummarizeInProcessAsync(string transcriptText, string modelPath,
+        IProgress<double>? percentProgress = null, CancellationToken cancellationToken = default)
     {
 
         _idleUnloadTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -146,46 +190,258 @@ public sealed class SummarizationService : IDisposable
         {
             try
             {
-                var executor = EnsureLoaded(modelPath);
+                var chunkCount = transcriptText.Length <= MaxChunkCharacters
+                    ? 0
+                    : SplitIntoChunks(transcriptText, MaxChunkCharacters).Count;
+                var needsLoad = !IsLoaded(modelPath);
 
-                var condensed = await CondenseIfNeededAsync(executor, transcriptText, cancellationToken)
+                var tracker = new ProgressTracker(percentProgress,
+                    (needsLoad ? LoadProgressUnits : 0)
+                    + chunkCount * (PrefillProgressUnits + ChunkExpectedTokens)
+                    + PrefillProgressUnits + FinalExpectedTokens);
+
+                var executor = EnsureLoaded(modelPath);
+                if (needsLoad)
+                {
+                    tracker.Advance(LoadProgressUnits);
+                }
+
+                var condensed = await CondenseIfNeededAsync(executor, transcriptText, tracker, cancellationToken)
                     .ConfigureAwait(false);
 
                 var prompt = SummaryPrompts.Final(condensed, GetSummaryLanguageName(Strings.Instance.Language));
-                var rawOutput = await RunInferenceAsync(executor, prompt, MaxOutputTokens, cancellationToken)
+                var rawOutput = await RunInferenceAsync(executor, prompt, MaxOutputTokens, FinalExpectedTokens, tracker,
+                        cancellationToken)
                     .ConfigureAwait(false);
 
-                return LocalizeSectionLabels(ParseResult(rawOutput), Strings.Instance.Language);
+                var parsed = ParseResult(rawOutput);
+                var cleaned = new RecordingSummary
+                {
+                    Title = parsed.Title,
+                    Summary = RemoveRepeatedLines(parsed.Summary)
+                };
+
+                var result = LocalizeSectionLabels(cleaned, Strings.Instance.Language);
+                tracker.Complete();
+                return result;
             }
             finally
             {
                 _idleUnloadTimer.Change(IdleUnloadDelay, Timeout.InfiniteTimeSpan);
+                MemoryTrimmer.ReleaseInBackground();
             }
         }, cancellationToken);
     }
 
+    private bool IsLoaded(string modelPath)
+    {
+        lock (_loadLock)
+        {
+            return _executor is not null &&
+                   string.Equals(_loadedModelPath, modelPath, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private sealed class ProgressTracker
+    {
+        private readonly IProgress<double>? _progress;
+        private readonly double _total;
+        private double _done;
+        private int _lastReportedPercent = -1;
+
+        public ProgressTracker(IProgress<double>? progress, double total)
+        {
+            _progress = progress;
+            _total = Math.Max(1, total);
+            _progress?.Report(0);
+        }
+
+        public void Advance(double units)
+        {
+            if (units <= 0)
+            {
+                return;
+            }
+
+            _done = Math.Min(_done + units, _total);
+
+            var percent = (int)Math.Min(99, Math.Floor(_done * 100.0 / _total));
+            if (percent != _lastReportedPercent)
+            {
+                _lastReportedPercent = percent;
+                _progress?.Report(percent);
+            }
+        }
+
+        public void Complete() => _progress?.Report(100);
+    }
+
     private static async Task<string> RunInferenceAsync(StatelessExecutor executor, string prompt, int maxTokens,
-        CancellationToken cancellationToken)
+        int expectedTokens, ProgressTracker tracker, CancellationToken cancellationToken)
+    {
+        var firstAttempt = await GenerateAsync(executor, prompt, maxTokens, expectedTokens, tracker,
+                strongPenalties: false, detectLoops: true, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!firstAttempt.LoopDetected)
+        {
+            return firstAttempt.Text;
+        }
+
+        Debug.WriteLine("[LoopbackTranscriber] SummarizationService: bucle de repeticion detectado, se reintenta con penalizaciones mas fuertes");
+
+        var secondAttempt = await GenerateAsync(executor, prompt, maxTokens, expectedTokens, tracker: null,
+                strongPenalties: true, detectLoops: false, cancellationToken)
+            .ConfigureAwait(false);
+
+        return secondAttempt.Text;
+    }
+
+    private static async Task<(string Text, bool LoopDetected)> GenerateAsync(StatelessExecutor executor,
+        string prompt, int maxTokens, int expectedTokens, ProgressTracker? tracker, bool strongPenalties,
+        bool detectLoops, CancellationToken cancellationToken)
     {
         var inferenceParams = new InferenceParams
         {
             MaxTokens = maxTokens,
-            AntiPrompts = ["<|im_end|>", "</s>"]
+            AntiPrompts = ["<|im_end|>", "</s>"],
+            SamplingPipeline = new DefaultSamplingPipeline
+            {
+                Temperature = strongPenalties ? 0.8f : 0.6f,
+                TopK = 30,
+                TopP = 0.9f,
+                RepeatPenalty = strongPenalties ? 1.25f : 1.12f,
+                PenaltyCount = 512,
+                FrequencyPenalty = strongPenalties ? 0.6f : 0.3f,
+                PresencePenalty = strongPenalties ? 0.5f : 0.3f
+            }
         };
 
         var builder = new StringBuilder();
+        var phaseTotal = PrefillProgressUnits + expectedTokens;
+        var phaseDone = 0.0;
+        var tokenCount = 0;
+        var firstToken = true;
+
+        var recentLines = new List<HashSet<string>>();
+        var lineStart = 0;
+        var repeatedLines = 0;
+        var loopDetected = false;
 
         await foreach (var token in executor.InferAsync(prompt, inferenceParams, cancellationToken)
                            .ConfigureAwait(false))
         {
             builder.Append(token);
+
+            if (firstToken)
+            {
+                firstToken = false;
+                tracker?.Advance(PrefillProgressUnits);
+                phaseDone += PrefillProgressUnits;
+            }
+
+            if (tokenCount < expectedTokens * 0.97)
+            {
+                tokenCount++;
+                tracker?.Advance(1);
+                phaseDone += 1;
+            }
+
+            if (!detectLoops || !token.Contains('\n'))
+            {
+                continue;
+            }
+
+            var text = builder.ToString();
+            int newline;
+            while ((newline = text.IndexOf('\n', lineStart)) >= 0)
+            {
+                var words = WordSet(text[lineStart..newline]);
+                lineStart = newline + 1;
+
+                if (words.Count < 5)
+                {
+                    continue;
+                }
+
+                if (recentLines.Any(previous => IsNearDuplicate(previous, words)))
+                {
+                    repeatedLines++;
+                }
+                else
+                {
+                    recentLines.Add(words);
+                    if (recentLines.Count > LoopWindowLines)
+                    {
+                        recentLines.RemoveAt(0);
+                    }
+                }
+            }
+
+            if (repeatedLines >= LoopRepeatedLinesLimit)
+            {
+                loopDetected = true;
+                break;
+            }
         }
 
-        return builder.ToString();
+        tracker?.Advance(phaseTotal - phaseDone);
+
+        return (builder.ToString(), loopDetected);
+    }
+
+    private static HashSet<string> WordSet(string line) =>
+        WordRegex.Matches(line.ToLowerInvariant()).Select(match => match.Value).ToHashSet();
+
+    private static bool IsNearDuplicate(HashSet<string> first, HashSet<string> second)
+    {
+        if (first.Count < 4 || second.Count < 4)
+        {
+            return first.SetEquals(second);
+        }
+
+        var shared = first.Count(second.Contains);
+        var union = first.Count + second.Count - shared;
+
+        return shared / (double)union >= NearDuplicateSimilarity;
+    }
+
+    private static string RemoveRepeatedLines(string text)
+    {
+        var kept = new List<string>();
+        var seen = new List<HashSet<string>>();
+
+        foreach (var rawLine in text.Split('\n'))
+        {
+            var line = rawLine.TrimEnd('\r');
+            var trimmed = line.TrimStart();
+
+            if (SectionLabelRegex.IsMatch(line) || trimmed.StartsWith("* ", StringComparison.Ordinal))
+            {
+                seen.Clear();
+                kept.Add(line);
+                continue;
+            }
+
+            var words = WordSet(trimmed);
+            if (words.Count >= 4)
+            {
+                if (seen.Any(previous => IsNearDuplicate(previous, words)))
+                {
+                    continue;
+                }
+
+                seen.Add(words);
+            }
+
+            kept.Add(line);
+        }
+
+        return string.Join('\n', kept);
     }
 
     private static async Task<string> CondenseIfNeededAsync(StatelessExecutor executor, string transcriptText,
-        CancellationToken cancellationToken)
+        ProgressTracker tracker, CancellationToken cancellationToken)
     {
         if (transcriptText.Length <= MaxChunkCharacters)
         {
@@ -198,11 +454,12 @@ public sealed class SummarizationService : IDisposable
         for (var i = 0; i < chunks.Count; i++)
         {
             var chunkPrompt = SummaryPrompts.Chunk(chunks[i], i + 1, chunks.Count);
-            var chunkOutput = await RunInferenceAsync(executor, chunkPrompt, MaxChunkOutputTokens, cancellationToken)
+            var chunkOutput = await RunInferenceAsync(executor, chunkPrompt, MaxChunkOutputTokens,
+                    ChunkExpectedTokens, tracker, cancellationToken)
                 .ConfigureAwait(false);
 
             keyPointsBuilder.AppendLine($"Puntos clave (parte {i + 1} de {chunks.Count}):");
-            keyPointsBuilder.AppendLine(StripThinkBlock(chunkOutput).Trim());
+            keyPointsBuilder.AppendLine(RemoveRepeatedLines(StripThinkBlock(chunkOutput).Trim()));
             keyPointsBuilder.AppendLine();
         }
 
@@ -256,10 +513,30 @@ public sealed class SummarizationService : IDisposable
 
             Debug.WriteLine("[LoopbackTranscriber] SummarizationService: modelo de resumen descargado de la RAM por inactividad");
 
+            DisposeExecutorContext(_executor);
             _weights.Dispose();
             _weights = null;
             _executor = null;
             _loadedModelPath = null;
+        }
+
+        MemoryTrimmer.Release();
+    }
+
+    private static void DisposeExecutorContext(StatelessExecutor? executor)
+    {
+        if (executor is null)
+        {
+            return;
+        }
+
+        try
+        {
+            (executor.GetType().GetProperty("Context")?.GetValue(executor) as IDisposable)?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("SummarizationService.DisposeExecutorContext: no se pudo liberar el contexto del modelo", ex);
         }
     }
 
@@ -272,6 +549,7 @@ public sealed class SummarizationService : IDisposable
                 return _executor;
             }
 
+            DisposeExecutorContext(_executor);
             _weights?.Dispose();
 
             var threadCount = Math.Clamp(Environment.ProcessorCount / 2, 2, 6);
