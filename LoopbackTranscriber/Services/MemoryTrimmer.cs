@@ -9,6 +9,18 @@ public static class MemoryTrimmer
 
     public static void ReleaseInBackground() => _ = Task.Run(Release);
 
+    public static void TrimWorkingSet()
+    {
+        try
+        {
+            SetProcessWorkingSetSize(GetCurrentProcess(), new IntPtr(-1), new IntPtr(-1));
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("MemoryTrimmer.TrimWorkingSet: no se pudo reducir la memoria en uso", ex);
+        }
+    }
+
     public static void Release()
     {
         if (Interlocked.Exchange(ref _running, 1) == 1)

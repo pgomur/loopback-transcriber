@@ -266,6 +266,117 @@ public sealed class WhisperTranscriptionService
         return mostRepeatedCount >= Math.Max(4, (int)(words.Count * 0.6));
     }
 
+    private const int MaxLoopPhraseWords = 12;
+
+    private static bool SameWordRun(string[] keys, int a, int b, int length)
+    {
+        for (var k = 0; k < length; k++)
+        {
+            if (keys[a + k] != keys[b + k])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string RemovePhraseLoops(string text)
+    {
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 3)
+        {
+            return text;
+        }
+
+        var keys = words.Select(w => w.Trim(WordTrimChars).ToLowerInvariant()).ToArray();
+        var kept = new List<string>(words.Length);
+        var changed = false;
+        var i = 0;
+
+        while (i < words.Length)
+        {
+            if (keys[i].Length == 0)
+            {
+                kept.Add(words[i]);
+                i++;
+                continue;
+            }
+
+            var loopLength = 0;
+            var loopRepeats = 0;
+            var maxLength = Math.Min(MaxLoopPhraseWords, (words.Length - i) / 2);
+
+            for (var length = 1; length <= maxLength; length++)
+            {
+                var repeats = 1;
+                while (i + (repeats + 1) * length <= words.Length && SameWordRun(keys, i, i + repeats * length, length))
+                {
+                    repeats++;
+                }
+
+                var minRepeats = length == 1 ? 4 : 3;
+                if (repeats >= minRepeats)
+                {
+                    loopLength = length;
+                    loopRepeats = repeats;
+                    break;
+                }
+            }
+
+            if (loopLength == 0)
+            {
+                kept.Add(words[i]);
+                i++;
+                continue;
+            }
+
+            changed = true;
+            var removeCompletely = loopLength == 1 ? loopRepeats >= 6 : loopRepeats >= 4;
+            if (!removeCompletely)
+            {
+                for (var k = 0; k < loopLength; k++)
+                {
+                    kept.Add(words[i + k]);
+                }
+            }
+
+            i += loopLength * loopRepeats;
+        }
+
+        return changed ? string.Join(' ', kept) : text;
+    }
+
+    private static string SegmentKey(string text) => string.Join(' ', NormalizeWords(text));
+
+    private static List<TranscriptSegment> RemoveRepeatedSegments(List<TranscriptSegment> segments)
+    {
+        var result = new List<TranscriptSegment>(segments.Count);
+        var i = 0;
+
+        while (i < segments.Count)
+        {
+            var key = SegmentKey(segments[i].Text);
+            var j = i + 1;
+            while (key.Length > 0 && j < segments.Count && SegmentKey(segments[j].Text) == key)
+            {
+                j++;
+            }
+
+            if (j - i < 3)
+            {
+                for (var k = i; k < j; k++)
+                {
+                    result.Add(segments[k]);
+                }
+            }
+
+            i = j;
+        }
+
+        return result;
+    }
+
     public static double WordOverlapRatio(string a, string b)
     {
         var wordsA = new HashSet<string>(NormalizeWords(a));
@@ -443,7 +554,8 @@ public sealed class WhisperTranscriptionService
                 continue;
             }
 
-            if (IsRepeatedWordLoop(text))
+            text = RemovePhraseLoops(text);
+            if (string.IsNullOrWhiteSpace(text) || IsRepeatedWordLoop(text))
             {
                 continue;
             }
@@ -451,6 +563,6 @@ public sealed class WhisperTranscriptionService
             segments.Add(new TranscriptSegment(result.Start, result.End, text));
         }
 
-        return MergeCloseSegments(segments);
+        return MergeCloseSegments(RemoveRepeatedSegments(segments));
     }
 }

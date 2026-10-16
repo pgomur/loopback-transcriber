@@ -224,6 +224,9 @@
 
                     </Grid>
                 </Border>
+
+                <TextBlock Text="{Binding Path=[ConfigLegalBody], Source={x:Static services:Strings.Instance}}"
+                           TextWrapping="Wrap" FontSize="11" LineHeight="16" Opacity="0.35" Margin="2,-10,0,12" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

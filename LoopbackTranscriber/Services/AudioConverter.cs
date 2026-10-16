@@ -29,6 +29,81 @@ public static class AudioConverter
         WaveFileWriter.CreateWaveFile16(destWavPath, sampleProvider);
     }
 
+    public const int ActivityWindowMs = 50;
+
+    public static bool[]? GetActivityMap(string wavPath, double minRms = 4.0)
+    {
+        using var reader = new WaveFileReader(wavPath);
+        var format = reader.WaveFormat;
+        if (format.BitsPerSample != 16 || format.Channels != 1)
+        {
+            return null;
+        }
+
+        var windowSamples = Math.Max(1, format.SampleRate * ActivityWindowMs / 1000);
+        var buffer = new byte[windowSamples * 2];
+        var map = new List<bool>();
+
+        while (true)
+        {
+            var read = 0;
+            while (read < buffer.Length)
+            {
+                var n = reader.Read(buffer, read, buffer.Length - read);
+                if (n <= 0)
+                {
+                    break;
+                }
+
+                read += n;
+            }
+
+            var sampleCount = read / 2;
+            if (sampleCount == 0)
+            {
+                break;
+            }
+
+            double sumSquares = 0;
+            for (var i = 0; i < sampleCount; i++)
+            {
+                var sample = (short)(buffer[i * 2] | (buffer[i * 2 + 1] << 8));
+                sumSquares += (double)sample * sample;
+            }
+
+            map.Add(Math.Sqrt(sumSquares / sampleCount) >= minRms);
+
+            if (read < buffer.Length)
+            {
+                break;
+            }
+        }
+
+        return map.ToArray();
+    }
+
+    public static (double Fraction, double ActiveSeconds) MeasureActivity(bool[] map, TimeSpan start, TimeSpan end)
+    {
+        var first = Math.Clamp((int)(start.TotalMilliseconds / ActivityWindowMs), 0, map.Length);
+        var last = Math.Clamp((int)Math.Ceiling(end.TotalMilliseconds / ActivityWindowMs), first, map.Length);
+        var total = last - first;
+        if (total <= 0)
+        {
+            return (1.0, Math.Max(0.0, (end - start).TotalSeconds));
+        }
+
+        var active = 0;
+        for (var i = first; i < last; i++)
+        {
+            if (map[i])
+            {
+                active++;
+            }
+        }
+
+        return ((double)active / total, active * ActivityWindowMs / 1000.0);
+    }
+
     public static void ApplyNoiseGate(string wavPath, double gateBelowPeakDb = 34.0)
     {
         byte[] bytes;

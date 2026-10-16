@@ -27,6 +27,7 @@ namespace LoopbackTranscriber
         private bool _translucentUiEnabled;
         private readonly SettingsService _settingsService;
         private TrayIconService? _trayIcon;
+        private System.Threading.Timer? _backgroundTrimTimer;
         private Views.TrayMenuWindow? _trayMenu;
         private bool _allowClose;
         private bool _hiddenToTray;
@@ -114,6 +115,8 @@ namespace LoopbackTranscriber
                 _trayMenu?.CloseMenu();
                 _trayIcon?.Dispose();
                 _trayIcon = null;
+                _backgroundTrimTimer?.Dispose();
+                _backgroundTrimTimer = null;
                 _viewModel.Targets.CollectionChanged -= OnTargetsCollectionChanged;
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
                 UiPreferences.TranslucentUiChanged -= OnTranslucentUiChanged;
@@ -185,6 +188,7 @@ namespace LoopbackTranscriber
                 _trayIcon?.SetTooltip(GetTrayTooltip());
                 _trayIcon?.Show();
                 MemoryTrimmer.ReleaseInBackground();
+                EnterBackgroundMode();
             }
             else
             {
@@ -193,8 +197,27 @@ namespace LoopbackTranscriber
                 if (!_hiddenToTray)
                 {
                     _trayIcon?.Hide();
+                    LeaveBackgroundMode();
                 }
             }
+        }
+
+        private void EnterBackgroundMode()
+        {
+            var interval = TimeSpan.FromMinutes(5);
+            if (_backgroundTrimTimer is null)
+            {
+                _backgroundTrimTimer = new System.Threading.Timer(_ => MemoryTrimmer.TrimWorkingSet(), null, interval, interval);
+            }
+            else
+            {
+                _backgroundTrimTimer.Change(interval, interval);
+            }
+        }
+
+        private void LeaveBackgroundMode()
+        {
+            _backgroundTrimTimer?.Change(System.Threading.Timeout.InfiniteTimeSpan, System.Threading.Timeout.InfiniteTimeSpan);
         }
 
         private string GetTrayTooltip()
@@ -214,6 +237,7 @@ namespace LoopbackTranscriber
             _hiddenToTray = true;
             Hide();
             MemoryTrimmer.ReleaseInBackground();
+            EnterBackgroundMode();
 
             if (_trayIcon is null)
             {
@@ -245,6 +269,7 @@ namespace LoopbackTranscriber
         {
             _hiddenToTray = false;
             _trayIcon?.Hide();
+            LeaveBackgroundMode();
 
             if (!IsVisible)
             {

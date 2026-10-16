@@ -26,6 +26,9 @@ public static class SummaryFormatter
         ["темы"] = "SummaryLabelTopics",
 
         ["objetivos"] = "SummaryLabelGoals",
+        ["objetivo"] = "SummaryLabelGoals",
+        ["goal"] = "SummaryLabelGoals",
+        ["ziel"] = "SummaryLabelGoals",
         ["goals"] = "SummaryLabelGoals",
         ["ziele"] = "SummaryLabelGoals",
         ["цели"] = "SummaryLabelGoals",
@@ -33,6 +36,15 @@ public static class SummaryFormatter
         ["proximos pasos"] = "SummaryLabelNextSteps",
         ["próximos pasos"] = "SummaryLabelNextSteps",
         ["next steps"] = "SummaryLabelNextSteps",
+        ["next step"] = "SummaryLabelNextSteps",
+        ["próximo paso"] = "SummaryLabelNextSteps",
+        ["proximo paso"] = "SummaryLabelNextSteps",
+        ["siguientes pasos"] = "SummaryLabelNextSteps",
+        ["siguiente paso"] = "SummaryLabelNextSteps",
+        ["próximo passo"] = "SummaryLabelNextSteps",
+        ["proximo passo"] = "SummaryLabelNextSteps",
+        ["nächster schritt"] = "SummaryLabelNextSteps",
+        ["следующий шаг"] = "SummaryLabelNextSteps",
         ["próximos passos"] = "SummaryLabelNextSteps",
         ["proximos passos"] = "SummaryLabelNextSteps",
         ["nächste schritte"] = "SummaryLabelNextSteps",
@@ -103,7 +115,7 @@ public static class SummaryFormatter
             }
 
             var header = HeaderRegex.Match(line);
-            if (header.Success && LabelToKey.TryGetValue(header.Groups["label"].Value.Trim(), out var key))
+            if (header.Success && LabelToKey.TryGetValue(NormalizeLabel(header.Groups["label"].Value), out var key))
             {
                 Flush();
                 currentKey = key;
@@ -111,7 +123,7 @@ public static class SummaryFormatter
                 hasOpenSection = true;
                 insideTopic = false;
 
-                var rest = header.Groups["rest"].Value.Trim();
+                var rest = header.Groups["rest"].Value.Trim().Trim('*', '_').Trim();
                 if (rest.Length > 0)
                 {
                     currentLines.Add(ToLine(rest, false));
@@ -136,6 +148,8 @@ public static class SummaryFormatter
         Flush();
         return sections;
     }
+
+    private static string NormalizeLabel(string label) => label.Trim().Trim('*', '#', '_', ' ', '\t').Trim();
 
     private static SummaryLine ToLine(string text, bool underTopic)
     {

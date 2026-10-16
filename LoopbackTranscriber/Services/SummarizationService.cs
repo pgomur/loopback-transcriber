@@ -24,7 +24,9 @@ public sealed class SummarizationService : IDisposable
 
     private const int ContextSize = 8192;
     private const int MaxTranscriptCharacters = 9000;
-    private const int MaxOutputTokens = 1400;
+    private const int MaxOutputTokens = 1800;
+    private const int MaxFollowUpOutputTokens = 300;
+    private const int FollowUpExpectedTokens = 120;
 
     private const int MaxChunkCharacters = 9000;
     private const int MaxChunkOutputTokens = 600;
@@ -215,10 +217,14 @@ public sealed class SummarizationService : IDisposable
                     .ConfigureAwait(false);
 
                 var parsed = ParseResult(rawOutput);
+                var summaryText = RemoveRepeatedLines(parsed.Summary);
+                summaryText = await AddMissingSectionsAsync(executor, condensed, summaryText, cancellationToken)
+                    .ConfigureAwait(false);
+
                 var cleaned = new RecordingSummary
                 {
                     Title = parsed.Title,
-                    Summary = RemoveRepeatedLines(parsed.Summary)
+                    Summary = summaryText
                 };
 
                 var result = LocalizeSectionLabels(cleaned, Strings.Instance.Language);
@@ -277,7 +283,7 @@ public sealed class SummarizationService : IDisposable
     }
 
     private static async Task<string> RunInferenceAsync(StatelessExecutor executor, string prompt, int maxTokens,
-        int expectedTokens, ProgressTracker tracker, CancellationToken cancellationToken)
+        int expectedTokens, ProgressTracker? tracker, CancellationToken cancellationToken)
     {
         var firstAttempt = await GenerateAsync(executor, prompt, maxTokens, expectedTokens, tracker,
                 strongPenalties: false, detectLoops: true, cancellationToken)
@@ -450,6 +456,7 @@ public sealed class SummarizationService : IDisposable
 
         var chunks = SplitIntoChunks(transcriptText, MaxChunkCharacters);
         var keyPointsBuilder = new StringBuilder();
+        var perPartLimit = Math.Max(300, (MaxTranscriptCharacters - chunks.Count * 60) / chunks.Count);
 
         for (var i = 0; i < chunks.Count; i++)
         {
@@ -459,7 +466,7 @@ public sealed class SummarizationService : IDisposable
                 .ConfigureAwait(false);
 
             keyPointsBuilder.AppendLine($"Puntos clave (parte {i + 1} de {chunks.Count}):");
-            keyPointsBuilder.AppendLine(RemoveRepeatedLines(StripThinkBlock(chunkOutput).Trim()));
+            keyPointsBuilder.AppendLine(FitPointsToLimit(RemoveRepeatedLines(StripThinkBlock(chunkOutput).Trim()), perPartLimit));
             keyPointsBuilder.AppendLine();
         }
 
@@ -468,6 +475,102 @@ public sealed class SummarizationService : IDisposable
         return combined.Length > MaxTranscriptCharacters
             ? combined[..MaxTranscriptCharacters] + "..."
             : combined;
+    }
+
+    private static bool HasSection(string summaryText, Func<string, bool> isLabel) =>
+        SectionLabelRegex.Matches(summaryText).Any(match => isLabel(match.Groups["label"].Value));
+
+    private static async Task<string> AddMissingSectionsAsync(StatelessExecutor executor, string source,
+        string summaryText, CancellationToken cancellationToken)
+    {
+        var languageName = GetSummaryLanguageName(Strings.Instance.Language);
+        var result = summaryText;
+
+        if (!HasSection(result, label => label.StartsWith("objetiv", StringComparison.OrdinalIgnoreCase)))
+        {
+            var goals = await ExtractSectionItemsAsync(executor, SummaryPrompts.Goals(source, languageName),
+                cancellationToken).ConfigureAwait(false);
+
+            if (goals is not null)
+            {
+                result = result.TrimEnd() + "\nObjetivos:\n" + goals;
+            }
+        }
+
+        if (!HasSection(result, label => label.Contains("paso", StringComparison.OrdinalIgnoreCase)))
+        {
+            var nextSteps = await ExtractSectionItemsAsync(executor, SummaryPrompts.NextSteps(source, languageName),
+                cancellationToken).ConfigureAwait(false);
+
+            if (nextSteps is not null)
+            {
+                result = result.TrimEnd() + "\nProximos pasos:\n" + nextSteps;
+            }
+        }
+
+        return result;
+    }
+
+    private static async Task<string?> ExtractSectionItemsAsync(StatelessExecutor executor, string prompt,
+        CancellationToken cancellationToken)
+    {
+        var output = await RunInferenceAsync(executor, prompt, MaxFollowUpOutputTokens, FollowUpExpectedTokens,
+                tracker: null, cancellationToken)
+            .ConfigureAwait(false);
+
+        var text = StripThinkBlock(output).Trim();
+        if (text.Length == 0 ||
+            text.StartsWith("NINGUN", StringComparison.OrdinalIgnoreCase) ||
+            (text.Length < 40 && text.Contains("ningun", StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
+        var lines = RemoveRepeatedLines(text)
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0)
+            .Select(line => line.StartsWith("- ", StringComparison.Ordinal) ? line
+                : line.StartsWith("* ", StringComparison.Ordinal) || line.StartsWith("• ", StringComparison.Ordinal) ? "- " + line[2..].Trim()
+                : "- " + line)
+            .Where(line => line.Length > 8)
+            .Take(8)
+            .ToList();
+
+        return lines.Count == 0 ? null : string.Join('\n', lines);
+    }
+
+    private static bool IsMarkedPoint(string line) =>
+        line.Contains("[OBJETIVO]", StringComparison.OrdinalIgnoreCase) ||
+        line.Contains("[PROXIMO_PASO]", StringComparison.OrdinalIgnoreCase);
+
+    private static string FitPointsToLimit(string points, int maxChars)
+    {
+        if (points.Length <= maxChars)
+        {
+            return points;
+        }
+
+        var lines = points.Split('\n').Select(line => line.TrimEnd('\r')).Where(line => line.Length > 0).ToList();
+        var remaining = maxChars - lines.Where(IsMarkedPoint).Sum(line => line.Length + 1);
+        var kept = new List<string>();
+
+        foreach (var line in lines)
+        {
+            if (IsMarkedPoint(line))
+            {
+                kept.Add(line);
+                continue;
+            }
+
+            if (line.Length + 1 <= remaining)
+            {
+                kept.Add(line);
+                remaining -= line.Length + 1;
+            }
+        }
+
+        return string.Join('\n', kept);
     }
 
     private static List<string> SplitIntoChunks(string text, int maxChunkCharacters)
@@ -581,7 +684,7 @@ public sealed class SummarizationService : IDisposable
     };
 
     private static readonly Regex SectionLabelRegex = new(
-        @"^(?<lead>[ \t]*(?:[-*][ \t]+)?)(?<label>Prop[oó]sito|Puntos clave|Temas|Objetivos|Pr[oó]ximos pasos|Tareas)[ \t]*:",
+        @"^(?<lead>[ \t]*(?:[-*][ \t]+)?(?:\*\*|__)?)(?<label>Prop[oó]sito|Puntos clave|Temas|Objetivos?|Pr[oó]ximos? pasos?|Siguientes? pasos?|Tareas)(?:\*\*|__)?[ \t]*:",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled);
 
     private static RecordingSummary LocalizeSectionLabels(RecordingSummary summary, string languageCode)
@@ -598,8 +701,9 @@ public sealed class SummarizationService : IDisposable
                 "proposito" or "propósito" => "SummaryLabelPurpose",
                 "puntos clave" => "SummaryLabelKeyPoints",
                 "temas" => "SummaryLabelTopics",
-                "objetivos" => "SummaryLabelGoals",
-                "proximos pasos" or "próximos pasos" => "SummaryLabelNextSteps",
+                "objetivos" or "objetivo" => "SummaryLabelGoals",
+                "proximos pasos" or "próximos pasos" or "proximo paso" or "próximo paso"
+                    or "siguientes pasos" or "siguiente paso" => "SummaryLabelNextSteps",
                 _ => "SummaryLabelTasks"
             };
 

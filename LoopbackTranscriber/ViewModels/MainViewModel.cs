@@ -1024,6 +1024,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             IsTranscribingActive = false;
 
+            if (hasMicTrack && micSegments.Count > 0)
+            {
+                try
+                {
+                    var micActivity = AudioConverter.GetActivityMap(micWhisperWavPath!);
+                    if (micActivity is not null)
+                    {
+                        micSegments = micSegments.Where(s =>
+                        {
+                            var (fraction, activeSeconds) = AudioConverter.MeasureActivity(micActivity, s.Start, s.End);
+                            return fraction >= 0.15 && activeSeconds >= 0.15;
+                        }).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Warn("MainViewModel.StopAndTranscribeAsync: no se pudo analizar la actividad del microfono, se conservan todos los segmentos", ex);
+                }
+            }
+
             var otherTrackStartedAt = bestDeviceTrack is not null
                 ? _deviceLoopbackStartedAt
                 : _processLoopbackStartedAt;

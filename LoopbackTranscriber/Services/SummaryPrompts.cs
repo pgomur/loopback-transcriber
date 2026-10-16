@@ -20,7 +20,7 @@ Proximos pasos:
 
 Reglas:
 1. Escribe todo el contenido (el titulo y el texto de cada seccion) en {{LANGUAGE}}, aunque la transcripcion este en otro idioma: traduce lo que haga falta. Las etiquetas (TITULO, RESUMEN, Proposito, Puntos clave, Temas, Objetivos, Proximos pasos) se escriben siempre exactamente asi.
-2. Se detallado: recoge TODO lo relevante que se dijo (datos, cifras, nombres, fechas, razones, decisiones, dudas y acuerdos) en vez de quedarte en generalidades. En Puntos clave pon entre 5 y 12 puntos segun lo larga que sea la conversacion, cada uno con su contenido concreto (una o dos frases). Usa SOLO lo que aparece en la transcripcion: no inventes ni supongas nada, y si algo no esta claro, no lo incluyas. Incluye siempre Proposito y Puntos clave. Temas, Objetivos y Proximos pasos solo si tienen contenido real; si no, omite la seccion entera, sin la etiqueta y sin frases tipo "no se mencionan objetivos".
+2. Se detallado: recoge TODO lo relevante que se dijo (datos, cifras, nombres, fechas, razones, decisiones, dudas y acuerdos) en vez de quedarte en generalidades. En Puntos clave pon entre 5 y 12 puntos segun lo larga que sea la conversacion, cada uno con su contenido concreto (una o dos frases). Usa SOLO lo que aparece en la transcripcion: no inventes ni supongas nada, y si algo no esta claro, no lo incluyas. Incluye siempre Proposito y Puntos clave. Temas, Objetivos y Proximos pasos: incluyelos siempre que haya al menos un elemento que encaje con su definicion (con uno basta); solo si de verdad no hay ninguno, omite la seccion entera, sin la etiqueta y sin frases tipo "no se mencionan objetivos". Antes de terminar, repasa la transcripcion y comprueba que no te dejas ningun objetivo ni proximo paso que si aparezca.
 3. Temas: solo si se tratan varios asuntos distintos o uno con bastante detalle. Cada tema va en su propia linea empezando por "* " y debajo sus detalles, uno por linea empezando por "- ". Cada tema suele llevar entre 2 y 5 detalles; solo un tema muy pequeno puede ir en una sola linea: "* Tema: frase".
 4. Objetivos reune tanto lo que alguien quiere lograr como lo que alguien se compromete explicitamente a hacer; no existe una seccion de tareas aparte. Si hay etiqueta de quien habla, ponla delante del punto tal cual aparece en la transcripcion.
 5. No repitas una misma idea en Objetivos y en Proximos pasos: elige la que mejor encaje. Una recomendacion, opinion, broma o pregunta retorica no es un objetivo ni un proximo paso.
@@ -37,6 +37,34 @@ Antepon una marca cuando corresponda: "[OBJETIVO] " si alguien expresa un propos
 
 Cada turno empieza con la etiqueta de quien habla ("Tu" o "Nombre (Tú)" para el usuario, "Participantes" para el resto); si no hay etiquetas, es una unica fuente. Responde en el mismo idioma en el que esta escrito el fragmento.
 """;
+
+    private const string GoalsSystem = """
+Lees la transcripcion de una conversacion y extraes SOLO los objetivos. Un objetivo es algo que alguien quiere conseguir, o que alguien se compromete explicitamente a hacer. NO son objetivos: opiniones, recomendaciones, habitos o costumbres, descripciones de lo que ya ocurrio, bromas ni preguntas retoricas.
+
+Responde con una lista, cada objetivo en su propia linea empezando por "- ", en una frase, con tus propias palabras y en {{LANGUAGE}} (traduce si hace falta). Usa solo lo que aparece en el texto: no inventes ni supongas nada y no repitas ideas. Si el texto trae etiquetas de quien habla y el objetivo es de alguien concreto, pon esa etiqueta delante tal cual aparece. Si el texto trae puntos marcados con [OBJETIVO], usalos sin incluir la marca.
+
+Si no hay ningun objetivo claro, responde exactamente: NINGUNO
+""";
+
+    private const string NextStepsSystem = """
+Lees la transcripcion de una conversacion y extraes SOLO los proximos pasos. Un proximo paso es algo concreto que se hara despues de esta conversacion: otra reunion, una fecha, un seguimiento o una accion pendiente que se ha acordado. NO son proximos pasos: opiniones, recomendaciones, habitos o costumbres, descripciones de lo que ya ocurrio, bromas ni preguntas retoricas.
+
+Responde con una lista, cada proximo paso en su propia linea empezando por "- ", en una frase, con tus propias palabras y en {{LANGUAGE}} (traduce si hace falta). Usa solo lo que aparece en el texto: no inventes ni supongas nada y no repitas ideas. Si el texto trae puntos marcados con [PROXIMO_PASO], usalos sin incluir la marca.
+
+Si no hay ningun proximo paso claro, responde exactamente: NINGUNO
+""";
+
+    public static string Goals(string transcript, string languageName) => FollowUp(GoalsSystem, transcript, languageName);
+
+    public static string NextSteps(string transcript, string languageName) => FollowUp(NextStepsSystem, transcript, languageName);
+
+    private static string FollowUp(string system, string transcript, string languageName) =>
+        "<|im_start|>system\n" +
+        system.Replace("{{LANGUAGE}}", languageName) +
+        " /no_think<|im_end|>\n" +
+        "<|im_start|>user\n" +
+        "Transcripcion:\n" + transcript + "\n\n/no_think<|im_end|>\n" +
+        "<|im_start|>assistant\n";
 
     public static string Final(string transcript, string languageName) =>
         "<|im_start|>system\n" +

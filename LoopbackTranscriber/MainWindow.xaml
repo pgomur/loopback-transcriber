@@ -80,6 +80,30 @@
             </Setter>
         </Style>
 
+        <Style x:Key="VirtualizedBubbleListStyle" TargetType="ItemsControl">
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ItemsControl">
+                        <ScrollViewer Focusable="False" CanContentScroll="True"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsPresenter Margin="0,0,14,0" />
+                        </ScrollViewer>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="ChatBubbleBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
             <Style.Triggers>
@@ -392,9 +416,9 @@
                         <Border Grid.Row="1" Grid.Column="0" MinHeight="230" CornerRadius="10" Padding="14"
                                 Background="{DynamicResource ControlFillColorSecondaryBrush}">
                             <Grid>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                <ItemsControl ItemsSource="{Binding TranscriptMessages}"
+                                              Style="{StaticResource VirtualizedBubbleListStyle}"
                                               Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource InverseBoolToVis}}">
-                                    <ItemsControl ItemsSource="{Binding TranscriptMessages}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <StackPanel Margin="0,4"
@@ -409,8 +433,7 @@
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                </ItemsControl>
 
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                                               Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource BoolToVis}}">
@@ -672,9 +695,9 @@
                         <Border Grid.Row="1" Grid.Column="0" MinHeight="230" CornerRadius="10" Padding="14"
                                 Background="{DynamicResource ControlFillColorSecondaryBrush}">
                             <Grid>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                <ItemsControl ItemsSource="{Binding TranscriptMessages}"
+                                              Style="{StaticResource VirtualizedBubbleListStyle}"
                                               Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource InverseBoolToVis}}">
-                                    <ItemsControl ItemsSource="{Binding TranscriptMessages}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <StackPanel Margin="0,4"
@@ -689,8 +712,7 @@
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                </ItemsControl>
 
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                                               Visibility="{Binding IsShowingSummaryTab, Converter={StaticResource BoolToVis}}">
