@@ -226,7 +226,24 @@
                 </Border>
 
                 <TextBlock Text="{Binding Path=[ConfigLegalBody], Source={x:Static services:Strings.Instance}}"
-                           TextWrapping="Wrap" FontSize="11" LineHeight="16" Opacity="0.35" Margin="2,-10,0,12" />
+                           TextWrapping="Wrap" FontSize="11" LineHeight="16" Opacity="0.35" Margin="2,-10,0,6" />
+
+                <TextBlock x:Name="ThirdPartyLink" Cursor="Hand" HorizontalAlignment="Left" Margin="2,0,0,12"
+                           Text="{Binding Path=[ConfigThirdPartyLicenses], Source={x:Static services:Strings.Instance}}"
+                           MouseLeftButtonUp="OnThirdPartyLicensesClick">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontSize" Value="11" />
+                            <Setter Property="Opacity" Value="0.35" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="0.7" />
+                                    <Setter Property="TextDecorations" Value="Underline" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -48,6 +48,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<TranscriptHistoryItem> FilteredTranscriptHistory { get; } = [];
 
+    public HistorySearchState HistorySearch { get; }
+
+    public HistorySearchState AppHistorySearch { get; }
+
+    public bool ShowHistoryNoResults => HistorySearch.Matches is not null && FilteredTranscriptHistory.Count == 0;
+
+    public bool ShowAppHistoryNoResults => AppHistorySearch.Matches is not null && AppTranscriptHistory.Count == 0;
+
     [ObservableProperty]
     private bool _hasSelectedAppHistoryItems;
 
@@ -169,12 +177,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
             matches = matches.Where(h => h.Duration is { } duration && duration.TotalMinutes >= minDurationMinutes);
         }
 
+        if (HistorySearch.Matches is { } searchMatches)
+        {
+            matches = matches.Where(h => searchMatches.Contains(h.FilePath));
+        }
+
         foreach (var item in matches)
         {
             FilteredTranscriptHistory.Add(item);
         }
 
         HasSelectedHistoryItems = FilteredTranscriptHistory.Any(i => i.IsSelected);
+        OnPropertyChanged(nameof(ShowHistoryNoResults));
         NotifyDeleteAvailabilityChanged();
     }
 
@@ -218,6 +232,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsApplicationsViewActive));
         ApplicationsViewModel?.SetActive(value == MainViewMode.Applications);
         RefreshTargetActiveStates();
+        RefreshSummaryModelAvailability();
     }
 
     [ObservableProperty]
@@ -263,7 +278,36 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public bool ShowViewedSummaryButton =>
         IsShowingSummaryTab && !string.IsNullOrWhiteSpace(TranscriptText);
 
-    partial void OnIsShowingSummaryTabChanged(bool value) => OnPropertyChanged(nameof(ShowViewedSummaryButton));
+    [ObservableProperty]
+    private bool _isSummaryModelAvailable = true;
+
+    public bool CanGenerateViewedSummary => !IsViewedSummaryGenerating && IsSummaryModelAvailable;
+
+    public bool ShowSummaryModelWarning => ShowViewedSummaryButton && !IsSummaryModelAvailable;
+
+    partial void OnIsSummaryModelAvailableChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanGenerateViewedSummary));
+        OnPropertyChanged(nameof(ShowSummaryModelWarning));
+    }
+
+    private void RefreshSummaryModelAvailability()
+    {
+        try
+        {
+            IsSummaryModelAvailable = File.Exists(_settingsService.Load().GetSummaryModelFilePath());
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("MainViewModel.RefreshSummaryModelAvailability: no se pudo comprobar el modelo de resumen", ex);
+        }
+    }
+
+    partial void OnIsShowingSummaryTabChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowViewedSummaryButton));
+        OnPropertyChanged(nameof(ShowSummaryModelWarning));
+    }
 
     partial void OnHasViewedSummaryChanged(bool value) => NotifyViewedSummaryButtonState();
 
@@ -275,6 +319,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         NotifyViewedSummaryButtonState();
+        OnPropertyChanged(nameof(CanGenerateViewedSummary));
     }
 
     [ObservableProperty]
@@ -335,6 +380,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _settingsService = settingsService;
         _transcriptHistoryService = transcriptHistoryService;
         _customAppsService = customAppsService;
+
+        HistorySearch = new HistorySearchState(() => TranscriptHistory.ToList(), RefreshFilteredTranscriptHistory);
+        AppHistorySearch = new HistorySearchState(() => TranscriptHistory.ToList(), RefreshAppTranscriptHistory);
 
         foreach (var app in TargetApp.All.Concat(_customAppsService.CustomApps))
         {
@@ -615,12 +663,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
             matches = matches.Where(h => h.Duration is { } duration && duration.TotalMinutes >= minDurationMinutes);
         }
 
+        if (AppHistorySearch.Matches is { } appSearchMatches)
+        {
+            matches = matches.Where(h => appSearchMatches.Contains(h.FilePath));
+        }
+
         foreach (var item in matches)
         {
             item.IsSelected = false;
             item.PropertyChanged += OnAppHistoryItemPropertyChanged;
             AppTranscriptHistory.Add(item);
         }
+
+        OnPropertyChanged(nameof(ShowAppHistoryNoResults));
     }
 
     private void OnAppHistoryItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -686,6 +741,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         RefreshAppTranscriptHistory();
         RefreshFilteredTranscriptHistory();
+
+        HistorySearch.Recompute();
+        AppHistorySearch.Recompute();
     }
 
     private void EnsureTranscriptsWatcher(string folder)
@@ -1241,6 +1299,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         _viewedTranscriptFilePath = item.FilePath;
+        RefreshSummaryModelAvailability();
         ApplyViewedSummary(item);
 
         if (!item.HasTxt && !item.HasMarkdown)
@@ -1360,8 +1419,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         if (!File.Exists(modelPath))
         {
-            MessageBox.Show(Strings.Instance.Get("SummaryModelMissingBody"), Strings.Instance.Get("SummaryModelMissingTitle"),
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            RefreshSummaryModelAvailability();
             return;
         }
 
@@ -1575,6 +1633,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         TranscriptMessages = ParseTranscriptMessages(value);
         OnPropertyChanged(nameof(ShowViewedSummaryButton));
+        OnPropertyChanged(nameof(ShowSummaryModelWarning));
     }
 
     private static ObservableCollection<TranscriptMessage> ParseTranscriptMessages(string text)

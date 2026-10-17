@@ -255,6 +255,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Orientation="Horizontal">
                                 <ui:Button Padding="6" Appearance="Transparent" Margin="0,0,6,0"
@@ -295,9 +296,21 @@
                                     </ui:Button.Style>
                                 </ui:Button>
                             </StackPanel>
-                            <ui:Button Grid.Column="1" Appearance="Secondary" Margin="12,0,0,0" Padding="10,5" VerticalAlignment="Center"
+                            <Border Grid.Column="1" Margin="12,0,0,0" Padding="2" Background="Transparent" VerticalAlignment="Center" Cursor="Hand"
+                                    ToolTipService.InitialShowDelay="100"
+                                    Visibility="{Binding ShowSummaryModelWarning, Converter={StaticResource BoolToVis}}">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding ShowConfigCommand}" />
+                                </Border.InputBindings>
+                                <Border.ToolTip>
+                                    <TextBlock Text="{Binding Path=[SummaryModelMissingHint], Source={x:Static services:Strings.Instance}}"
+                                               TextWrapping="Wrap" TextAlignment="Left" MaxWidth="260" />
+                                </Border.ToolTip>
+                                <ui:SymbolIcon Symbol="Warning24" FontSize="22" Foreground="#FFC02E" />
+                            </Border>
+                            <ui:Button Grid.Column="2" Appearance="Secondary" Margin="12,0,0,0" Padding="10,5" VerticalAlignment="Center"
                                        Visibility="{Binding ShowViewedSummaryButton, Converter={StaticResource BoolToVis}}"
-                                       IsEnabled="{Binding IsViewedSummaryGenerating, Converter={StaticResource InverseBoolConverter}}"
+                                       IsEnabled="{Binding CanGenerateViewedSummary}"
                                        Command="{Binding RegenerateViewedSummaryCommand}">
                                 <Grid>
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding ShowViewedIdleGenerate, Converter={StaticResource BoolToVis}}">
@@ -451,7 +464,22 @@
                         <Border Grid.Row="1" Grid.Column="2" CornerRadius="8"
                                 Background="{DynamicResource ControlFillColorSecondaryBrush}">
                             <Grid Margin="14">
-                                <ScrollViewer Margin="0,0,0,0" VerticalScrollBarVisibility="Auto">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <ui:TextBox Grid.Row="0" Margin="0,0,0,10"
+                                            Text="{Binding AppHistorySearch.Text, UpdateSourceTrigger=PropertyChanged}"
+                                            PlaceholderText="{Binding Path=[SearchHistoryPlaceholder], Source={x:Static services:Strings.Instance}}"
+                                            ClearButtonEnabled="True">
+                                    <ui:TextBox.Icon>
+                                        <ui:SymbolIcon Symbol="Search16" />
+                                    </ui:TextBox.Icon>
+                                </ui:TextBox>
+                                <TextBlock Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,24,0,0" Opacity="0.55"
+                                           Text="{Binding Path=[SearchNoResults], Source={x:Static services:Strings.Instance}}"
+                                           Visibility="{Binding ShowAppHistoryNoResults, Converter={StaticResource BoolToVis}}" />
+                                <ScrollViewer Grid.Row="1" Margin="0,0,0,0" VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl ItemsSource="{Binding AppTranscriptHistory}" HorizontalContentAlignment="Stretch">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -534,6 +562,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Orientation="Horizontal">
                                 <ui:Button Padding="6" Appearance="Transparent" Margin="0,0,6,0"
@@ -574,9 +603,21 @@
                                     </ui:Button.Style>
                                 </ui:Button>
                             </StackPanel>
-                            <ui:Button Grid.Column="1" Appearance="Secondary" Margin="12,0,0,0" Padding="10,5" VerticalAlignment="Center"
+                            <Border Grid.Column="1" Margin="12,0,0,0" Padding="2" Background="Transparent" VerticalAlignment="Center" Cursor="Hand"
+                                    ToolTipService.InitialShowDelay="100"
+                                    Visibility="{Binding ShowSummaryModelWarning, Converter={StaticResource BoolToVis}}">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding ShowConfigCommand}" />
+                                </Border.InputBindings>
+                                <Border.ToolTip>
+                                    <TextBlock Text="{Binding Path=[SummaryModelMissingHint], Source={x:Static services:Strings.Instance}}"
+                                               TextWrapping="Wrap" TextAlignment="Left" MaxWidth="260" />
+                                </Border.ToolTip>
+                                <ui:SymbolIcon Symbol="Warning24" FontSize="22" Foreground="#FFC02E" />
+                            </Border>
+                            <ui:Button Grid.Column="2" Appearance="Secondary" Margin="12,0,0,0" Padding="10,5" VerticalAlignment="Center"
                                        Visibility="{Binding ShowViewedSummaryButton, Converter={StaticResource BoolToVis}}"
-                                       IsEnabled="{Binding IsViewedSummaryGenerating, Converter={StaticResource InverseBoolConverter}}"
+                                       IsEnabled="{Binding CanGenerateViewedSummary}"
                                        Command="{Binding RegenerateViewedSummaryCommand}">
                                 <Grid>
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding ShowViewedIdleGenerate, Converter={StaticResource BoolToVis}}">
@@ -730,7 +771,22 @@
                         <Border Grid.Row="1" Grid.Column="2" CornerRadius="8"
                                 Background="{DynamicResource ControlFillColorSecondaryBrush}">
                             <Grid Margin="14">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <ui:TextBox Grid.Row="0" Margin="0,0,0,10"
+                                            Text="{Binding HistorySearch.Text, UpdateSourceTrigger=PropertyChanged}"
+                                            PlaceholderText="{Binding Path=[SearchHistoryPlaceholder], Source={x:Static services:Strings.Instance}}"
+                                            ClearButtonEnabled="True">
+                                    <ui:TextBox.Icon>
+                                        <ui:SymbolIcon Symbol="Search16" />
+                                    </ui:TextBox.Icon>
+                                </ui:TextBox>
+                                <TextBlock Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,24,0,0" Opacity="0.55"
+                                           Text="{Binding Path=[SearchNoResults], Source={x:Static services:Strings.Instance}}"
+                                           Visibility="{Binding ShowHistoryNoResults, Converter={StaticResource BoolToVis}}" />
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                     <ItemsControl ItemsSource="{Binding FilteredTranscriptHistory}" HorizontalContentAlignment="Stretch">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
