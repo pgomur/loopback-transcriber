@@ -3,7 +3,7 @@ using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace LoopbackTranscriber.Services;
-public sealed class DeviceLoopbackRecorder : IDisposable
+public sealed class DeviceLoopbackRecorder : IDeviceCapture
 {
     public sealed class DeviceTrack
     {

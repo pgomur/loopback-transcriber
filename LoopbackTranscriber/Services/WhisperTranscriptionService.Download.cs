@@ -21,7 +21,13 @@ public sealed partial class WhisperTranscriptionService
     private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromHours(1) };
 
     private const string HuggingFaceRepository = "https://huggingface.co/sandrohanea/whisper.net/resolve";
-    private const string ModelVersion = "v5";
+
+    internal const string ModelRevision = "79dea24237e62d8a6e20a978ba415446d19712b3";
+
+    internal static readonly IReadOnlyDictionary<GgmlType, string> PinnedSha256 = new Dictionary<GgmlType, string>
+    {
+        [GgmlType.LargeV3Turbo] = "05265418cae607e28c62db4095612e2c1967885d87cbda5a104834414b563ac8",
+    };
 
     private const int DownloadBufferSize = 1024 * 1024;
 
@@ -33,7 +39,7 @@ public sealed partial class WhisperTranscriptionService
         "medium" => GgmlType.Medium,
         "large" => GgmlType.LargeV3,
         "turbo" => GgmlType.LargeV3Turbo,
-        _ => GgmlType.Small
+        _ => throw new InvalidOperationException(Strings.Instance.Format("ErrorModelNotPinned", modelSize))
     };
 
     private static string GetModelFileName(GgmlType type) => type switch
@@ -48,7 +54,7 @@ public sealed partial class WhisperTranscriptionService
     };
 
     private static string GetModelUrl(GgmlType type) =>
-        $"{HuggingFaceRepository}/{ModelVersion}/q5_1/{GetModelFileName(type)}.bin";
+        $"{HuggingFaceRepository}/{ModelRevision}/q5_1/{GetModelFileName(type)}.bin";
 
     internal static string FormatBytes(long bytes)
     {
@@ -75,22 +81,50 @@ public sealed partial class WhisperTranscriptionService
         }
 
         var ggmlType = ParseModelSize(modelSize);
+
+        if (!PinnedSha256.TryGetValue(ggmlType, out var expectedSha256))
+        {
+            throw new InvalidOperationException(Strings.Instance.Format("ErrorModelNotPinned", GetModelFileName(ggmlType)));
+        }
+
         var tempPath = destinationPath + ".download";
 
-        var downloadedWithProgress = await TryDownloadWithProgressAsync(ggmlType, modelSize, tempPath, progress,
+        var downloaded = await TryDownloadWithProgressAsync(ggmlType, modelSize, tempPath, progress,
             percentProgress, cancellationToken).ConfigureAwait(false);
 
-        if (!downloadedWithProgress)
+        if (!downloaded)
         {
             progress?.Report(Strings.Instance.Get("ProgressDownloadingModel"));
+            downloaded = await TryDownloadWithProgressAsync(ggmlType, modelSize, tempPath, progress,
+                percentProgress, cancellationToken).ConfigureAwait(false);
+        }
 
-            await using (var modelStream = await WhisperGgmlDownloader.Default
-                             .GetGgmlModelAsync(ggmlType, cancellationToken: cancellationToken)
-                             .ConfigureAwait(false))
-            await using (var fileStream = File.Create(tempPath))
+        if (!downloaded)
+        {
+            throw new IOException(Strings.Instance.Format("ErrorModelDownloadFailed", GetModelFileName(ggmlType)));
+        }
+
+        try
+        {
+            await ModelIntegrity.VerifySha256Async(tempPath, expectedSha256, GetModelFileName(ggmlType), progress,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            try
             {
-                await modelStream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
+                File.Delete(tempPath);
             }
+            catch (Exception deleteEx)
+            {
+                AppLog.Warn($"WhisperTranscriptionService: no se pudo borrar \"{tempPath}\"", deleteEx);
+            }
+
+            throw;
         }
 
         File.Move(tempPath, destinationPath, overwrite: true);
@@ -164,6 +198,11 @@ public sealed partial class WhisperTranscriptionService
                 {
                     progress?.Report(Strings.Instance.Format("ProgressDownloadingBytes", FormatBytes(totalRead)));
                 }
+            }
+
+            if (totalBytes is > 0 && totalRead != totalBytes.Value)
+            {
+                throw new IOException($"Descarga incompleta: {totalRead} de {totalBytes.Value} bytes.");
             }
 
             return true;

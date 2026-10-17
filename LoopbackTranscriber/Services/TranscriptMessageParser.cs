@@ -5,11 +5,10 @@ using LoopbackTranscriber.Models;
 
 namespace LoopbackTranscriber.Services;
 
-/// <summary>Convierte el texto plano de una transcripción en los mensajes (bocadillos) que muestra el visor.</summary>
 internal static class TranscriptMessageParser
 {
     private static readonly Regex ChatSpeakerPrefixRegex =
-        new(@"^(Tu|Participantes|[^\r\n:]+? \(Tú\))\s*:\s*", RegexOptions.Compiled);
+        new("^(" + SpeakerLabels.PrefixPattern + @")\s*:\s*", RegexOptions.Compiled);
 
     public static ObservableCollection<TranscriptMessage> Parse(string text)
     {

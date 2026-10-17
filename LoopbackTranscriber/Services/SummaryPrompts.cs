@@ -1,3 +1,5 @@
+using LoopbackTranscriber.Models;
+
 namespace LoopbackTranscriber.Services;
 
 public static class SummaryPrompts
@@ -25,7 +27,7 @@ Reglas:
 4. Objetivos reune tanto lo que alguien quiere lograr como lo que alguien se compromete explicitamente a hacer; no existe una seccion de tareas aparte. Si hay etiqueta de quien habla, ponla delante del punto tal cual aparece en la transcripcion.
 5. No repitas una misma idea en Objetivos y en Proximos pasos: elige la que mejor encaje. Una recomendacion, opinion, broma o pregunta retorica no es un objetivo ni un proximo paso.
 6. Sintetiza con tus palabras: no copies lineas ni pongas un punto por cada intervencion. Afirma lo que se dijo ("quiere una casa de madera") en vez de "se menciona que..." o "se comenta sobre..." y varia la estructura de las frases.
-7. Cada turno de la transcripcion empieza con la etiqueta de quien habla: "Tu" (o "Nombre (Tú)" si el usuario dio su nombre) para el propio usuario y "Participantes" para el resto. Usa solo etiquetas que aparezcan en el texto y solo cuando distinguir aporte algo; no las traduzcas. Si el texto no trae ninguna etiqueta, viene de una unica fuente: no nombres a nadie ni inventes "Hablante 1".
+7. Cada turno de la transcripcion empieza con la etiqueta de quien habla: "{{SELF}}" (o "{{SELF_NAMED}}" si el usuario dio su nombre) para el propio usuario y "{{OTHERS}}" para el resto. Usa solo etiquetas que aparezcan en el texto y solo cuando distinguir aporte algo; no las traduzcas. Si el texto no trae ninguna etiqueta, viene de una unica fuente: no nombres a nadie ni inventes "Hablante 1".
 8. Si el texto trae puntos marcados con [OBJETIVO] o [PROXIMO_PASO], usalos para esas secciones sin incluir la marca.
 9. No te repitas: cada punto debe aportar informacion distinta a los anteriores. Nunca escribas dos puntos que digan casi lo mismo con otras palabras; si ya lo dijiste, sigue con otra cosa. Es mejor poner menos puntos que repetir.
 """;
@@ -35,7 +37,7 @@ Extraes los puntos mas importantes de UNA parte (parte {{PART}} de {{TOTAL}}) de
 
 Antepon una marca cuando corresponda: "[OBJETIVO] " si alguien expresa un proposito propio ("quiero lograr X") o se compromete explicitamente a hacer algo concreto (en ese caso empieza el texto con la etiqueta real de quien habla, tal cual aparece); "[PROXIMO_PASO] " si se menciona una proxima reunion o fecha, o algo que el grupo hara o revisara despues. Nunca marques una simple opinion, recomendacion o pregunta retorica. Los demas puntos van sin marca.
 
-Cada turno empieza con la etiqueta de quien habla ("Tu" o "Nombre (Tú)" para el usuario, "Participantes" para el resto); si no hay etiquetas, es una unica fuente. Responde en el mismo idioma en el que esta escrito el fragmento.
+Cada turno empieza con la etiqueta de quien habla ("{{SELF}}" o "{{SELF_NAMED}}" para el usuario, "{{OTHERS}}" para el resto); si no hay etiquetas, es una unica fuente. Responde en el mismo idioma en el que esta escrito el fragmento.
 """;
 
     private const string GoalsSystem = """
@@ -68,7 +70,7 @@ Si no hay ningun proximo paso claro, responde exactamente: NINGUNO
 
     public static string Final(string transcript, string languageName) =>
         "<|im_start|>system\n" +
-        FinalSystem.Replace("{{LANGUAGE}}", languageName) +
+        SpeakerLabels.ApplyToPrompt(FinalSystem).Replace("{{LANGUAGE}}", languageName) +
         " /no_think<|im_end|>\n" +
         "<|im_start|>user\n" +
         "Transcripcion:\n" + transcript + "\n\n/no_think<|im_end|>\n" +
@@ -76,7 +78,7 @@ Si no hay ningun proximo paso claro, responde exactamente: NINGUNO
 
     public static string Chunk(string chunkText, int partNumber, int totalParts) =>
         "<|im_start|>system\n" +
-        ChunkSystem.Replace("{{PART}}", partNumber.ToString()).Replace("{{TOTAL}}", totalParts.ToString()) +
+        SpeakerLabels.ApplyToPrompt(ChunkSystem).Replace("{{PART}}", partNumber.ToString()).Replace("{{TOTAL}}", totalParts.ToString()) +
         " /no_think<|im_end|>\n" +
         "<|im_start|>user\n" +
         "Fragmento:\n" + chunkText + "\n\n/no_think<|im_end|>\n" +

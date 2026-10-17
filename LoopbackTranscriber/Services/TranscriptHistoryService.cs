@@ -230,7 +230,7 @@ public sealed class TranscriptHistoryService
     private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
 
     private static readonly Regex TimestampSpeakerPrefixRegex =
-        new(@"^(?:Tu|Participantes|[^\r\n:]+? \(Tú\))\s*:\s*", RegexOptions.Multiline | RegexOptions.Compiled);
+        new("^(?:" + SpeakerLabels.PrefixPattern + @")\s*:\s*", RegexOptions.Multiline | RegexOptions.Compiled);
 
     private static string BuildPreview(string content)
     {

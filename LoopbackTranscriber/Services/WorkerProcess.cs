@@ -24,32 +24,7 @@ internal static class WorkerProcess
         {
             await File.WriteAllTextAsync(jobPath, jobJson, cancellationToken).ConfigureAwait(false);
 
-            var executable = Environment.ProcessPath
-                             ?? throw new InvalidOperationException(Strings.Instance.Get("ErrorBackgroundProcessStart"));
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = executable,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-
-            if (string.Equals(Path.GetFileNameWithoutExtension(executable), "dotnet", StringComparison.OrdinalIgnoreCase))
-            {
-                var assemblyPath = Assembly.GetEntryAssembly()?.Location;
-                if (!string.IsNullOrEmpty(assemblyPath))
-                {
-                    startInfo.ArgumentList.Add(assemblyPath);
-                }
-            }
-
-            startInfo.ArgumentList.Add(WorkerHost.Flag);
-            startInfo.ArgumentList.Add(kind);
-            startInfo.ArgumentList.Add(jobPath);
-            startInfo.ArgumentList.Add(resultPath);
-            startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+            var startInfo = CreateStartInfo(kind, jobPath, resultPath);
 
             using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
@@ -71,7 +46,8 @@ internal static class WorkerProcess
                 }
             };
 
-            process.ErrorDataReceived += (_, _) => { };
+            var stderrTail = new WorkerStderrTail();
+            process.ErrorDataReceived += (_, e) => stderrTail.Add(e.Data);
 
             process.Start();
             process.BeginOutputReadLine();
@@ -102,6 +78,8 @@ internal static class WorkerProcess
                 return await File.ReadAllTextAsync(resultPath, cancellationToken).ConfigureAwait(false);
             }
 
+            AppLog.Error($"WorkerProcess[{kind}]: el proceso termino sin resultado (codigo {process.ExitCode}).\n{stderrTail.Dump()}");
+
             throw new InvalidOperationException(
                 Strings.Instance.Format("ErrorBackgroundProcessEnded", process.ExitCode));
         }
@@ -110,6 +88,44 @@ internal static class WorkerProcess
             TryDelete(jobPath);
             TryDelete(resultPath);
         }
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(string kind, string jobPath, string resultPath, bool redirectInput = false)
+    {
+        var executable = Environment.ProcessPath
+                         ?? throw new InvalidOperationException(Strings.Instance.Get("ErrorBackgroundProcessStart"));
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executable,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        if (redirectInput)
+        {
+            startInfo.RedirectStandardInput = true;
+            startInfo.StandardInputEncoding = new System.Text.UTF8Encoding(false);
+        }
+
+        if (string.Equals(Path.GetFileNameWithoutExtension(executable), "dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            var assemblyPath = Assembly.GetEntryAssembly()?.Location;
+            if (!string.IsNullOrEmpty(assemblyPath))
+            {
+                startInfo.ArgumentList.Add(assemblyPath);
+            }
+        }
+
+        startInfo.ArgumentList.Add(WorkerHost.Flag);
+        startInfo.ArgumentList.Add(kind);
+        startInfo.ArgumentList.Add(jobPath);
+        startInfo.ArgumentList.Add(resultPath);
+        startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+
+        return startInfo;
     }
 
     private static void TryDelete(string path)
@@ -146,6 +162,16 @@ internal static class WorkerHost
             StartParentWatchdog(parentPid);
         }
 
+        if (string.Equals(kind, "whisper-live", StringComparison.Ordinal))
+        {
+            return RunLiveWhisper(jobPath);
+        }
+
+        if (string.Equals(kind, "translate-live", StringComparison.Ordinal))
+        {
+            return RunLiveTranslator(jobPath);
+        }
+
         try
         {
             var jobJson = File.ReadAllText(jobPath);
@@ -162,6 +188,8 @@ internal static class WorkerHost
         }
         catch (Exception ex)
         {
+            AppLog.Warn($"WorkerHost: fallo el trabajo '{kind}'", ex);
+
             try
             {
                 File.WriteAllText(resultPath, JsonSerializer.Serialize(new WorkerErrorResult { Error = ex.Message }));
@@ -172,6 +200,129 @@ internal static class WorkerHost
             }
 
             return 1;
+        }
+    }
+
+    private static int RunLiveWhisper(string configPath)
+    {
+        try
+        {
+            var config = JsonSerializer.Deserialize<LiveWhisperConfig>(File.ReadAllText(configPath))
+                         ?? throw new InvalidOperationException("Configuracion de transcripcion en vivo invalida.");
+
+            using var engine = new LiveWhisperEngine(config);
+            WriteLiveMessage(new LiveWorkerMessage { Ready = true });
+
+            string? line;
+            while ((line = Console.In.ReadLine()) is not null)
+            {
+                if (line.Length == 0)
+                {
+                    continue;
+                }
+
+                var request = JsonSerializer.Deserialize<LiveWhisperRequest>(line);
+                if (request is null)
+                {
+                    continue;
+                }
+
+                var response = new LiveWorkerMessage { Id = request.Id };
+                try
+                {
+                    var pcm = Convert.FromBase64String(request.Audio);
+                    var stopwatch = Stopwatch.StartNew();
+                    response.Segments = Task.Run(() => engine.TranscribeAsync(pcm)).GetAwaiter().GetResult();
+                    response.Ms = stopwatch.ElapsedMilliseconds;
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Warn("WorkerHost: fallo una peticion en vivo", ex);
+                    response.Error = ex.Message;
+                }
+
+                WriteLiveMessage(response);
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            WriteLiveMessage(new LiveWorkerMessage { Error = ex.Message });
+            return 1;
+        }
+    }
+
+    private static int RunLiveTranslator(string configPath)
+    {
+        try
+        {
+            var config = JsonSerializer.Deserialize<LiveTranslatorConfig>(File.ReadAllText(configPath))
+                         ?? throw new InvalidOperationException("Configuracion de traduccion en vivo invalida.");
+
+            using var engine = new LiveTranslatorEngine(config);
+
+            try
+            {
+                Task.Run(() => engine.TranslateAsync("Hello, how are you?", null, "Spanish")).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("WorkerHost: fallo en el calentamiento del traductor", ex);
+            }
+
+            WriteLiveMessage(new LiveWorkerMessage { Ready = true });
+
+            string? line;
+            while ((line = Console.In.ReadLine()) is not null)
+            {
+                if (line.Length == 0)
+                {
+                    continue;
+                }
+
+                var request = JsonSerializer.Deserialize<LiveTranslateRequest>(line);
+                if (request is null)
+                {
+                    continue;
+                }
+
+                var response = new LiveWorkerMessage { Id = request.Id };
+                try
+                {
+                    var stopwatch = Stopwatch.StartNew();
+                    response.Text = Task.Run(() => engine.TranslateAsync(request.Text, request.Context, request.Target))
+                        .GetAwaiter().GetResult();
+                    response.Ms = stopwatch.ElapsedMilliseconds;
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Warn("WorkerHost: fallo una peticion en vivo", ex);
+                    response.Error = ex.Message;
+                }
+
+                WriteLiveMessage(response);
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            WriteLiveMessage(new LiveWorkerMessage { Error = ex.Message });
+            return 1;
+        }
+    }
+
+    private static void WriteLiveMessage(LiveWorkerMessage message)
+    {
+        try
+        {
+            Console.Out.WriteLine("@@L " + JsonSerializer.Serialize(message));
+            Console.Out.Flush();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("WorkerHost: no se pudo enviar un mensaje de la transcripcion en vivo", ex);
         }
     }
 

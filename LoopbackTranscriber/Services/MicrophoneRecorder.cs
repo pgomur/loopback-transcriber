@@ -4,7 +4,7 @@ using NAudio.Wave;
 
 namespace LoopbackTranscriber.Services;
 
-public sealed class MicrophoneRecorder : IDisposable
+public sealed class MicrophoneRecorder : IMicCapture
 {
     private WasapiCapture? _capture;
     private WaveFileWriter? _writer;

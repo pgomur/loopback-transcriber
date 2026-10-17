@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.Services;
 
-public sealed partial class WhisperTranscriptionService
+public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
 {
 
     public sealed record TranscriptSegment(TimeSpan Start, TimeSpan End, string Text);
@@ -110,6 +110,33 @@ public sealed partial class WhisperTranscriptionService
             .ToList();
     }
 
+    internal static string? FilterSegmentText(string? rawText, float noSpeechProbability)
+    {
+        var text = rawText?.Trim();
+        if (string.IsNullOrEmpty(text) || NonSpeechTagRegex.IsMatch(text))
+        {
+            return null;
+        }
+
+        if (noSpeechProbability >= NoSpeechProbThreshold)
+        {
+            return null;
+        }
+
+        if (noSpeechProbability >= HallucinationNoSpeechSoftThreshold && TranscriptFilters.IsKnownHallucinatedPhrase(text))
+        {
+            return null;
+        }
+
+        text = TranscriptFilters.RemovePhraseLoops(text);
+        if (string.IsNullOrWhiteSpace(text) || TranscriptFilters.IsRepeatedWordLoop(text))
+        {
+            return null;
+        }
+
+        return text;
+    }
+
     internal async Task<List<TranscriptSegment>> TranscribeSegmentsInProcessAsync(string wavPath, string modelPath,
         string language, int threadCount, bool useGpu = true, IProgress<int>? percentProgress = null,
         CancellationToken cancellationToken = default)
@@ -141,24 +168,8 @@ public sealed partial class WhisperTranscriptionService
         var segments = new List<TranscriptSegment>();
         await foreach (var result in processor.ProcessAsync(fileStream, cancellationToken).ConfigureAwait(false))
         {
-            var text = result.Text?.Trim();
-            if (string.IsNullOrEmpty(text) || NonSpeechTagRegex.IsMatch(text))
-            {
-                continue;
-            }
-
-            if (result.NoSpeechProbability >= NoSpeechProbThreshold)
-            {
-                continue;
-            }
-
-            if (result.NoSpeechProbability >= HallucinationNoSpeechSoftThreshold && TranscriptFilters.IsKnownHallucinatedPhrase(text))
-            {
-                continue;
-            }
-
-            text = TranscriptFilters.RemovePhraseLoops(text);
-            if (string.IsNullOrWhiteSpace(text) || TranscriptFilters.IsRepeatedWordLoop(text))
+            var text = FilterSegmentText(result.Text, result.NoSpeechProbability);
+            if (text is null)
             {
                 continue;
             }

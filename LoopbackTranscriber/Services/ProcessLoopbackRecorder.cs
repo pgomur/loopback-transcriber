@@ -6,29 +6,40 @@ using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.Services;
 
-public sealed class ProcessLoopbackRecorder : IDisposable
+public sealed class ProcessLoopbackRecorder : IProcessCapture
 {
     private const uint AUDCLNT_BUFFERFLAGS_SILENT = 0x2;
 
-    private IAudioClient? _audioClient;
-    private IAudioCaptureClient? _captureClient;
-    private AutoResetEvent? _sampleEvent;
-    private ManualResetEvent? _stopEvent;
-    private Thread? _captureThread;
-    private FileStream? _fileStream;
-    private BinaryWriter? _writer;
-    private long _dataBytesWritten;
-    private WAVEFORMATEX _format;
-    private Exception? _captureError;
+    public const int CaptureSampleRate = 44100;
+    public const int CaptureChannels = 2;
 
-    private byte[] _scratchBuffer = new byte[4096];
+    private sealed class CaptureSession
+    {
+        public required IAudioClient AudioClient;
+        public required IAudioCaptureClient CaptureClient;
+        public required AutoResetEvent SampleEvent;
+        public required ManualResetEvent StopEvent;
+        public required FileStream FileStream;
+        public required BinaryWriter Writer;
+        public required WAVEFORMATEX Format;
 
-    private long _packetCount;
-    private long _silentPacketCount;
-    private long _framesCaptured;
-    private int _peakSampleAbs;
+        public readonly object WriteLock = new();
+        public Thread? Thread;
+        public volatile bool Abandoned;
+        public volatile Exception? Error;
+        public byte[] Scratch = new byte[4096];
+        public long DataBytesWritten;
+        public long PacketCount;
+        public long SilentPacketCount;
+        public long FramesCaptured;
+        public int PeakSampleAbs;
+    }
+
+    private CaptureSession? _session;
 
     public string LastCaptureStats { get; private set; } = string.Empty;
+
+    public event Action<byte[], int>? AudioCaptured;
 
     public bool IsRecording { get; private set; }
 
@@ -39,192 +50,319 @@ public sealed class ProcessLoopbackRecorder : IDisposable
             throw new InvalidOperationException(Strings.Instance.Get("ErrorRecordingAlreadyRunning"));
         }
 
-        _audioClient = await Wasapi.ActivateProcessLoopbackAsync(processId, includeProcessTree)
+        var audioClient = await Wasapi.ActivateProcessLoopbackAsync(processId, includeProcessTree)
             .ConfigureAwait(false);
 
-        _format = WAVEFORMATEX.CreatePlain(WAVEFORMATEX.WAVE_FORMAT_PCM, 44100, 2, 16);
+        IAudioCaptureClient? captureClient = null;
+        AutoResetEvent? sampleEvent = null;
+        ManualResetEvent? stopEvent = null;
+        FileStream? fileStream = null;
+        BinaryWriter? writer = null;
 
-        const AUDCLNT_STREAMFLAGS flags = AUDCLNT_STREAMFLAGS.LOOPBACK
-            | AUDCLNT_STREAMFLAGS.EVENTCALLBACK
-            | AUDCLNT_STREAMFLAGS.AUTOCONVERTPCM
-            | AUDCLNT_STREAMFLAGS.SRC_DEFAULT_QUALITY;
-
-        var hr = _audioClient.Initialize(AUDCLNT_SHAREMODE.Shared, flags, 0, 0, ref _format, IntPtr.Zero);
-        ThrowIfFailed(hr, "IAudioClient.Initialize");
-
-        _sampleEvent = new AutoResetEvent(false);
-        hr = _audioClient.SetEventHandle(_sampleEvent.SafeWaitHandle.DangerousGetHandle());
-        ThrowIfFailed(hr, "IAudioClient.SetEventHandle");
-
-        var captureClientGuid = typeof(IAudioCaptureClient).GUID;
-        hr = _audioClient.GetService(ref captureClientGuid, out var captureClientPtr);
-        ThrowIfFailed(hr, "IAudioClient.GetService(IAudioCaptureClient)");
-        _captureClient = (IAudioCaptureClient)Marshal.GetObjectForIUnknown(captureClientPtr);
-        Marshal.Release(captureClientPtr);
-
-        var directory = Path.GetDirectoryName(outputWavPath);
-        if (!string.IsNullOrEmpty(directory))
+        try
         {
-            Directory.CreateDirectory(directory);
+            var format = WAVEFORMATEX.CreatePlain(WAVEFORMATEX.WAVE_FORMAT_PCM, CaptureSampleRate, CaptureChannels, 16);
+
+            const AUDCLNT_STREAMFLAGS flags = AUDCLNT_STREAMFLAGS.LOOPBACK
+                | AUDCLNT_STREAMFLAGS.EVENTCALLBACK
+                | AUDCLNT_STREAMFLAGS.AUTOCONVERTPCM
+                | AUDCLNT_STREAMFLAGS.SRC_DEFAULT_QUALITY;
+
+            var hr = audioClient.Initialize(AUDCLNT_SHAREMODE.Shared, flags, 0, 0, ref format, IntPtr.Zero);
+            ThrowIfFailed(hr, "IAudioClient.Initialize");
+
+            sampleEvent = new AutoResetEvent(false);
+            hr = audioClient.SetEventHandle(sampleEvent.SafeWaitHandle.DangerousGetHandle());
+            ThrowIfFailed(hr, "IAudioClient.SetEventHandle");
+
+            var captureClientGuid = typeof(IAudioCaptureClient).GUID;
+            hr = audioClient.GetService(ref captureClientGuid, out var captureClientPtr);
+            ThrowIfFailed(hr, "IAudioClient.GetService(IAudioCaptureClient)");
+            captureClient = (IAudioCaptureClient)Marshal.GetObjectForIUnknown(captureClientPtr);
+            Marshal.Release(captureClientPtr);
+
+            var directory = Path.GetDirectoryName(outputWavPath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            fileStream = new FileStream(outputWavPath, FileMode.Create, FileAccess.Write,
+                FileShare.ReadWrite | FileShare.Delete);
+            writer = new BinaryWriter(fileStream);
+            WriteWavHeaderPlaceholder(writer, format);
+            stopEvent = new ManualResetEvent(false);
+
+            var session = new CaptureSession
+            {
+                AudioClient = audioClient,
+                CaptureClient = captureClient,
+                SampleEvent = sampleEvent,
+                StopEvent = stopEvent,
+                FileStream = fileStream,
+                Writer = writer,
+                Format = format
+            };
+
+            hr = audioClient.Start();
+            ThrowIfFailed(hr, "IAudioClient.Start");
+
+            LastCaptureStats = string.Empty;
+            _session = session;
+            IsRecording = true;
+
+            session.Thread = new Thread(() => CaptureLoop(session)) { IsBackground = true, Name = "LoopbackTranscriber-Capture" };
+            session.Thread.Start();
         }
-
-        _fileStream = new FileStream(outputWavPath, FileMode.Create, FileAccess.Write, FileShare.Read);
-        _writer = new BinaryWriter(_fileStream);
-        WriteWavHeaderPlaceholder(_writer, _format);
-        _dataBytesWritten = 0;
-        _packetCount = 0;
-        _silentPacketCount = 0;
-        _framesCaptured = 0;
-        _peakSampleAbs = 0;
-        LastCaptureStats = string.Empty;
-        _captureError = null;
-        _stopEvent = new ManualResetEvent(false);
-
-        hr = _audioClient.Start();
-        ThrowIfFailed(hr, "IAudioClient.Start");
-
-        IsRecording = true;
-
-        _captureThread = new Thread(CaptureLoop) { IsBackground = true, Name = "LoopbackTranscriber-Capture" };
-        _captureThread.Start();
+        catch
+        {
+            _session = null;
+            IsRecording = false;
+            TryDispose(writer);
+            TryDispose(fileStream);
+            TryDispose(sampleEvent);
+            TryDispose(stopEvent);
+            TryReleaseCom(captureClient);
+            TryReleaseCom(audioClient);
+            throw;
+        }
     }
 
     public async Task<string> StopAsync()
     {
-        if (!IsRecording)
+        if (!IsRecording || _session is null)
         {
             throw new InvalidOperationException(Strings.Instance.Get("ErrorNoRecordingRunning"));
         }
 
+        var session = _session;
         IsRecording = false;
-        _stopEvent!.Set();
+        session.StopEvent.Set();
 
-        var path = await Task.Run(FinishStop).ConfigureAwait(false);
+        var path = await Task.Run(() => FinishStop(session)).ConfigureAwait(false);
 
-        var error = _captureError;
-        _captureError = null;
+        var error = session.Error;
         if (error is not null)
         {
-            throw new InvalidOperationException(Strings.Instance.Get("ErrorAudioCapture"), error);
+            if (session.DataBytesWritten <= 0)
+            {
+                throw new InvalidOperationException(Strings.Instance.Get("ErrorAudioCapture"), error);
+            }
+
+            AppLog.Warn("ProcessLoopbackRecorder: la captura termino con error; se conserva el audio grabado hasta ese momento", error);
         }
 
         return path;
     }
 
-    private string FinishStop()
+    private string FinishStop(CaptureSession session)
     {
-        var thread = _captureThread;
-        thread?.Join(TimeSpan.FromSeconds(5));
+        var thread = session.Thread;
+        if (thread is not null && !thread.Join(TimeSpan.FromSeconds(5)))
+        {
+            AppLog.Info("ProcessLoopbackRecorder: el hilo de captura tarda en terminar, se detiene el cliente de audio");
+            TryStop(session.AudioClient);
 
-        _audioClient?.Stop();
+            if (!thread.Join(TimeSpan.FromSeconds(5)))
+            {
+                return AbandonStuckCapture(session);
+            }
+        }
 
-        FixWavHeader(_writer!, _dataBytesWritten, _format);
-        _writer!.Flush();
-        var path = _fileStream!.Name;
+        TryStop(session.AudioClient);
 
-        _writer.Dispose();
-        _fileStream.Dispose();
-        _writer = null;
-        _fileStream = null;
+        string path;
+        lock (session.WriteLock)
+        {
+            FixWavHeader(session.Writer, session.DataBytesWritten, session.Format);
+            session.Writer.Flush();
+            path = session.FileStream.Name;
+            session.Writer.Dispose();
+            session.FileStream.Dispose();
+        }
 
-        ReleaseAudioObjects();
-
-        _sampleEvent?.Dispose();
-        _stopEvent?.Dispose();
-        _sampleEvent = null;
-        _stopEvent = null;
+        TryReleaseCom(session.CaptureClient);
+        TryReleaseCom(session.AudioClient);
+        session.SampleEvent.Dispose();
+        session.StopEvent.Dispose();
 
         LastCaptureStats =
-            $"paquetes={_packetCount}, en_silencio={_silentPacketCount}, frames={_framesCaptured}, pico_senal={_peakSampleAbs}/32768";
+            $"paquetes={session.PacketCount}, en_silencio={session.SilentPacketCount}, frames={session.FramesCaptured}, pico_senal={session.PeakSampleAbs}/32768";
+
+        if (ReferenceEquals(_session, session))
+        {
+            _session = null;
+        }
 
         return path;
     }
 
-    private void CaptureLoop()
+    private string AbandonStuckCapture(CaptureSession session)
+    {
+        var path = session.FileStream.Name;
+        AppLog.Error($"ProcessLoopbackRecorder: el hilo de captura no termino; se abandona la sesion (\"{path}\")");
+
+        session.Abandoned = true;
+
+        if (Monitor.TryEnter(session.WriteLock, TimeSpan.FromSeconds(2)))
+        {
+            try
+            {
+                FixWavHeader(session.Writer, session.DataBytesWritten, session.Format);
+                session.Writer.Flush();
+                session.Writer.Dispose();
+                session.FileStream.Dispose();
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("ProcessLoopbackRecorder: no se pudo cerrar el WAV de la sesion abandonada", ex);
+            }
+            finally
+            {
+                Monitor.Exit(session.WriteLock);
+            }
+        }
+        else
+        {
+            try
+            {
+                using var headerStream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite,
+                    FileShare.ReadWrite | FileShare.Delete);
+                var blockAlign = Math.Max(1, (int)session.Format.nBlockAlign);
+                var dataBytes = Math.Max(0, headerStream.Length - 44);
+                dataBytes -= dataBytes % blockAlign;
+                using var headerWriter = new BinaryWriter(headerStream);
+                FixWavHeader(headerWriter, dataBytes, session.Format);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("ProcessLoopbackRecorder: no se pudo reparar la cabecera del WAV abandonado", ex);
+            }
+        }
+
+        LastCaptureStats = "captura abandonada: el hilo de captura no respondio";
+
+        if (ReferenceEquals(_session, session))
+        {
+            _session = null;
+        }
+
+        return path;
+    }
+
+    private void CaptureLoop(CaptureSession session)
     {
         try
         {
-            var handles = new WaitHandle[] { _sampleEvent!, _stopEvent! };
-            while (true)
+            var handles = new WaitHandle[] { session.SampleEvent, session.StopEvent };
+            while (!session.Abandoned)
             {
                 var signaled = WaitHandle.WaitAny(handles, 2000);
                 if (signaled == 1)
                 {
-
-                    DrainAvailablePackets();
+                    DrainAvailablePackets(session);
                     break;
                 }
 
                 if (signaled != WaitHandle.WaitTimeout)
                 {
-                    DrainAvailablePackets();
+                    DrainAvailablePackets(session);
                 }
             }
         }
         catch (Exception ex)
         {
-            _captureError = ex;
+            session.Error = ex;
         }
     }
 
-    private void EnsureScratchCapacity(int size)
+    private void DrainAvailablePackets(CaptureSession session)
     {
-        if (_scratchBuffer.Length < size)
-        {
-            _scratchBuffer = new byte[size];
-        }
-    }
+        var captureClient = session.CaptureClient;
+        var blockAlign = session.Format.nBlockAlign;
 
-    private void DrainAvailablePackets()
-    {
-        while (true)
+        while (!session.Abandoned)
         {
-            var hr = _captureClient!.GetNextPacketSize(out var framesAvailable);
+            var hr = captureClient.GetNextPacketSize(out var framesAvailable);
             if (hr < 0 || framesAvailable == 0)
             {
                 break;
             }
 
-            hr = _captureClient.GetBuffer(out var dataPtr, out var numFrames, out var bufferFlags, out _, out _);
+            hr = captureClient.GetBuffer(out var dataPtr, out var numFrames, out var bufferFlags, out _, out _);
             if (hr < 0)
             {
                 break;
             }
 
-            var bytesToCapture = (int)(numFrames * _format.nBlockAlign);
+            var bytesToCapture = (int)(numFrames * blockAlign);
+            var written = false;
             if (bytesToCapture > 0)
             {
-                _packetCount++;
-                _framesCaptured += numFrames;
-
-                EnsureScratchCapacity(bytesToCapture);
-
-                if ((bufferFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0 || dataPtr == IntPtr.Zero)
+                lock (session.WriteLock)
                 {
-                    _silentPacketCount++;
-                    Array.Clear(_scratchBuffer, 0, bytesToCapture);
-                    _writer!.Write(_scratchBuffer, 0, bytesToCapture);
-                }
-                else
-                {
-                    Marshal.Copy(dataPtr, _scratchBuffer, 0, bytesToCapture);
-                    _writer!.Write(_scratchBuffer, 0, bytesToCapture);
-
-                    for (var i = 0; i + 1 < bytesToCapture; i += 2)
+                    if (!session.Abandoned)
                     {
-                        var sample = (short)(_scratchBuffer[i] | (_scratchBuffer[i + 1] << 8));
-                        var abs = Math.Abs((int)sample);
-                        if (abs > _peakSampleAbs)
+                        if (session.Scratch.Length < bytesToCapture)
                         {
-                            _peakSampleAbs = abs;
+                            session.Scratch = new byte[bytesToCapture];
                         }
+
+                        session.PacketCount++;
+                        session.FramesCaptured += numFrames;
+
+                        if ((bufferFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0 || dataPtr == IntPtr.Zero)
+                        {
+                            session.SilentPacketCount++;
+                            Array.Clear(session.Scratch, 0, bytesToCapture);
+                            session.Writer.Write(session.Scratch, 0, bytesToCapture);
+                        }
+                        else
+                        {
+                            Marshal.Copy(dataPtr, session.Scratch, 0, bytesToCapture);
+                            session.Writer.Write(session.Scratch, 0, bytesToCapture);
+
+                            for (var i = 0; i + 1 < bytesToCapture; i += 2)
+                            {
+                                var sample = (short)(session.Scratch[i] | (session.Scratch[i + 1] << 8));
+                                var abs = Math.Abs((int)sample);
+                                if (abs > session.PeakSampleAbs)
+                                {
+                                    session.PeakSampleAbs = abs;
+                                }
+                            }
+                        }
+
+                        session.DataBytesWritten += bytesToCapture;
+                        written = true;
                     }
                 }
-
-                _dataBytesWritten += bytesToCapture;
             }
 
-            _captureClient.ReleaseBuffer(numFrames);
+            if (written && !session.Abandoned)
+            {
+                RaiseAudioCaptured(session.Scratch, bytesToCapture);
+            }
+
+            captureClient.ReleaseBuffer(numFrames);
+        }
+    }
+
+    private void RaiseAudioCaptured(byte[] buffer, int count)
+    {
+        var handler = AudioCaptured;
+        if (handler is null)
+        {
+            return;
+        }
+
+        try
+        {
+            handler(buffer, count);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("ProcessLoopbackRecorder: fallo en un suscriptor del audio capturado", ex);
         }
     }
 
@@ -260,18 +398,44 @@ public sealed class ProcessLoopbackRecorder : IDisposable
         stream.Seek(0, SeekOrigin.End);
     }
 
-    private void ReleaseAudioObjects()
+    private static void TryStop(IAudioClient client)
     {
-        if (_captureClient is not null)
+        try
         {
-            Marshal.ReleaseComObject(_captureClient);
-            _captureClient = null;
+            client.Stop();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("ProcessLoopbackRecorder: fallo al detener el cliente de audio", ex);
+        }
+    }
+
+    private static void TryDispose(IDisposable? disposable)
+    {
+        try
+        {
+            disposable?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("ProcessLoopbackRecorder: fallo al liberar un recurso", ex);
+        }
+    }
+
+    private static void TryReleaseCom(object? comObject)
+    {
+        if (comObject is null)
+        {
+            return;
         }
 
-        if (_audioClient is not null)
+        try
         {
-            Marshal.ReleaseComObject(_audioClient);
-            _audioClient = null;
+            Marshal.ReleaseComObject(comObject);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("ProcessLoopbackRecorder: fallo al liberar un objeto COM", ex);
         }
     }
 
@@ -285,13 +449,14 @@ public sealed class ProcessLoopbackRecorder : IDisposable
 
     public void Dispose()
     {
-        if (IsRecording)
+        var session = _session;
+        if (IsRecording && session is not null)
         {
             try
             {
                 IsRecording = false;
-                _stopEvent?.Set();
-                var abandonedPath = FinishStop();
+                session.StopEvent.Set();
+                var abandonedPath = FinishStop(session);
                 TryDeleteFile(abandonedPath);
             }
             catch (Exception ex)
@@ -299,12 +464,6 @@ public sealed class ProcessLoopbackRecorder : IDisposable
                 AppLog.Warn("ProcessLoopbackRecorder.Dispose: fallo al detener la grabacion en curso", ex);
             }
         }
-
-        _writer?.Dispose();
-        _fileStream?.Dispose();
-        _sampleEvent?.Dispose();
-        _stopEvent?.Dispose();
-        ReleaseAudioObjects();
     }
 
     private static void TryDeleteFile(string? path)

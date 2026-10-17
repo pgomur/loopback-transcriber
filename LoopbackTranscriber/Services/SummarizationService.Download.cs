@@ -15,8 +15,12 @@ namespace LoopbackTranscriber.Services;
 
 public sealed partial class SummarizationService
 {
+    private const string ModelRevision = "bc640142c66e1fdd12af0bd68f40445458f3869b";
+
+    private const string ModelSha256 = "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5";
+
     private const string ModelDownloadUrl =
-        "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf";
+        "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/" + ModelRevision + "/Qwen3-4B-Q4_K_M.gguf";
 
     private const int DownloadBufferSize = 1024 * 1024;
 
@@ -99,6 +103,26 @@ public sealed partial class SummarizationService
                     progress?.Report(Strings.Instance.Format("SummaryModelDownloadingBytes", FormatBytes(totalRead)));
                 }
             }
+
+            if (totalBytes is > 0 && totalRead != totalBytes.Value)
+            {
+                throw new IOException($"Descarga incompleta: {totalRead} de {totalBytes.Value} bytes.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            TryDeleteFile(tempPath);
+            throw;
+        }
+
+        try
+        {
+            await ModelIntegrity.VerifySha256Async(tempPath, ModelSha256, "Qwen3-4B-Q4_K_M", progress, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
