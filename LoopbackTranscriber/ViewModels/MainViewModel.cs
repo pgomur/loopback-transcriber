@@ -19,10 +19,9 @@ namespace LoopbackTranscriber.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly TargetProcessWatcher _watcher;
-    private readonly ProcessLoopbackRecorder _recorder;
-    private readonly DeviceLoopbackRecorder _deviceRecorder;
-    private readonly MicrophoneRecorder _microphoneRecorder;
+    private readonly CaptureCoordinator _capture;
     private readonly WhisperTranscriptionService _whisper;
+    private readonly RecordingProcessor _recordingProcessor;
     private readonly SummarizationService _summarizer;
     private readonly SettingsService _settingsService;
     private readonly TranscriptHistoryService _transcriptHistoryService;
@@ -30,32 +29,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly DispatcherTimer _elapsedTimer;
 
     private DateTime _recordingStartedAt;
-    private string? _currentRawWavPath;
-
-    private DateTime? _processLoopbackStartedAt;
-    private DateTime? _deviceLoopbackStartedAt;
-    private DateTime? _microphoneStartedAt;
     private FileSystemWatcher? _transcriptsWatcher;
     private string? _watchedTranscriptsFolderPath;
     private string? _viewedTranscriptFilePath;
     private readonly DispatcherTimer _transcriptsRefreshTimer;
+    private readonly IDialogService _dialogs;
 
     public MainViewModel(
         TargetProcessWatcher watcher,
-        ProcessLoopbackRecorder recorder,
-        DeviceLoopbackRecorder deviceRecorder,
-        MicrophoneRecorder microphoneRecorder,
+        CaptureCoordinator capture,
         WhisperTranscriptionService whisper,
+        RecordingProcessor recordingProcessor,
         SummarizationService summarizer,
         SettingsService settingsService,
         TranscriptHistoryService transcriptHistoryService,
-        CustomAppsService customAppsService)
+        CustomAppsService customAppsService,
+        IDialogService dialogs)
     {
+        _dialogs = dialogs;
         _watcher = watcher;
-        _recorder = recorder;
-        _deviceRecorder = deviceRecorder;
-        _microphoneRecorder = microphoneRecorder;
+        _capture = capture;
+        _capture.AudioCaptured += (buffer, count) => LiveAudioCaptured?.Invoke(buffer, count);
         _whisper = whisper;
+        _recordingProcessor = recordingProcessor;
         _summarizer = summarizer;
         _settingsService = settingsService;
         _transcriptHistoryService = transcriptHistoryService;
@@ -92,6 +88,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             LoadTranscriptHistoryFromDisk();
         };
 
+        RefreshFailedRecordings();
         InitializeFirstRunOrShowApp();
     }
 
@@ -148,9 +145,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _transcriptsRefreshTimer.Stop();
         _transcriptsWatcher?.Dispose();
         _watcher.Dispose();
-        _recorder.Dispose();
-        _deviceRecorder.Dispose();
-        _microphoneRecorder.Dispose();
+        _capture.Dispose();
         _summarizer.Dispose();
     }
 }

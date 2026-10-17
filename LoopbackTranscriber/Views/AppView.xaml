@@ -29,6 +29,22 @@
                                  Minimum="0" Maximum="100"
                                  Value="{Binding TranscriptionProgressPercent, Mode=OneWay}" />
                 </StackPanel>
+
+                <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                        BorderBrush="{DynamicResource SystemFillColorCautionBrush}" BorderThickness="3,0,0,0"
+                        Visibility="{Binding HasFailedRecording, Converter={StaticResource BoolToVis}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding FailedRecordingText}" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <ui:Button Content="{Binding Path=[FailedRecordingRetry], Source={x:Static services:Strings.Instance}}"
+                                       Appearance="Primary" Command="{Binding RetryFailedRecordingCommand}" />
+                            <ui:Button Content="{Binding Path=[FailedRecordingDiscard], Source={x:Static services:Strings.Instance}}"
+                                       Appearance="Secondary" Margin="8,0,0,0"
+                                       Command="{Binding DiscardFailedRecordingCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,18,0,0" VerticalAlignment="Center">
@@ -49,6 +65,10 @@
                         </Style>
                     </ui:Button.Style>
                 </ui:Button>
+                <ui:Button Content="{Binding Path=[LiveTranslationButton], Source={x:Static services:Strings.Instance}}"
+                           Appearance="Secondary" FontWeight="SemiBold" Margin="12,0,0,0"
+                           Width="190" Height="36"
+                           Command="{Binding ToggleLiveTranslationCommand}" />
                 <TextBlock Text="{Binding ElapsedText}" FontSize="16" VerticalAlignment="Center"
                            Margin="16,0,0,0"
                            Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}" />

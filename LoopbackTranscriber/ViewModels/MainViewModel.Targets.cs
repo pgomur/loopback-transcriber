@@ -31,9 +31,11 @@ public partial class MainViewModel
             vm?.UpdateFrom(status);
         }
 
+        NotifyLiveTranslationAvailability();
+
         if (IsRecording && SelectedTarget is not null && !SelectedTarget.IsRunning)
         {
-            _ = CancelRecordingAsync(SelectedTarget.DisplayName);
+            _ = StopAfterAppClosedAsync(SelectedTarget.DisplayName);
             return;
         }
 
@@ -84,10 +86,12 @@ public partial class MainViewModel
 
         OnPropertyChanged(nameof(CanToggleRecording));
         ToggleRecordingCommand.NotifyCanExecuteChanged();
+        NotifyLiveTranslationAvailability();
     }
 
     partial void OnSelectedTargetChanged(TargetItemViewModel? value)
     {
+        NotifyLiveTranslationAvailability();
         RefreshTargetActiveStates();
 
         TranscriptText = string.Empty;

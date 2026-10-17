@@ -56,54 +56,10 @@ public partial class MainViewModel
 
     public string RecordButtonText => IsRecording ? Strings.Instance.Get("RecordStop") : Strings.Instance.Get("RecordStart");
 
-    private async Task CancelRecordingAsync(string closedAppName)
+    private async Task StopAfterAppClosedAsync(string closedAppName)
     {
-        _elapsedTimer.Stop();
-        IsRecording = false;
-
-        string? rawWavPath = null;
-        var deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
-
-        try
-        {
-            rawWavPath = await _recorder.StopAsync();
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("MainViewModel.CancelRecordingAsync: fallo al parar la captura por proceso", ex);
-        }
-
-        try
-        {
-            deviceTracks = await Task.Run(() => _deviceRecorder.Stop());
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("MainViewModel.CancelRecordingAsync: fallo al parar la captura por dispositivo", ex);
-        }
-
-        string? micWavPath = null;
-        try
-        {
-            micWavPath = await Task.Run(() => _microphoneRecorder.Stop());
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("MainViewModel.CancelRecordingAsync: fallo al parar la captura del microfono", ex);
-        }
-
-        TryDelete(rawWavPath);
-        TryDelete(micWavPath);
-        foreach (var track in deviceTracks)
-        {
-            TryDelete(track.WavPath);
-        }
-
-        StatusText = Strings.Instance.Format("StatusRecordingCancelledAppClosed", closedAppName);
-
-        OnPropertyChanged(nameof(CanToggleRecording));
-        ToggleRecordingCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(RecordButtonText));
+        AppLog.Info($"MainViewModel: {closedAppName} se cerro durante la grabacion; se procesa como una parada normal");
+        await StopAndTranscribeAsync();
     }
 
     [RelayCommand(CanExecute = nameof(CanToggleRecording))]
@@ -153,42 +109,9 @@ public partial class MainViewModel
             return;
         }
 
-        _processLoopbackStartedAt = null;
-        _deviceLoopbackStartedAt = null;
-        _microphoneStartedAt = null;
-
         try
         {
-            var wavPath = Path.Combine(Path.GetTempPath(), "LoopbackTranscriber",
-                $"grabacion_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-
-            await _recorder.StartAsync(SelectedTarget.ProcessId, wavPath);
-            _currentRawWavPath = wavPath;
-            _processLoopbackStartedAt = DateTime.UtcNow;
-
-            try
-            {
-                var deviceDir = Path.GetDirectoryName(wavPath)!;
-                var deviceBaseName = Path.GetFileNameWithoutExtension(wavPath);
-                _deviceRecorder.Start(deviceDir, deviceBaseName);
-                _deviceLoopbackStartedAt = DateTime.UtcNow;
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn("MainViewModel.StartRecordingAsync: fallo al iniciar la captura por dispositivo, se continua solo con la captura por proceso", ex);
-            }
-
-            try
-            {
-                var micWavPath = Path.Combine(Path.GetDirectoryName(wavPath)!,
-                    Path.GetFileNameWithoutExtension(wavPath) + "_mic.wav");
-                _microphoneRecorder.Start(micWavPath);
-                _microphoneStartedAt = DateTime.UtcNow;
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn("MainViewModel.StartRecordingAsync: fallo al iniciar la captura del microfono, el resumen solo identificara al interlocutor", ex);
-            }
+            await _capture.StartAsync(SelectedTarget.ProcessId);
 
             IsRecording = true;
             StatusText = Strings.Instance.Format("StatusListening", SelectedTarget.DisplayName);
@@ -203,7 +126,7 @@ public partial class MainViewModel
         finally
         {
             OnPropertyChanged(nameof(CanToggleRecording));
-        ToggleRecordingCommand.NotifyCanExecuteChanged();
+            ToggleRecordingCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(RecordButtonText));
         }
     }
@@ -213,98 +136,46 @@ public partial class MainViewModel
         _elapsedTimer.Stop();
         IsRecording = false;
 
-        var recordingDuration = DateTime.Now - _recordingStartedAt;
         IsBusy = true;
         StatusText = Strings.Instance.Get("StatusProcessingAudio");
         OnPropertyChanged(nameof(CanToggleRecording));
         ToggleRecordingCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(RecordButtonText));
 
-        string? rawWavPath = null;
-        string? whisperWavPath = null;
-        string? micRawWavPath = null;
-        string? micWhisperWavPath = null;
-        var deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
+        var appName = SelectedTarget?.DisplayName ?? "reunion";
+        var recordedAt = _recordingStartedAt;
+
+        StoppedRecording? stopped = null;
+        var keepOriginals = false;
 
         try
         {
-            (rawWavPath, deviceTracks, micRawWavPath) = await StopCapturesAsync();
+            stopped = await _capture.StopAsync();
 
-            const double deviceSignalThreshold = 0.01;
-            var bestDeviceTrack = deviceTracks
-                .Where(t => t.PeakAbs >= deviceSignalThreshold)
-                .OrderByDescending(t => t.PeakAbs)
-                .FirstOrDefault();
-
-            var transcriptionSourceWavPath = bestDeviceTrack is not null
-                ? bestDeviceTrack.WavPath
-                : rawWavPath;
-
-            var settings = _settingsService.Load();
-            var modelPath = settings.GetModelFilePath();
-
-            var progress = new Progress<string>(text => StatusText = text);
-
-            StatusText = Strings.Instance.Get("StatusCheckingModel");
-            await _whisper.EnsureModelDownloadedAsync(settings.ModelSize, modelPath, progress);
-
-            IsTranscribingActive = true;
-            TranscriptionProgressPercent = 0;
-            StatusText = Strings.Instance.Format("StatusTranscribingWithPercent", 0);
-
-            whisperWavPath = Path.Combine(Path.GetDirectoryName(transcriptionSourceWavPath)!,
-                Path.GetFileNameWithoutExtension(transcriptionSourceWavPath) + ".16k.wav");
-            AudioConverter.ConvertToWhisperFormat(transcriptionSourceWavPath, whisperWavPath);
-
-            var hasMicTrack = micRawWavPath is not null;
-            if (hasMicTrack)
+            if (stopped.SourceWavPath is null)
             {
-                micWhisperWavPath = Path.Combine(Path.GetDirectoryName(micRawWavPath)!,
-                    Path.GetFileNameWithoutExtension(micRawWavPath) + ".16k.wav");
-                AudioConverter.ConvertToWhisperFormat(micRawWavPath!, micWhisperWavPath);
-
-                try
-                {
-                    AudioConverter.ApplyNoiseGate(micWhisperWavPath);
-                }
-                catch (Exception ex)
-                {
-                    AppLog.Warn("MainViewModel.StopAndTranscribeAsync: fallo al aplicar la puerta de ruido al microfono, se transcribe sin filtrar", ex);
-                }
+                throw new InvalidOperationException(Strings.Instance.Get("ErrorAudioCapture"), stopped.ProcessStopError);
             }
 
-            var threadCount = WhisperTranscriptionService.GetRecommendedThreadCount(hasMicTrack ? 2 : 1);
-
-            var (otherSegments, micSegments) = await TranscribeTracksAsync(
-                whisperWavPath, micWhisperWavPath, hasMicTrack, modelPath, settings.Language, threadCount);
-
-            IsTranscribingActive = false;
-
-            if (hasMicTrack && micSegments.Count > 0)
-            {
-                micSegments = FilterMicSegmentsByActivity(micSegments, micWhisperWavPath!);
-            }
-
-            var otherTrackStartedAt = bestDeviceTrack is not null
-                ? _deviceLoopbackStartedAt
-                : _processLoopbackStartedAt;
-            var micStartOffset = TimeSpan.Zero;
-            if (hasMicTrack && otherTrackStartedAt is not null && _microphoneStartedAt is not null)
-            {
-                micStartOffset = _microphoneStartedAt.Value - otherTrackStartedAt.Value;
-            }
-
-            var filteredMicSegments = hasMicTrack
-                ? MeetingEchoFilter.RemoveEchoes(micSegments, otherSegments, micStartOffset)
-                : micSegments;
-
-            var text = ComposeTranscriptText(otherSegments, filteredMicSegments, micStartOffset, settings.UserName);
-
-            ShowAndSaveTranscript(text, settings, transcriptionSourceWavPath, micRawWavPath);
+            await ProcessRecordingAsync(stopped.SourceWavPath, stopped.MicWavPath, stopped.MicStartOffset, appName, recordedAt);
         }
         catch (Exception ex)
         {
-            StatusText = Strings.Instance.Format("StatusErrorProcessing", ex.Message);
+            AppLog.Warn("MainViewModel.StopAndTranscribeAsync: fallo al procesar la grabacion", ex);
+
+            var outcome = _capture.PreserveFailed(stopped, appName, recordedAt, ex.Message);
+            keepOriginals = outcome.KeepOriginals;
+
+            if (outcome.Saved is not null)
+            {
+                StatusText = Strings.Instance.Format("StatusErrorProcessingKept", ex.Message, outcome.Saved.Folder);
+            }
+            else
+            {
+                StatusText = string.IsNullOrEmpty(outcome.TempFolder)
+                    ? Strings.Instance.Format("StatusErrorProcessing", ex.Message)
+                    : Strings.Instance.Format("StatusErrorProcessingKept", ex.Message, outcome.TempFolder);
+            }
         }
         finally
         {
@@ -312,45 +183,29 @@ public partial class MainViewModel
             MemoryTrimmer.ReleaseInBackground();
             IsTranscribingActive = false;
             OnPropertyChanged(nameof(CanToggleRecording));
-        ToggleRecordingCommand.NotifyCanExecuteChanged();
+            ToggleRecordingCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(RecordButtonText));
 
-            TryDelete(rawWavPath);
-            TryDelete(whisperWavPath);
-            TryDelete(micRawWavPath);
-            TryDelete(micWhisperWavPath);
-            foreach (var track in deviceTracks)
+            if (!keepOriginals)
             {
-                TryDelete(track.WavPath);
+                _capture.DeleteOriginals(stopped);
             }
+
+            RefreshFailedRecordings();
         }
     }
 
-    private static void TryDelete(string? path)
+    private async Task ProcessRecordingAsync(string sourceWavPath, string? micRawWavPath, TimeSpan micStartOffset,
+        string appName, DateTime recordedAt)
     {
-        if (string.IsNullOrEmpty(path))
-        {
-            return;
-        }
+        var settings = _settingsService.Load();
+        var callbacks = new RecordingCallbacks(
+            text => StatusText = text,
+            percent => TranscriptionProgressPercent = percent,
+            active => IsTranscribingActive = active);
 
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn($"MainViewModel.TryDelete: no se pudo borrar el fichero temporal \"{path}\"", ex);
-        }
-    }
+        var text = await _recordingProcessor.ProcessAsync(sourceWavPath, micRawWavPath, micStartOffset, settings, callbacks);
 
-    private static string SelfSpeakerLabel(string? userName)
-    {
-        var cleaned = string.Join(' ', (userName ?? string.Empty)
-            .Replace(':', ' ')
-            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-        return cleaned.Length == 0 ? "Tu" : $"{cleaned} (Tú)";
+        ShowAndSaveTranscript(text, settings, sourceWavPath, micRawWavPath, appName, recordedAt);
     }
 }

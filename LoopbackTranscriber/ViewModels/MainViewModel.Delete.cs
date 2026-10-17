@@ -25,9 +25,9 @@ public partial class MainViewModel
             return true;
         }
 
-        MessageBox.Show(
+        _dialogs.ShowError(
             Strings.Instance.Format("ErrorDeleteTranscriptBody", item.AppName, item.TimestampText, error!.Message),
-            Strings.Instance.Get("ErrorTitle"), MessageBoxButton.OK, MessageBoxImage.Error);
+            Strings.Instance.Get("ErrorTitle"));
         return false;
     }
 
@@ -65,13 +65,11 @@ public partial class MainViewModel
             return;
         }
 
-        var result = MessageBox.Show(
+        var confirmed = _dialogs.Confirm(
             Strings.Instance.Format("ConfirmDeleteTranscript", item.AppName, item.TimestampText),
-            Strings.Instance.Get("ConfirmDeleteTranscriptTitle"),
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            Strings.Instance.Get("ConfirmDeleteTranscriptTitle"));
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
         {
             return;
         }
@@ -100,10 +98,9 @@ public partial class MainViewModel
             ? Strings.Instance.Get("ConfirmDeleteSelectedOne")
             : Strings.Instance.Format("ConfirmDeleteSelectedMany", selected.Count);
 
-        var result = MessageBox.Show(message, Strings.Instance.Get("ConfirmDeleteSelectedTitle"),
-            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        var confirmed = _dialogs.Confirm(message, Strings.Instance.Get("ConfirmDeleteSelectedTitle"));
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
         {
             return;
         }
@@ -134,10 +131,9 @@ public partial class MainViewModel
             ? Strings.Instance.Get("ConfirmDeleteSelectedOne")
             : Strings.Instance.Format("ConfirmDeleteSelectedMany", selected.Count);
 
-        var result = MessageBox.Show(message, Strings.Instance.Get("ConfirmDeleteSelectedTitle"),
-            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        var confirmed = _dialogs.Confirm(message, Strings.Instance.Get("ConfirmDeleteSelectedTitle"));
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
         {
             return;
         }

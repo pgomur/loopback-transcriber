@@ -30,6 +30,9 @@ public partial class MainViewModel
     [ObservableProperty]
     private ApplicationsViewModel? _applicationsViewModel;
 
+    [ObservableProperty]
+    private LiveTranslationSettingsViewModel? _liveSettingsViewModel;
+
     public bool IsFirstRunActive => CurrentView == MainViewMode.FirstRun;
 
     public bool IsAppViewActive => CurrentView == MainViewMode.AppView;
@@ -40,6 +43,8 @@ public partial class MainViewModel
 
     public bool IsApplicationsViewActive => CurrentView == MainViewMode.Applications;
 
+    public bool IsLiveSettingsViewActive => CurrentView == MainViewMode.LiveTranslation;
+
     partial void OnCurrentViewChanged(MainViewMode value)
     {
         OnPropertyChanged(nameof(IsFirstRunActive));
@@ -47,6 +52,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(IsHistoryViewActive));
         OnPropertyChanged(nameof(IsConfigViewActive));
         OnPropertyChanged(nameof(IsApplicationsViewActive));
+        OnPropertyChanged(nameof(IsLiveSettingsViewActive));
         ApplicationsViewModel?.SetActive(value == MainViewMode.Applications);
         RefreshTargetActiveStates();
         RefreshSummaryModelAvailability();
@@ -96,6 +102,21 @@ public partial class MainViewModel
         }
 
         CurrentView = MainViewMode.Config;
+    }
+
+    [RelayCommand]
+    private void ShowLiveSettings()
+    {
+        if (LiveSettingsViewModel is null)
+        {
+            LiveSettingsViewModel = new LiveTranslationSettingsViewModel(_settingsService);
+        }
+        else
+        {
+            LiveSettingsViewModel.RefreshFromDisk();
+        }
+
+        CurrentView = MainViewMode.LiveTranslation;
     }
 
     [RelayCommand]

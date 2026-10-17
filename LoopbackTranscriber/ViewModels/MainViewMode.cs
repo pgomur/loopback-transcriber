@@ -6,5 +6,6 @@ public enum MainViewMode
     AppView,
     History,
     Config,
-    Applications
+    Applications,
+    LiveTranslation
 }

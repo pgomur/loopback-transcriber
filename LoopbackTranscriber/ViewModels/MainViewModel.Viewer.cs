@@ -224,8 +224,7 @@ public partial class MainViewModel
 
         if (!item.HasTxt && !item.HasMarkdown)
         {
-            MessageBox.Show(Strings.Instance.Get("SummaryNoTextBody"), Strings.Instance.Get("SummaryNoTextTitle"),
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowInfo(Strings.Instance.Get("SummaryNoTextBody"), Strings.Instance.Get("SummaryNoTextTitle"));
             return;
         }
 
@@ -285,8 +284,7 @@ public partial class MainViewModel
         catch (Exception ex)
         {
             AppLog.Warn($"MainViewModel.GenerateSummaryAsync: fallo al generar el resumen de \"{item.FilePath}\"", ex);
-            MessageBox.Show(Strings.Instance.Format("SummaryErrorBody", ex.Message), Strings.Instance.Get("ErrorTitle"),
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowError(Strings.Instance.Format("SummaryErrorBody", ex.Message), Strings.Instance.Get("ErrorTitle"));
         }
         finally
         {

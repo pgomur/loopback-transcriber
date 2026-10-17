@@ -49,7 +49,7 @@ public sealed partial class HistorySearchState : ObservableObject
         _debounceTimer.Start();
     }
 
-    public async void Recompute()
+    public void Recompute()
     {
         _debounceTimer.Stop();
 
@@ -60,7 +60,7 @@ public sealed partial class HistorySearchState : ObservableObject
             return;
         }
 
-        await RunSearchAsync();
+        _ = RunSearchAsync();
     }
 
     private void ClearMatches()
@@ -75,6 +75,21 @@ public sealed partial class HistorySearchState : ObservableObject
     }
 
     private async Task RunSearchAsync()
+    {
+        try
+        {
+            await RunSearchCoreAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("HistorySearchState.RunSearchAsync: fallo al buscar en el historial", ex);
+        }
+    }
+
+    private async Task RunSearchCoreAsync()
     {
         var query = Text.Trim();
         if (query.Length == 0)
@@ -97,25 +112,15 @@ public sealed partial class HistorySearchState : ObservableObject
 
         var candidates = _itemsProvider().Select(SearchCandidate.From).ToList();
 
-        try
-        {
-            var matches = await Task.Run(() => FindMatches(candidates, terms, token), token);
+        var matches = await Task.Run(() => FindMatches(candidates, terms, token), token);
 
-            if (token.IsCancellationRequested || !string.Equals(Text.Trim(), query, StringComparison.Ordinal))
-            {
-                return;
-            }
+        if (token.IsCancellationRequested || !string.Equals(Text.Trim(), query, StringComparison.Ordinal))
+        {
+            return;
+        }
 
-            Matches = matches;
-            _onChanged();
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("HistorySearchState.RunSearchAsync: fallo al buscar en el historial", ex);
-        }
+        Matches = matches;
+        _onChanged();
     }
 
     public static List<string> ParseTerms(string query)
