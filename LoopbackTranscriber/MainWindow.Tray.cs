@@ -64,7 +64,7 @@ namespace LoopbackTranscriber
 
         private string GetTrayTooltip()
         {
-            return _viewModel.IsRecording && _viewModel.SelectedTarget is { } target
+            return _viewModel.Recording.IsRecording && _viewModel.Targets.SelectedTarget is { } target
                 ? Strings.Instance.Format("TrayTooltipRecording", target.DisplayName)
                 : Strings.Instance.Get("TrayTooltipIdle");
         }
@@ -150,7 +150,7 @@ namespace LoopbackTranscriber
 
         private void ExitFromTray()
         {
-            if (_viewModel.IsRecording)
+            if (_viewModel.Recording.IsRecording)
             {
                 var answer = System.Windows.MessageBox.Show(
                     Strings.Instance.Get("ExitDuringRecordingBody"),
@@ -194,38 +194,38 @@ namespace LoopbackTranscriber
 
             if (!_viewModel.IsFirstRunActive)
             {
-                if (_viewModel.IsRecording)
+                if (_viewModel.Recording.IsRecording)
                 {
-                    var recordingName = _viewModel.SelectedTarget?.DisplayName ?? string.Empty;
+                    var recordingName = _viewModel.Targets.SelectedTarget?.DisplayName ?? string.Empty;
                     entries.Add(new(
                         Strings.Instance.Format("TrayRecordingStatus", recordingName),
                         false,
                         null,
                         IsStatus: true,
-                        LiveText: () => _viewModel.ElapsedText));
+                        LiveText: () => _viewModel.Recording.ElapsedText));
                     entries.Add(new(
                         Strings.Instance.Format("TrayStopRecording", recordingName),
-                        _viewModel.CanToggleRecording,
+                        _viewModel.Recording.CanToggleRecording,
                         () =>
                         {
                             RestoreFromTray();
-                            RunTrayAction(_viewModel.StopRecordingFromTrayAsync);
+                            RunTrayAction(_recordingHost.StopRecordingAsync);
                         },
                         Icon: Views.TrayMenuWindow.StopGlyph));
                 }
                 else
                 {
-                    foreach (var target in _viewModel.Targets.ToList())
+                    foreach (var target in _viewModel.Targets.Items.ToList())
                     {
                         var captured = target;
                         entries.Add(new(
                             Strings.Instance.Format("TrayStartRecording", captured.DisplayName),
-                            _viewModel.CanStartRecordingFor(captured),
-                            () => RunTrayAction(() => _viewModel.StartRecordingForAsync(captured)),
+                            _recordingHost.CanStartRecordingFor(captured),
+                            () => RunTrayAction(() => _recordingHost.StartRecordingForAsync(captured)),
                             Icon: Views.TrayMenuWindow.RecordGlyph));
                     }
 
-                    if (_viewModel.RecordDisabledReason is { } reason)
+                    if (_viewModel.Recording.RecordDisabledReason is { } reason)
                     {
                         entries.Add(new(reason, false, null));
                     }
@@ -241,7 +241,7 @@ namespace LoopbackTranscriber
                 }
                 else
                 {
-                    foreach (var target in _viewModel.Targets.ToList())
+                    foreach (var target in _viewModel.Targets.Items.ToList())
                     {
                         var capturedTarget = target;
                         entries.Add(new(

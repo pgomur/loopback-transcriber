@@ -15,7 +15,20 @@ public sealed class TargetProcessStatus
     public string ProcessName { get; set; } = string.Empty;
 }
 
-public sealed class TargetProcessWatcher : IDisposable
+public interface ITargetWatcher
+{
+    IReadOnlyList<TargetProcessStatus> Statuses { get; }
+
+    event EventHandler? StatusesChanged;
+
+    void Start();
+
+    void AddTarget(TargetApp app);
+
+    void RemoveTarget(string appId);
+}
+
+public sealed class TargetProcessWatcher : ITargetWatcher, IDisposable
 {
     private readonly System.Threading.Timer _timer;
     private readonly Dispatcher _dispatcher;

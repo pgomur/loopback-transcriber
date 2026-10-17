@@ -99,7 +99,7 @@
     <Style x:Key="SpinningIconStyle" TargetType="ui:SymbolIcon">
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
         <Style.Triggers>
-            <DataTrigger Binding="{Binding IsViewedSummaryGenerating}" Value="True">
+            <DataTrigger Binding="{Binding Viewer.IsViewedSummaryGenerating}" Value="True">
                 <DataTrigger.EnterActions>
                     <BeginStoryboard x:Name="SpinningIconStoryboard">
                         <Storyboard>

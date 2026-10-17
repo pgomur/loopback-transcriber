@@ -97,9 +97,9 @@ namespace LoopbackTranscriber
             });
             item.CommandParameter = target;
 
-            item.SetBinding(UIElement.IsEnabledProperty, new Binding(nameof(MainViewModel.IsRecording))
+            item.SetBinding(UIElement.IsEnabledProperty, new Binding(nameof(RecordingViewModel.IsRecording))
             {
-                Source = _viewModel,
+                Source = _viewModel.Recording,
                 Converter = new InverseBooleanConverter()
             });
 

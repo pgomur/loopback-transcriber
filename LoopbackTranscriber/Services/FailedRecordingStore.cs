@@ -19,17 +19,24 @@ public sealed class FailedRecording
     [JsonIgnore] public TimeSpan MicStartOffset => TimeSpan.FromTicks(MicStartOffsetTicks);
 }
 
-public static class FailedRecordingStore
+public sealed class FailedRecordingStore
 {
     private const string ManifestName = "manifest.json";
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public static string RootFolder { get; } = Path.Combine(
+    public static FailedRecordingStore Default { get; } = new(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "LoopbackTranscriber", "failed");
+        "LoopbackTranscriber", "failed"));
 
-    public static FailedRecording? TryPreserve(string? sourceWavPath, string? micWavPath, TimeSpan micStartOffset,
+    public FailedRecordingStore(string rootFolder)
+    {
+        RootFolder = rootFolder;
+    }
+
+    public string RootFolder { get; }
+
+    public FailedRecording? TryPreserve(string? sourceWavPath, string? micWavPath, TimeSpan micStartOffset,
         string appName, DateTime recordedAt, string error)
     {
         if (string.IsNullOrEmpty(sourceWavPath) || !File.Exists(sourceWavPath))
@@ -106,7 +113,7 @@ public static class FailedRecordingStore
     private static void WriteManifest(FailedRecording recording) =>
         File.WriteAllText(Path.Combine(recording.Folder, ManifestName), JsonSerializer.Serialize(recording, JsonOptions));
 
-    public static List<FailedRecording> List()
+    public List<FailedRecording> List()
     {
         var result = new List<FailedRecording>();
 
@@ -159,7 +166,7 @@ public static class FailedRecordingStore
         return result.OrderByDescending(r => r.RecordedAt).ToList();
     }
 
-    public static void Delete(FailedRecording recording)
+    public void Delete(FailedRecording recording)
     {
         try
         {

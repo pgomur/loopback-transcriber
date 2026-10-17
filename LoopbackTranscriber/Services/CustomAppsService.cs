@@ -3,16 +3,27 @@ using LoopbackTranscriber.Models;
 
 namespace LoopbackTranscriber.Services;
 
-public sealed class CustomAppsService
+public interface ICustomAppsService
 {
-    private readonly SettingsService _settingsService;
+    IReadOnlyList<TargetApp> CustomApps { get; }
+
+    event EventHandler? Changed;
+
+    TargetApp AddApp(string processName, string displayName);
+
+    void RemoveApp(string id);
+}
+
+public sealed class CustomAppsService : ICustomAppsService
+{
+    private readonly ISettingsStore _settingsService;
     private readonly List<TargetApp> _customApps;
 
     public IReadOnlyList<TargetApp> CustomApps => _customApps;
 
     public event EventHandler? Changed;
 
-    public CustomAppsService(SettingsService settingsService)
+    public CustomAppsService(ISettingsStore settingsService)
     {
         _settingsService = settingsService;
 

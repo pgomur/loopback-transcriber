@@ -13,7 +13,7 @@ using LoopbackTranscriber.Models;
 
 namespace LoopbackTranscriber.Services;
 
-public sealed partial class SummarizationService : IDisposable
+public sealed partial class SummarizationService : ISummarizer, IDisposable
 {
     private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromHours(1) };
 

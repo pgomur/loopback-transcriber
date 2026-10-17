@@ -23,7 +23,7 @@ public partial class MainWindow
             return;
         }
 
-        var liveViewModel = new LiveTranslationViewModel(_viewModel, target, _settingsService, RestoreFromTray);
+        var liveViewModel = _liveFactory.Create(target, RestoreFromTray);
         var window = new LiveTranslationWindow { DataContext = liveViewModel };
         var workArea = SystemParameters.WorkArea;
         window.Height = Math.Min(window.Height, Math.Max(window.MinHeight, workArea.Height - 40));

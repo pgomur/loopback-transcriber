@@ -4,7 +4,14 @@ using System.IO;
 
 namespace LoopbackTranscriber.Services;
 
-public sealed class SettingsService
+public interface ISettingsStore
+{
+    AppSettings Load();
+
+    void Save(AppSettings settings);
+}
+
+public sealed class SettingsService : ISettingsStore
 {
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

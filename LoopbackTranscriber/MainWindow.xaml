@@ -56,7 +56,7 @@
                 <ui:NavigationViewItem Content="{Binding Path=[NavHistory], Source={x:Static services:Strings.Instance}}"
                                         Command="{Binding ShowHistoryCommand}"
                                         IsActive="{Binding IsHistoryViewActive}"
-                                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBoolConverter}}">
+                                        IsEnabled="{Binding Recording.IsRecording, Converter={StaticResource InverseBoolConverter}}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="History24" />
                     </ui:NavigationViewItem.Icon>

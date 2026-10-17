@@ -40,19 +40,21 @@ public sealed class CaptureCoordinator : IDisposable
     private readonly IMicCapture _mic;
     private readonly Func<DateTime> _utcNow;
     private readonly string _tempFolder;
+    private readonly FailedRecordingStore _failedStore;
 
     private DateTime? _processStartedAt;
     private DateTime? _deviceStartedAt;
     private DateTime? _micStartedAt;
 
     public CaptureCoordinator(IProcessCapture process, IDeviceCapture device, IMicCapture mic,
-        Func<DateTime>? utcNow = null, string? tempFolder = null)
+        Func<DateTime>? utcNow = null, string? tempFolder = null, FailedRecordingStore? failedStore = null)
     {
         _process = process;
         _device = device;
         _mic = mic;
         _utcNow = utcNow ?? (() => DateTime.UtcNow);
         _tempFolder = tempFolder ?? Path.Combine(Path.GetTempPath(), "LoopbackTranscriber");
+        _failedStore = failedStore ?? FailedRecordingStore.Default;
 
         _process.AudioCaptured += (buffer, count) => AudioCaptured?.Invoke(buffer, count);
     }
@@ -171,7 +173,7 @@ public sealed class CaptureCoordinator : IDisposable
         var preserveSource = stopped.SourceWavPath ?? stopped.MicWavPath;
         var preserveMic = stopped.SourceWavPath is null ? null : stopped.MicWavPath;
 
-        var saved = FailedRecordingStore.TryPreserve(preserveSource, preserveMic, stopped.MicStartOffset,
+        var saved = _failedStore.TryPreserve(preserveSource, preserveMic, stopped.MicStartOffset,
             appName, recordedAt, error);
         if (saved is not null)
         {

@@ -25,7 +25,9 @@ namespace LoopbackTranscriber
 
         private readonly MainViewModel _viewModel;
         private bool _translucentUiEnabled;
-        private readonly SettingsService _settingsService;
+        private readonly ISettingsStore _settingsService;
+        private readonly IRecordingHost _recordingHost;
+        private readonly ILiveTranslationFactory _liveFactory;
         private TrayIconService? _trayIcon;
         private System.Threading.Timer? _backgroundTrimTimer;
         private Views.TrayMenuWindow? _trayMenu;
@@ -33,31 +35,16 @@ namespace LoopbackTranscriber
         private bool _hiddenToTray;
         private WindowState _stateBeforeMinimize = WindowState.Normal;
 
-        public MainWindow()
+        public MainWindow(MainViewModel viewModel, ISettingsStore settingsService,
+            IRecordingHost recordingHost, ILiveTranslationFactory liveFactory)
         {
-            var settingsService = new SettingsService();
             _settingsService = settingsService;
-            settingsService.EnsureDefaultUserName();
-            Strings.Instance.SetLanguage(settingsService.Load().UiLanguage);
+            _recordingHost = recordingHost;
+            _liveFactory = liveFactory;
+            _viewModel = viewModel;
             ApplyCalendarCulture(Strings.Instance.Language);
 
             InitializeComponent();
-
-            var whisper = new WhisperTranscriptionService();
-            var summarizer = new SummarizationService();
-            var transcriptHistoryService = new TranscriptHistoryService();
-            var customAppsService = new CustomAppsService(settingsService);
-
-            _viewModel = new MainViewModel(
-                new TargetProcessWatcher(),
-                new CaptureCoordinator(new ProcessLoopbackRecorder(), new DeviceLoopbackRecorder(), new MicrophoneRecorder()),
-                whisper,
-                new RecordingProcessor(whisper, new NaudioAudioPreparer()),
-                summarizer,
-                settingsService,
-                transcriptHistoryService,
-                customAppsService,
-                new WpfDialogService());
 
             DataContext = _viewModel;
 
@@ -65,13 +52,15 @@ namespace LoopbackTranscriber
             ApplyTranslucency(_translucentUiEnabled);
             UiPreferences.TranslucentUiChanged += OnTranslucentUiChanged;
 
-            foreach (var target in _viewModel.Targets)
+            foreach (var target in _viewModel.Targets.Items)
             {
                 AppsNavigationView.MenuItems.Add(CreateTargetMenuItem(target));
             }
 
-            _viewModel.Targets.CollectionChanged += OnTargetsCollectionChanged;
+            _viewModel.Targets.Items.CollectionChanged += OnTargetsCollectionChanged;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _viewModel.Recording.PropertyChanged += OnViewModelPropertyChanged;
+            _viewModel.Targets.PropertyChanged += OnViewModelPropertyChanged;
             _viewModel.LiveTranslationToggleRequested += OnLiveTranslationToggleRequested;
             Strings.Instance.LanguageChanged += OnAppLanguageChangedForCalendar;
 
@@ -94,7 +83,7 @@ namespace LoopbackTranscriber
                     return;
                 }
 
-                if (_viewModel.IsSummaryGenerating)
+                if (_viewModel.Viewer.IsSummaryGenerating)
                 {
                     var answer = System.Windows.MessageBox.Show(
                         Strings.Instance.Get("CloseDuringSummaryBody"),
@@ -118,13 +107,14 @@ namespace LoopbackTranscriber
                 _trayIcon = null;
                 _backgroundTrimTimer?.Dispose();
                 _backgroundTrimTimer = null;
-                _viewModel.Targets.CollectionChanged -= OnTargetsCollectionChanged;
+                _viewModel.Targets.Items.CollectionChanged -= OnTargetsCollectionChanged;
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+                _viewModel.Recording.PropertyChanged -= OnViewModelPropertyChanged;
+                _viewModel.Targets.PropertyChanged -= OnViewModelPropertyChanged;
                 _viewModel.LiveTranslationToggleRequested -= OnLiveTranslationToggleRequested;
                 _liveWindow?.Close();
                 UiPreferences.TranslucentUiChanged -= OnTranslucentUiChanged;
                 Strings.Instance.LanguageChanged -= OnAppLanguageChangedForCalendar;
-                _viewModel.Dispose();
             };
         }
 
@@ -134,9 +124,9 @@ namespace LoopbackTranscriber
             {
                 ApplyFirstRunTitleBarOverrideIfNeeded();
             }
-            else if (e.PropertyName is nameof(MainViewModel.IsRecording) or nameof(MainViewModel.SelectedTarget))
+            else if (e.PropertyName is nameof(RecordingViewModel.IsRecording) or nameof(TargetsViewModel.SelectedTarget))
             {
-                _trayIcon?.SetRecording(_viewModel.IsRecording);
+                _trayIcon?.SetRecording(_viewModel.Recording.IsRecording);
                 _trayIcon?.SetTooltip(GetTrayTooltip());
             }
         }
