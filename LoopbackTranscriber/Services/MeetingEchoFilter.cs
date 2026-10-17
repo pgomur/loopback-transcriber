@@ -3,10 +3,6 @@ using TranscriptSegment = LoopbackTranscriber.Services.WhisperTranscriptionServi
 
 namespace LoopbackTranscriber.Services;
 
-/// <summary>
-/// Descarta los segmentos del microfono que son el eco de lo que ya suena en la reunion
-/// (el micro recoge los altavoces), comparando su texto con el de la pista de los participantes.
-/// </summary>
 internal static class MeetingEchoFilter
 {
     private const double EchoSimilarityThreshold = 0.6;

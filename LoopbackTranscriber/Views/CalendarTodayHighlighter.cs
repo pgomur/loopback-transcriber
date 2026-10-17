@@ -3,7 +3,6 @@ using System.Windows.Media;
 
 namespace LoopbackTranscriber.Views;
 
-/// <summary>Resalta el dia de hoy en el calendario desplegable de los DatePicker del historial.</summary>
 internal static class CalendarTodayHighlighter
 {
     public static void OnCalendarOpened(object? sender, RoutedEventArgs e)
