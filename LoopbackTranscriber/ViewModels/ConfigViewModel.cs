@@ -13,9 +13,9 @@ namespace LoopbackTranscriber.ViewModels;
 
 public partial class ConfigViewModel : ObservableObject
 {
-    private readonly SettingsService _settingsService;
-    private readonly WhisperTranscriptionService _whisper;
-    private readonly SummarizationService _summarizer;
+    private readonly ISettingsStore _settingsService;
+    private readonly IWhisperTranscriber _whisper;
+    private readonly ISummarizer _summarizer;
 
     private const string FixedModelSize = "turbo";
 
@@ -93,7 +93,7 @@ public partial class ConfigViewModel : ObservableObject
 
     partial void OnIsSummaryModelDownloadedChanged(bool value) => OnPropertyChanged(nameof(CanDownloadSummaryModel));
 
-    public ConfigViewModel(SettingsService settingsService, WhisperTranscriptionService whisper, SummarizationService summarizer)
+    public ConfigViewModel(ISettingsStore settingsService, IWhisperTranscriber whisper, ISummarizer summarizer)
     {
         _settingsService = settingsService;
         _whisper = whisper;

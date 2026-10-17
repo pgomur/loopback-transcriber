@@ -13,9 +13,9 @@ public partial class FirstRunViewModel : ObservableObject
 {
     private const string FixedModelSize = "turbo";
 
-    private readonly SettingsService _settingsService;
-    private readonly WhisperTranscriptionService _whisper;
-    private readonly SummarizationService _summarizer;
+    private readonly ISettingsStore _settingsService;
+    private readonly IWhisperTranscriber _whisper;
+    private readonly ISummarizer _summarizer;
 
     private CancellationTokenSource? _modelDownloadCts;
     private CancellationTokenSource? _summaryModelDownloadCts;
@@ -78,7 +78,7 @@ public partial class FirstRunViewModel : ObservableObject
 
     public bool IsSummaryModelDownloadIdle => !IsSummaryModelDownloadActive;
 
-    public FirstRunViewModel(SettingsService settingsService, WhisperTranscriptionService whisper, SummarizationService summarizer)
+    public FirstRunViewModel(ISettingsStore settingsService, IWhisperTranscriber whisper, ISummarizer summarizer)
     {
         _settingsService = settingsService;
         _whisper = whisper;

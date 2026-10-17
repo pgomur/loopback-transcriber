@@ -6,9 +6,7 @@ public partial class MainViewModel
 {
     public event EventHandler<TargetItemViewModel>? LiveTranslationToggleRequested;
 
-    public event Action<byte[], int>? LiveAudioCaptured;
-
-    public bool CanToggleLiveTranslation => SelectedTarget?.IsRunning ?? false;
+    public bool CanToggleLiveTranslation => Targets.SelectedTarget?.IsRunning ?? false;
 
     private void NotifyLiveTranslationAvailability()
     {
@@ -19,7 +17,7 @@ public partial class MainViewModel
     [RelayCommand(CanExecute = nameof(CanToggleLiveTranslation))]
     private void ToggleLiveTranslation()
     {
-        if (SelectedTarget is { } target)
+        if (Targets.SelectedTarget is { } target)
         {
             LiveTranslationToggleRequested?.Invoke(this, target);
         }

@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using LoopbackTranscriber.Models;
 using LoopbackTranscriber.Services;
 using System.IO;
@@ -18,77 +19,41 @@ namespace LoopbackTranscriber.ViewModels;
 
 public partial class MainViewModel : ObservableObject, IDisposable
 {
-    private readonly TargetProcessWatcher _watcher;
-    private readonly CaptureCoordinator _capture;
-    private readonly WhisperTranscriptionService _whisper;
-    private readonly RecordingProcessor _recordingProcessor;
-    private readonly SummarizationService _summarizer;
-    private readonly SettingsService _settingsService;
-    private readonly TranscriptHistoryService _transcriptHistoryService;
-    private readonly CustomAppsService _customAppsService;
-    private readonly DispatcherTimer _elapsedTimer;
+    private readonly IPageFactory _pages;
+    private readonly ISettingsStore _settingsService;
+    private readonly IMessenger _messenger;
 
-    private DateTime _recordingStartedAt;
-    private FileSystemWatcher? _transcriptsWatcher;
-    private string? _watchedTranscriptsFolderPath;
-    private string? _viewedTranscriptFilePath;
-    private readonly DispatcherTimer _transcriptsRefreshTimer;
-    private readonly IDialogService _dialogs;
+    public TargetsViewModel Targets { get; }
+
+    public RecordingViewModel Recording { get; }
+
+    public HistoryViewModel History { get; }
+
+    public ViewerViewModel Viewer { get; }
 
     public MainViewModel(
-        TargetProcessWatcher watcher,
-        CaptureCoordinator capture,
-        WhisperTranscriptionService whisper,
-        RecordingProcessor recordingProcessor,
-        SummarizationService summarizer,
-        SettingsService settingsService,
-        TranscriptHistoryService transcriptHistoryService,
-        CustomAppsService customAppsService,
-        IDialogService dialogs)
+        TargetsViewModel targets,
+        RecordingViewModel recording,
+        HistoryViewModel history,
+        ViewerViewModel viewer,
+        IPageFactory pages,
+        ISettingsStore settingsService,
+        IMessenger messenger)
     {
-        _dialogs = dialogs;
-        _watcher = watcher;
-        _capture = capture;
-        _capture.AudioCaptured += (buffer, count) => LiveAudioCaptured?.Invoke(buffer, count);
-        _whisper = whisper;
-        _recordingProcessor = recordingProcessor;
-        _summarizer = summarizer;
+        Targets = targets;
+        Recording = recording;
+        History = history;
+        Viewer = viewer;
+        _pages = pages;
         _settingsService = settingsService;
-        _transcriptHistoryService = transcriptHistoryService;
-        _customAppsService = customAppsService;
+        _messenger = messenger;
 
-        HistorySearch = new HistorySearchState(() => TranscriptHistory.ToList(), RefreshFilteredTranscriptHistory);
-        AppHistorySearch = new HistorySearchState(() => TranscriptHistory.ToList(), RefreshAppTranscriptHistory);
-
-        foreach (var app in TargetApp.All.Concat(_customAppsService.CustomApps))
-        {
-            AddTargetInternal(app);
-        }
-
-        _customAppsService.Changed += OnCustomAppsChanged;
-
-        AppTranscriptHistory.CollectionChanged += (_, _) => HasAppHistoryItems = AppTranscriptHistory.Count > 0;
-        TranscriptHistory.CollectionChanged += (_, _) => HasHistoryItems = TranscriptHistory.Count > 0;
-
-        _watcher.StatusesChanged += OnWatcherStatusesChanged;
+        _messenger.Register<MainViewModel, TargetSelectionChangedMessage>(this, static (r, m) => r.OnTargetSelectionChanged(m.Target));
+        _messenger.Register<MainViewModel, TargetStatusesSyncedMessage>(this, static (r, _) => r.OnTargetStatusesSynced());
+        _messenger.Register<MainViewModel, TargetListChangedMessage>(this, static (r, _) => r.OnTargetListChanged());
 
         Strings.Instance.LanguageChanged += OnAppLanguageChanged;
 
-        _elapsedTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
-        _elapsedTimer.Tick += (_, _) =>
-        {
-            var elapsed = DateTime.Now - _recordingStartedAt;
-            ElapsedText = elapsed.ToString(@"mm\:ss");
-        };
-
-        _transcriptsRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };
-        _transcriptsRefreshTimer.Tick += (_, _) =>
-        {
-            _transcriptsRefreshTimer.Stop();
-            LoadTranscriptHistoryFromDisk();
-        };
-
-        RefreshFailedRecordings();
         InitializeFirstRunOrShowApp();
     }
 
@@ -107,7 +72,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 _settingsService.Save(settings);
             }
 
-            SelectedTarget ??= Targets.FirstOrDefault();
+            Targets.SelectFirstIfNone();
             CurrentView = MainViewMode.AppView;
             return;
         }
@@ -117,35 +82,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public void Start()
     {
-        _watcher.Start();
-        SyncTargetsFromWatcher();
-        LoadTranscriptHistoryFromDisk();
+        Targets.Start();
+        History.Reload();
     }
-
-    private void OnWatcherStatusesChanged(object? sender, EventArgs e) => SyncTargetsFromWatcher();
 
     private void OnAppLanguageChanged(object? sender, EventArgs e)
     {
-        OnPropertyChanged(nameof(RecordButtonText));
-        ViewedSummarySections = SummaryFormatter.Parse(ViewedSummaryText);
-
-        if (!IsRecording && !IsBusy && SelectedTarget is not null)
-        {
-            StatusText = SelectedTarget.IsRunning
-                ? Strings.Instance.Format("StatusDetected", SelectedTarget.DisplayName, Strings.Instance.Get("RecordStart"))
-                : Strings.Instance.Format("StatusNotRunning", SelectedTarget.DisplayName);
-        }
+        Viewer.RefreshLanguage();
+        Recording.OnLanguageChanged();
     }
 
     public void Dispose()
     {
-        _watcher.StatusesChanged -= OnWatcherStatusesChanged;
-        _customAppsService.Changed -= OnCustomAppsChanged;
+        _messenger.UnregisterAll(this);
         Strings.Instance.LanguageChanged -= OnAppLanguageChanged;
-        _transcriptsRefreshTimer.Stop();
-        _transcriptsWatcher?.Dispose();
-        _watcher.Dispose();
-        _capture.Dispose();
-        _summarizer.Dispose();
     }
 }

@@ -1,23 +1,41 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Globalization;
-using System.Diagnostics;
-using System.Windows;
-using System.Windows.Threading;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using LoopbackTranscriber.Models;
 using LoopbackTranscriber.Services;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.ViewModels;
 
-public partial class MainViewModel
+public sealed partial class ViewerViewModel : ObservableObject, IDisposable
 {
+    private readonly ISettingsStore _settings;
+    private readonly ISummarizer _summarizer;
+    private readonly TranscriptHistoryService _historyService;
+    private readonly IDialogService _dialogs;
+    private readonly IMessenger _messenger;
+
+    public ViewerViewModel(
+        ISettingsStore settings,
+        ISummarizer summarizer,
+        TranscriptHistoryService historyService,
+        IDialogService dialogs,
+        IMessenger messenger)
+    {
+        _settings = settings;
+        _summarizer = summarizer;
+        _historyService = historyService;
+        _dialogs = dialogs;
+        _messenger = messenger;
+
+        _messenger.Register<ViewerViewModel, TranscriptDeletedMessage>(this, static (recipient, message) => recipient.ClearViewedTranscriptIfDeleted(message.FilePath));
+        _messenger.Register<ViewerViewModel, TranscriptReadyMessage>(this, static (recipient, message) => recipient.ShowTranscript(message.Text, message.FilePath));
+        _messenger.Register<ViewerViewModel, CaptureStateChangedMessage>(this, static (recipient, message) => recipient._captureActive = message.IsActive);
+    }
+
+    public void Dispose() => _messenger.UnregisterAll(this);
+
     [ObservableProperty]
     private string _transcriptText = string.Empty;
 
@@ -65,15 +83,15 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(ShowSummaryModelWarning));
     }
 
-    private void RefreshSummaryModelAvailability()
+    public void RefreshSummaryModelAvailability()
     {
         try
         {
-            IsSummaryModelAvailable = File.Exists(_settingsService.Load().GetSummaryModelFilePath());
+            IsSummaryModelAvailable = File.Exists(_settings.Load().GetSummaryModelFilePath());
         }
         catch (Exception ex)
         {
-            AppLog.Warn("MainViewModel.RefreshSummaryModelAvailability: no se pudo comprobar el modelo de resumen", ex);
+            AppLog.Warn("ViewerViewModel.RefreshSummaryModelAvailability: no se pudo comprobar el modelo de resumen", ex);
         }
     }
 
@@ -108,12 +126,12 @@ public partial class MainViewModel
     [RelayCommand]
     private void ViewHistoryTranscript(TranscriptHistoryItem? item)
     {
-        if (item is null || IsRecording || IsBusy)
+        if (item is null || _captureActive)
         {
             return;
         }
 
-        _viewedTranscriptFilePath = item.FilePath;
+        ViewedFilePath = item.FilePath;
         RefreshSummaryModelAvailability();
         ApplyViewedSummary(item);
 
@@ -131,7 +149,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"MainViewModel.ViewHistoryTranscript: no se pudo leer \"{item.FilePath}\", se muestra el resumen", ex);
+            AppLog.Warn($"ViewerViewModel.ViewHistoryTranscript: no se pudo leer \"{item.FilePath}\", se muestra el resumen", ex);
             TranscriptText = item.Preview;
         }
     }
@@ -163,11 +181,39 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void ClearViewedTranscript()
+    private void ClearViewedTranscript() => Clear();
+
+    public void Clear()
     {
         TranscriptText = string.Empty;
-        _viewedTranscriptFilePath = null;
+        ViewedFilePath = null;
         ClearViewedSummary();
+    }
+
+    private void ShowTranscript(string text, string? filePath)
+    {
+        TranscriptText = text;
+
+        if (filePath is not null)
+        {
+            ViewedFilePath = filePath;
+        }
+    }
+
+    public void RefreshLanguage() => ViewedSummarySections = SummaryFormatter.Parse(ViewedSummaryText);
+
+    public string? ViewedFilePath { get; private set; }
+
+    private bool _captureActive;
+
+    private int _summaryGenerationCount;
+
+    public bool IsSummaryGenerating => _summaryGenerationCount > 0;
+
+    private void NotifySummaryActivityChanged()
+    {
+        OnPropertyChanged(nameof(IsSummaryGenerating));
+        _messenger.Send(new SummaryActivityChangedMessage(IsSummaryGenerating));
     }
 
     [RelayCommand]
@@ -179,13 +225,12 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task RegenerateViewedSummaryAsync()
     {
-        if (_viewedTranscriptFilePath is null || IsViewedSummaryGenerating)
+        if (ViewedFilePath is null || IsViewedSummaryGenerating)
         {
             return;
         }
 
-        var item = TranscriptHistory.FirstOrDefault(h =>
-            string.Equals(h.FilePath, _viewedTranscriptFilePath, StringComparison.OrdinalIgnoreCase));
+        var item = FindHistoryItem(ViewedFilePath);
 
         if (item is null)
         {
@@ -203,13 +248,19 @@ public partial class MainViewModel
         }
     }
 
-    private void ClearViewedTranscriptIfDeleted(TranscriptHistoryItem item)
+    private TranscriptHistoryItem? FindHistoryItem(string filePath)
     {
-        if (_viewedTranscriptFilePath is not null &&
-            string.Equals(_viewedTranscriptFilePath, item.FilePath, StringComparison.OrdinalIgnoreCase))
+        var request = _messenger.Send(new FindTranscriptRequest(filePath));
+        return request.HasReceivedResponse ? request.Response : null;
+    }
+
+    private void ClearViewedTranscriptIfDeleted(string filePath)
+    {
+        if (ViewedFilePath is not null &&
+            string.Equals(ViewedFilePath, filePath, StringComparison.OrdinalIgnoreCase))
         {
             TranscriptText = string.Empty;
-            _viewedTranscriptFilePath = null;
+            ViewedFilePath = null;
             ClearViewedSummary();
         }
     }
@@ -217,7 +268,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task GenerateSummaryAsync(TranscriptHistoryItem? item)
     {
-        if (item is null || item.IsGeneratingSummary || IsRecording || IsBusy)
+        if (item is null || item.IsGeneratingSummary || _captureActive)
         {
             return;
         }
@@ -228,7 +279,7 @@ public partial class MainViewModel
             return;
         }
 
-        var settings = _settingsService.Load();
+        var settings = _settings.Load();
         var modelPath = settings.GetSummaryModelFilePath();
 
         if (!File.Exists(modelPath))
@@ -244,7 +295,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"MainViewModel.GenerateSummaryAsync: no se pudo leer \"{item.FilePath}\"", ex);
+            AppLog.Warn($"ViewerViewModel.GenerateSummaryAsync: no se pudo leer \"{item.FilePath}\"", ex);
             transcriptText = item.Preview;
         }
 
@@ -260,7 +311,7 @@ public partial class MainViewModel
                 item.SummaryProgressPercent = percent;
 
                 if (IsViewedSummaryGenerating &&
-                    string.Equals(_viewedTranscriptFilePath, item.FilePath, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(ViewedFilePath, item.FilePath, StringComparison.OrdinalIgnoreCase))
                 {
                     ViewedSummaryProgressPercent = percent;
                 }
@@ -268,14 +319,14 @@ public partial class MainViewModel
 
             var summary = await _summarizer.SummarizeAsync(transcriptText, modelPath, percentProgress);
 
-            _transcriptHistoryService.SaveSummary(item.SummaryFilePath, summary);
+            _historyService.SaveSummary(item.SummaryFilePath, summary);
 
             item.HasSummary = true;
             item.SummaryTitle = summary.Title;
             item.SummaryText = summary.Summary;
 
-            if (_viewedTranscriptFilePath is not null &&
-                string.Equals(_viewedTranscriptFilePath, item.FilePath, StringComparison.OrdinalIgnoreCase))
+            if (ViewedFilePath is not null &&
+                string.Equals(ViewedFilePath, item.FilePath, StringComparison.OrdinalIgnoreCase))
             {
                 ApplyViewedSummary(item);
                 IsShowingSummaryTab = true;
@@ -283,7 +334,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"MainViewModel.GenerateSummaryAsync: fallo al generar el resumen de \"{item.FilePath}\"", ex);
+            AppLog.Warn($"ViewerViewModel.GenerateSummaryAsync: fallo al generar el resumen de \"{item.FilePath}\"", ex);
             _dialogs.ShowError(Strings.Instance.Format("SummaryErrorBody", ex.Message), Strings.Instance.Get("ErrorTitle"));
         }
         finally

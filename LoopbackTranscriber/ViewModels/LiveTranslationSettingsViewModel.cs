@@ -7,7 +7,7 @@ namespace LoopbackTranscriber.ViewModels;
 
 public partial class LiveTranslationSettingsViewModel : ObservableObject
 {
-    private readonly SettingsService _settingsService;
+    private readonly ISettingsStore _settingsService;
     private bool _applying;
 
     public List<LanguageOption> AvailableLanguages { get; } =
@@ -34,7 +34,7 @@ public partial class LiveTranslationSettingsViewModel : ObservableObject
     [ObservableProperty]
     private double _liveWindowOpacity;
 
-    public LiveTranslationSettingsViewModel(SettingsService settingsService)
+    public LiveTranslationSettingsViewModel(ISettingsStore settingsService)
     {
         _settingsService = settingsService;
 

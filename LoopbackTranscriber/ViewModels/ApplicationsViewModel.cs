@@ -11,8 +11,8 @@ namespace LoopbackTranscriber.ViewModels;
 
 public partial class ApplicationsViewModel : ObservableObject
 {
-    private readonly CustomAppsService _customAppsService;
-    private readonly SettingsService _settingsService;
+    private readonly ICustomAppsService _customAppsService;
+    private readonly ISettingsStore _settingsService;
     private readonly TranscriptHistoryService _transcriptHistoryService;
 
     public ObservableCollection<DiscoveredApp> DiscoveredApps { get; } = [];
@@ -30,8 +30,8 @@ public partial class ApplicationsViewModel : ObservableObject
     private readonly DispatcherTimer _autoRefreshTimer;
 
     public ApplicationsViewModel(
-        CustomAppsService customAppsService,
-        SettingsService settingsService,
+        ICustomAppsService customAppsService,
+        ISettingsStore settingsService,
         TranscriptHistoryService transcriptHistoryService)
     {
         _customAppsService = customAppsService;

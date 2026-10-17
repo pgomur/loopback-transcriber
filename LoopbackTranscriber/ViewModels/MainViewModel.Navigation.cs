@@ -55,17 +55,15 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(IsLiveSettingsViewActive));
         ApplicationsViewModel?.SetActive(value == MainViewMode.Applications);
         RefreshTargetActiveStates();
-        RefreshSummaryModelAvailability();
+        Viewer.RefreshSummaryModelAvailability();
     }
 
     [RelayCommand]
     private void ShowHistory()
     {
-        TranscriptText = string.Empty;
-        _viewedTranscriptFilePath = null;
-        ClearViewedSummary();
+        Viewer.Clear();
 
-        LoadTranscriptHistoryFromDisk();
+        History.Reload();
         CurrentView = MainViewMode.History;
     }
 
@@ -73,7 +71,7 @@ public partial class MainViewModel
     {
         if (FirstRunViewModel is null)
         {
-            FirstRunViewModel = new FirstRunViewModel(_settingsService, _whisper, _summarizer);
+            FirstRunViewModel = _pages.CreateFirstRun();
             FirstRunViewModel.SetupCompleted += OnFirstRunSetupCompleted;
         }
 
@@ -94,7 +92,7 @@ public partial class MainViewModel
     {
         if (ConfigViewModel is null)
         {
-            ConfigViewModel = new ConfigViewModel(_settingsService, _whisper, _summarizer);
+            ConfigViewModel = _pages.CreateConfig();
         }
         else
         {
@@ -109,7 +107,7 @@ public partial class MainViewModel
     {
         if (LiveSettingsViewModel is null)
         {
-            LiveSettingsViewModel = new LiveTranslationSettingsViewModel(_settingsService);
+            LiveSettingsViewModel = _pages.CreateLiveSettings();
         }
         else
         {
@@ -124,7 +122,7 @@ public partial class MainViewModel
     {
         if (ApplicationsViewModel is null)
         {
-            ApplicationsViewModel = new ApplicationsViewModel(_customAppsService, _settingsService, _transcriptHistoryService);
+            ApplicationsViewModel = _pages.CreateApplications();
         }
         else
         {
