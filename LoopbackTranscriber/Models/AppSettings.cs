@@ -5,7 +5,19 @@ namespace LoopbackTranscriber.Models;
 public sealed class AppSettings
 {
 
-    public string ModelSize { get; set; } = "turbo";
+    public const string DefaultModelSize = "turbo";
+
+    private string _modelSize = DefaultModelSize;
+
+    public string ModelSize
+    {
+        get => _modelSize;
+        set
+        {
+            var normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
+            _modelSize = normalized.Length == 0 ? DefaultModelSize : normalized;
+        }
+    }
 
     public string ModelsFolder { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -15,7 +27,8 @@ public sealed class AppSettings
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LoopbackTranscriber", "transcripts");
 
-    public string Language { get; set; } = "auto";
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string Language => "auto";
 
     public string UiLanguage { get; set; } = DetectSystemLanguage();
 
@@ -30,6 +43,20 @@ public sealed class AppSettings
     public bool FirstRunSetupCompleted { get; set; }
 
     public List<CustomTargetAppSettings> CustomApps { get; set; } = [];
+
+    public string LiveTranslationLanguage { get; set; } = string.Empty;
+
+    public double LiveWindowOpacity { get; set; } = 1.0;
+
+    public bool LiveShowOriginal { get; set; } = true;
+
+    public bool LiveShowMetrics { get; set; } = true;
+
+    public double LiveTextSize { get; set; } = 19;
+
+    public int LiveAudioContext { get; set; }
+
+    public bool LiveFlashAttention { get; set; }
 
     public string GetModelFileName() => $"ggml-{ModelSize}.bin";
 

@@ -231,6 +231,27 @@ namespace LoopbackTranscriber
                     }
                 }
 
+                if (_liveWindow is not null && _liveWindowTarget is { } liveTarget)
+                {
+                    entries.Add(new(
+                        Strings.Instance.Format("TrayLiveTranslationClose", liveTarget.DisplayName),
+                        true,
+                        () => ToggleLiveTranslationFor(liveTarget),
+                        Icon: "Translate24"));
+                }
+                else
+                {
+                    foreach (var target in _viewModel.Targets.ToList())
+                    {
+                        var capturedTarget = target;
+                        entries.Add(new(
+                            Strings.Instance.Format("TrayLiveTranslationOpen", capturedTarget.DisplayName),
+                            capturedTarget.IsRunning,
+                            () => ToggleLiveTranslationFor(capturedTarget),
+                            Icon: "Translate24"));
+                    }
+                }
+
                 entries.Add(TrayMenuEntry.Separator);
             }
 

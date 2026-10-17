@@ -68,6 +68,13 @@
                         <ui:SymbolIcon Symbol="AppsList24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{Binding Path=[LiveTranslationButton], Source={x:Static services:Strings.Instance}}"
+                                        Command="{Binding ShowLiveSettingsCommand}"
+                                        IsActive="{Binding IsLiveSettingsViewActive}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Translate24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{Binding Path=[NavConfig], Source={x:Static services:Strings.Instance}}"
                                         Command="{Binding ShowConfigCommand}"
                                         IsActive="{Binding IsConfigViewActive}">
@@ -91,6 +98,10 @@
                 </Grid>
                 <Grid Visibility="{Binding IsApplicationsViewActive, Converter={StaticResource BoolToVis}}">
                     <views:ApplicationsView DataContext="{Binding ApplicationsViewModel}" />
+                </Grid>
+
+                <Grid Visibility="{Binding IsLiveSettingsViewActive, Converter={StaticResource BoolToVis}}">
+                    <views:LiveTranslationSettingsView DataContext="{Binding LiveSettingsViewModel}" />
                 </Grid>
 
                 <Grid Visibility="{Binding IsConfigViewActive, Converter={StaticResource BoolToVis}}">

@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="LoopbackTranscriber.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\AppIcon.ico" />
   </ItemGroup>
 

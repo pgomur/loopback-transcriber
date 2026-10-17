@@ -6,7 +6,7 @@ public sealed class TranscriptMessage
 
     public string Text { get; init; } = string.Empty;
 
-    public bool IsSelf => Speaker == "Tu" || (Speaker?.EndsWith(" (Tú)", StringComparison.Ordinal) ?? false);
+    public bool IsSelf => SpeakerLabels.IsSelf(Speaker);
 
-    public string DisplaySpeaker => !IsSelf ? "Participantes" : (Speaker == "Tu" ? "Tú" : Speaker!);
+    public string DisplaySpeaker => SpeakerLabels.DisplayName(Speaker);
 }

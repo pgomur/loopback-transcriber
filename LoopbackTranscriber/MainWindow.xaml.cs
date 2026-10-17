@@ -50,14 +50,14 @@ namespace LoopbackTranscriber
 
             _viewModel = new MainViewModel(
                 new TargetProcessWatcher(),
-                new ProcessLoopbackRecorder(),
-                new DeviceLoopbackRecorder(),
-                new MicrophoneRecorder(),
+                new CaptureCoordinator(new ProcessLoopbackRecorder(), new DeviceLoopbackRecorder(), new MicrophoneRecorder()),
                 whisper,
+                new RecordingProcessor(whisper, new NaudioAudioPreparer()),
                 summarizer,
                 settingsService,
                 transcriptHistoryService,
-                customAppsService);
+                customAppsService,
+                new WpfDialogService());
 
             DataContext = _viewModel;
 
@@ -72,6 +72,7 @@ namespace LoopbackTranscriber
 
             _viewModel.Targets.CollectionChanged += OnTargetsCollectionChanged;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _viewModel.LiveTranslationToggleRequested += OnLiveTranslationToggleRequested;
             Strings.Instance.LanguageChanged += OnAppLanguageChangedForCalendar;
 
             ApplyFirstRunTitleBarOverrideIfNeeded();
@@ -119,6 +120,8 @@ namespace LoopbackTranscriber
                 _backgroundTrimTimer = null;
                 _viewModel.Targets.CollectionChanged -= OnTargetsCollectionChanged;
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+                _viewModel.LiveTranslationToggleRequested -= OnLiveTranslationToggleRequested;
+                _liveWindow?.Close();
                 UiPreferences.TranslucentUiChanged -= OnTranslucentUiChanged;
                 Strings.Instance.LanguageChanged -= OnAppLanguageChangedForCalendar;
                 _viewModel.Dispose();
