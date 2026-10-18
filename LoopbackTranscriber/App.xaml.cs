@@ -24,6 +24,8 @@ namespace LoopbackTranscriber
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            CrashHandler.Install(this);
+
             base.OnStartup(e);
 
             var settingsService = new SettingsService();
@@ -37,6 +39,7 @@ namespace LoopbackTranscriber
 
             var window = _services.GetRequiredService<global::LoopbackTranscriber.MainWindow>();
             MainWindow = window;
+            CrashHandler.Attach(_services.GetRequiredService<ViewModels.RecordingViewModel>(), window);
             window.Show();
         }
 

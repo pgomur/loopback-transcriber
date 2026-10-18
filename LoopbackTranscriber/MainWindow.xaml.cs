@@ -32,6 +32,7 @@ namespace LoopbackTranscriber
         private System.Threading.Timer? _backgroundTrimTimer;
         private Views.TrayMenuWindow? _trayMenu;
         private bool _allowClose;
+        private bool _closingAfterCrash;
         private bool _hiddenToTray;
         private WindowState _stateBeforeMinimize = WindowState.Normal;
 
@@ -83,7 +84,7 @@ namespace LoopbackTranscriber
                     return;
                 }
 
-                if (_viewModel.Viewer.IsSummaryGenerating)
+                if (!_closingAfterCrash && _viewModel.Viewer.IsSummaryGenerating)
                 {
                     var answer = System.Windows.MessageBox.Show(
                         Strings.Instance.Get("CloseDuringSummaryBody"),
@@ -140,6 +141,13 @@ namespace LoopbackTranscriber
                 await Task.Delay(TimeSpan.FromSeconds(4));
                 MemoryTrimmer.Release();
             });
+        }
+
+        internal void CloseAfterCrash()
+        {
+            _closingAfterCrash = true;
+            _allowClose = true;
+            Close();
         }
 
         private void OnSessionEnding(object sender, SessionEndingCancelEventArgs e)

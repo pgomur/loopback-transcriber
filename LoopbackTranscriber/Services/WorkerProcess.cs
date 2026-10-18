@@ -154,6 +154,7 @@ internal static class WorkerHost
     public static int Run(string[] commandLineArgs)
     {
         var kind = commandLineArgs[2];
+        InstallUnhandledExceptionLogging(kind);
         var jobPath = commandLineArgs[3];
         var resultPath = commandLineArgs[4];
 
@@ -324,6 +325,18 @@ internal static class WorkerHost
         {
             AppLog.Warn("WorkerHost: no se pudo enviar un mensaje de la transcripcion en vivo", ex);
         }
+    }
+
+    private static void InstallUnhandledExceptionLogging(string kind)
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            AppLog.Error($"WorkerHost[{kind}]: excepcion no controlada (terminando={e.IsTerminating}): {e.ExceptionObject}");
+
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            AppLog.Warn($"WorkerHost[{kind}]: excepcion no observada en una tarea", e.Exception);
+            e.SetObserved();
+        };
     }
 
     private static void StartParentWatchdog(int parentPid)
