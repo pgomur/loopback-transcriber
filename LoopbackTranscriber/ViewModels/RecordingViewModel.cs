@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -75,6 +76,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
 
         StatusText = DescribeIdleState(target);
+        ApplyFailedRecordingFilter();
         NotifyToggleAvailability();
     }
 
@@ -215,6 +217,22 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         return preserving.Result.Preserved is not null;
     }
 
+    public async Task RecoverOrphanRecordingsAsync()
+    {
+        try
+        {
+            var recovered = await Task.Run(_workflow.RecoverOrphans);
+            if (recovered.Count > 0)
+            {
+                RefreshFailedRecordings();
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("RecordingViewModel.RecoverOrphanRecordingsAsync: fallo al recuperar grabaciones huerfanas", ex);
+        }
+    }
+
     private async Task StartRecordingAsync()
     {
         var target = _selectedTarget;
@@ -226,7 +244,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
 
         try
         {
-            await _workflow.StartAsync(target.ProcessId);
+            await _workflow.StartAsync(target.ProcessId, target.DisplayName);
 
             IsRecording = true;
             StatusText = Strings.Instance.Format("StatusListening", target.DisplayName);
@@ -283,25 +301,11 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         percent => TranscriptionProgressPercent = percent,
         active => IsTranscribingActive = active);
 
-    private FailedRecording? _failedRecording;
-    private int _failedRecordingCount;
+    private IReadOnlyList<FailedRecording> _allFailedRecordings = [];
 
-    public bool HasFailedRecording => _failedRecording is not null;
+    public ObservableCollection<FailedRecordingItem> FailedRecordings { get; } = new();
 
-    public string FailedRecordingText
-    {
-        get
-        {
-            if (_failedRecording is null)
-            {
-                return string.Empty;
-            }
-
-            var text = Strings.Instance.Format("FailedRecordingBanner", _failedRecording.AppName,
-                _failedRecording.RecordedAt.ToString("g"));
-            return _failedRecordingCount > 1 ? $"{text} (+{_failedRecordingCount - 1})" : text;
-        }
-    }
+    public bool HasFailedRecording => FailedRecordings.Count > 0;
 
     partial void OnIsBusyChanged(bool value)
     {
@@ -319,12 +323,24 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
 
     private void RefreshFailedRecordings()
     {
-        var all = _workflow.ListFailed();
-        _failedRecording = all.FirstOrDefault();
-        _failedRecordingCount = all.Count;
+        _allFailedRecordings = _workflow.ListFailed();
+        ApplyFailedRecordingFilter();
+    }
+
+    private void ApplyFailedRecordingFilter()
+    {
+        var appName = _selectedTarget?.DisplayName;
+
+        FailedRecordings.Clear();
+        if (appName is not null)
+        {
+            foreach (var recording in _allFailedRecordings.Where(r => string.Equals(r.AppName, appName, StringComparison.OrdinalIgnoreCase)))
+            {
+                FailedRecordings.Add(new FailedRecordingItem(recording));
+            }
+        }
 
         OnPropertyChanged(nameof(HasFailedRecording));
-        OnPropertyChanged(nameof(FailedRecordingText));
         NotifyFailedRecordingCommands();
     }
 
@@ -334,15 +350,14 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         DiscardFailedRecordingCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanRetryFailedRecording() =>
-        _failedRecording is not null && !IsBusy && !IsRecording && !IsSummaryGenerating;
+    private bool CanRetryFailedRecording(FailedRecording? recording) =>
+        recording is not null && !IsBusy && !IsRecording && !IsSummaryGenerating;
 
-    private bool CanDiscardFailedRecording() => _failedRecording is not null && !IsBusy;
+    private bool CanDiscardFailedRecording(FailedRecording? recording) => recording is not null && !IsBusy;
 
     [RelayCommand(CanExecute = nameof(CanRetryFailedRecording))]
-    private async Task RetryFailedRecordingAsync()
+    private async Task RetryFailedRecordingAsync(FailedRecording? recording)
     {
-        var recording = _failedRecording;
         if (recording is null)
         {
             return;
@@ -370,9 +385,8 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanDiscardFailedRecording))]
-    private void DiscardFailedRecording()
+    private void DiscardFailedRecording(FailedRecording? recording)
     {
-        var recording = _failedRecording;
         if (recording is null)
         {
             return;

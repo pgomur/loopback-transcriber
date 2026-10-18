@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using NAudio.Wave;
 using System.Text.Json.Serialization;
 
 namespace LoopbackTranscriber.Services;
@@ -17,6 +18,7 @@ public sealed class FailedRecording
     [JsonIgnore] public string SourceWavPath => Path.Combine(Folder, SourceWav);
     [JsonIgnore] public string? MicWavPath => string.IsNullOrEmpty(MicWav) ? null : Path.Combine(Folder, MicWav);
     [JsonIgnore] public TimeSpan MicStartOffset => TimeSpan.FromTicks(MicStartOffsetTicks);
+    [JsonIgnore] public TimeSpan? Duration { get; set; }
 }
 
 public sealed class FailedRecordingStore
@@ -149,6 +151,7 @@ public sealed class FailedRecordingStore
 
                     if (File.Exists(recording.SourceWavPath))
                     {
+                        recording.Duration = TryReadDuration(recording.SourceWavPath);
                         result.Add(recording);
                     }
                 }
@@ -164,6 +167,20 @@ public sealed class FailedRecordingStore
         }
 
         return result.OrderByDescending(r => r.RecordedAt).ToList();
+    }
+
+    private static TimeSpan? TryReadDuration(string wavPath)
+    {
+        try
+        {
+            using var reader = new WaveFileReader(wavPath);
+            return reader.TotalTime;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"FailedRecordingStore: no se pudo leer la duracion de \"{wavPath}\"", ex);
+            return null;
+        }
     }
 
     public void Delete(FailedRecording recording)

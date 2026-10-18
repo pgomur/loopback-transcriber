@@ -84,6 +84,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         Targets.Start();
         History.Reload();
+        _ = Recording.RecoverOrphanRecordingsAsync();
     }
 
     private void OnAppLanguageChanged(object? sender, EventArgs e)

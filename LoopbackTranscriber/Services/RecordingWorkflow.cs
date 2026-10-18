@@ -31,7 +31,10 @@ public sealed class RecordingWorkflow
 
     public event Action<byte[], int>? AudioCaptured;
 
-    public Task StartAsync(uint processId) => _capture.StartAsync(processId);
+    public Task StartAsync(uint processId, string? appName = null) => _capture.StartAsync(processId, appName);
+
+    public IReadOnlyList<FailedRecording> RecoverOrphans() =>
+        _capture.RecoverOrphans(Strings.Instance.Get("RecordingRecoveredReason"));
 
     public async Task<RecordingResult> StopAndProcessAsync(string appName, DateTime recordedAt,
         RecordingCallbacks callbacks, CancellationToken cancellationToken = default)
