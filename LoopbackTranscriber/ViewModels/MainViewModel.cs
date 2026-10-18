@@ -22,6 +22,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IPageFactory _pages;
     private readonly ISettingsStore _settingsService;
     private readonly IMessenger _messenger;
+    private readonly IModelVerifier _modelVerifier;
 
     public TargetsViewModel Targets { get; }
 
@@ -38,7 +39,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ViewerViewModel viewer,
         IPageFactory pages,
         ISettingsStore settingsService,
-        IMessenger messenger)
+        IMessenger messenger,
+        IModelVerifier modelVerifier)
     {
         Targets = targets;
         Recording = recording;
@@ -47,6 +49,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _pages = pages;
         _settingsService = settingsService;
         _messenger = messenger;
+        _modelVerifier = modelVerifier;
 
         _messenger.Register<MainViewModel, TargetSelectionChangedMessage>(this, static (r, m) => r.OnTargetSelectionChanged(m.Target));
         _messenger.Register<MainViewModel, TargetStatusesSyncedMessage>(this, static (r, _) => r.OnTargetStatusesSynced());
@@ -85,6 +88,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Targets.Start();
         History.Reload();
         _ = Recording.RecoverOrphanRecordingsAsync();
+        _ = VerifyInstalledModelsAsync();
+    }
+
+    private async Task VerifyInstalledModelsAsync()
+    {
+        try
+        {
+            var result = await Task.Run(() => _modelVerifier.VerifyInstalledModelsAsync());
+            if (!result.AnyRemoved)
+            {
+                return;
+            }
+
+            Viewer.RefreshSummaryModelAvailability();
+
+            if (CurrentView != MainViewMode.FirstRun && !Recording.IsRecording && !Recording.IsBusy)
+            {
+                ShowFirstRunSetup();
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("MainViewModel.VerifyInstalledModelsAsync: fallo al verificar los modelos instalados", ex);
+        }
     }
 
     private void OnAppLanguageChanged(object? sender, EventArgs e)

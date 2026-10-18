@@ -14,6 +14,8 @@ public interface IProcessCapture : IDisposable
     Task<string> StopAsync();
 
     double LastPeakAbs { get; }
+
+    long? FirstSampleTimestamp { get; }
 }
 
 public interface IDeviceCapture : IDisposable
@@ -28,6 +30,8 @@ public interface IMicCapture : IDisposable
     void Start(string wavPath);
 
     string? Stop();
+
+    long? FirstSampleTimestamp { get; }
 }
 
 public sealed record StoppedRecording(string? SourceWavPath, string? MicWavPath, TimeSpan MicStartOffset,
@@ -198,8 +202,14 @@ public sealed class CaptureCoordinator : IDisposable
         var sourceWavPath = bestDeviceTrack is not null ? bestDeviceTrack.WavPath : rawWavPath;
 
         var micStartOffset = TimeSpan.Zero;
+        var sourceFirstSample = bestDeviceTrack is not null ? bestDeviceTrack.FirstSampleTimestamp : _process.FirstSampleTimestamp;
+        var micFirstSample = _mic.FirstSampleTimestamp;
         var otherTrackStartedAt = bestDeviceTrack is not null ? _deviceStartedAt : _processStartedAt;
-        if (micWavPath is not null && otherTrackStartedAt is not null && _micStartedAt is not null)
+        if (micWavPath is not null && sourceFirstSample is not null && micFirstSample is not null)
+        {
+            micStartOffset = TimeSpan.FromTicks(micFirstSample.Value - sourceFirstSample.Value);
+        }
+        else if (micWavPath is not null && otherTrackStartedAt is not null && _micStartedAt is not null)
         {
             micStartOffset = _micStartedAt.Value - otherTrackStartedAt.Value;
         }

@@ -10,6 +10,7 @@ public sealed class MicrophoneRecorder : IMicCapture
     private WaveFileWriter? _writer;
     private readonly object _writeLock = new();
     private ManualResetEventSlim? _stoppedEvent;
+    private CaptureTimeline? _timeline;
     private string? _wavPath;
     private double _peakAbs;
     private bool _isRecording;
@@ -19,6 +20,8 @@ public sealed class MicrophoneRecorder : IMicCapture
     public bool IsAvailable { get; private set; } = true;
 
     public string? LastUsedDeviceName { get; private set; }
+
+    public long? FirstSampleTimestamp { get; private set; }
 
     public void Start(string wavPath)
     {
@@ -79,6 +82,8 @@ public sealed class MicrophoneRecorder : IMicCapture
         _writer = writer;
         _wavPath = wavPath;
         _peakAbs = 0;
+        _timeline = new CaptureTimeline(capture.WaveFormat.SampleRate);
+        FirstSampleTimestamp = null;
         _stoppedEvent = new ManualResetEventSlim(false);
 
         capture.DataAvailable += OnDataAvailable;
@@ -104,15 +109,26 @@ public sealed class MicrophoneRecorder : IMicCapture
 
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
     {
-        lock (_writeLock)
-        {
-            _writer?.Write(e.Buffer, 0, e.BytesRecorded);
-        }
-
+        var arrival = CaptureTimeline.Now();
         var format = _capture?.WaveFormat;
         if (format is null)
         {
             return;
+        }
+
+        lock (_writeLock)
+        {
+            if (_writer is not null && _timeline is not null && e.BytesRecorded > 0)
+            {
+                var blockAlign = Math.Max(1, format.BlockAlign);
+                var paddingFrames = _timeline.PaddingBeforeArrival(arrival, e.BytesRecorded / blockAlign);
+                if (paddingFrames > 0)
+                {
+                    CaptureTimeline.WriteSilence(_writer, paddingFrames * blockAlign);
+                }
+
+                _writer.Write(e.Buffer, 0, e.BytesRecorded);
+            }
         }
 
         if (format.Encoding == WaveFormatEncoding.IeeeFloat && format.BitsPerSample == 32)
@@ -178,6 +194,17 @@ public sealed class MicrophoneRecorder : IMicCapture
 
         var wavPath = _wavPath;
         var hasSignal = _peakAbs > SignalThreshold;
+
+        if (_timeline is not null)
+        {
+            FirstSampleTimestamp = _timeline.FirstSampleTimestamp;
+            if (_timeline.PaddedFrames > 0)
+            {
+                AppLog.Info($"MicrophoneRecorder: huecos rellenados con silencio = {_timeline.PaddedDuration.TotalSeconds:0.0}s");
+            }
+        }
+
+        _timeline = null;
 
         _capture = null;
         _writer = null;

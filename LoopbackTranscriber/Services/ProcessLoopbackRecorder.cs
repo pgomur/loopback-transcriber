@@ -9,6 +9,7 @@ namespace LoopbackTranscriber.Services;
 public sealed class ProcessLoopbackRecorder : IProcessCapture
 {
     private const uint AUDCLNT_BUFFERFLAGS_SILENT = 0x2;
+    private const uint AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR = 0x4;
 
     public const int CaptureSampleRate = 44100;
     public const int CaptureChannels = 2;
@@ -22,6 +23,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         public required FileStream FileStream;
         public required BinaryWriter Writer;
         public required WAVEFORMATEX Format;
+        public required CaptureTimeline Timeline;
 
         public readonly object WriteLock = new();
         public Thread? Thread;
@@ -40,6 +42,8 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
     public string LastCaptureStats { get; private set; } = string.Empty;
 
     public double LastPeakAbs { get; private set; }
+
+    public long? FirstSampleTimestamp { get; private set; }
 
     public event Action<byte[], int>? AudioCaptured;
 
@@ -103,7 +107,8 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
                 StopEvent = stopEvent,
                 FileStream = fileStream,
                 Writer = writer,
-                Format = format
+                Format = format,
+                Timeline = new CaptureTimeline(CaptureSampleRate)
             };
 
             hr = audioClient.Start();
@@ -111,6 +116,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
 
             LastCaptureStats = string.Empty;
             LastPeakAbs = 0;
+            FirstSampleTimestamp = null;
             _session = session;
             IsRecording = true;
 
@@ -190,8 +196,10 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         session.StopEvent.Dispose();
 
         LastPeakAbs = session.PeakSampleAbs / 32768.0;
+        FirstSampleTimestamp = session.Timeline.FirstSampleTimestamp;
         LastCaptureStats =
-            $"paquetes={session.PacketCount}, en_silencio={session.SilentPacketCount}, frames={session.FramesCaptured}, pico_senal={session.PeakSampleAbs}/32768";
+            $"paquetes={session.PacketCount}, en_silencio={session.SilentPacketCount}, frames={session.FramesCaptured}, pico_senal={session.PeakSampleAbs}/32768, huecos_rellenados={session.Timeline.PaddedDuration.TotalSeconds:0.0}s";
+        AppLog.Info($"ProcessLoopbackRecorder: {LastCaptureStats}");
 
         if (ReferenceEquals(_session, session))
         {
@@ -245,6 +253,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         }
 
         LastPeakAbs = session.PeakSampleAbs / 32768.0;
+        FirstSampleTimestamp = session.Timeline.FirstSampleTimestamp;
         LastCaptureStats = "captura abandonada: el hilo de captura no respondio";
 
         if (ReferenceEquals(_session, session))
@@ -294,7 +303,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
                 break;
             }
 
-            hr = captureClient.GetBuffer(out var dataPtr, out var numFrames, out var bufferFlags, out _, out _);
+            hr = captureClient.GetBuffer(out var dataPtr, out var numFrames, out var bufferFlags, out _, out var qpcPosition);
             if (hr < 0)
             {
                 break;
@@ -315,6 +324,21 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
 
                         session.PacketCount++;
                         session.FramesCaptured += numFrames;
+
+                        if ((bufferFlags & AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR) == 0 && qpcPosition != 0)
+                        {
+                            var paddingFrames = session.Timeline.PaddingBefore((long)qpcPosition, numFrames);
+                            if (paddingFrames > 0)
+                            {
+                                var paddingBytes = paddingFrames * blockAlign;
+                                CaptureTimeline.WriteSilence(session.FileStream, paddingBytes);
+                                session.DataBytesWritten += paddingBytes;
+                            }
+                        }
+                        else
+                        {
+                            session.Timeline.AddUntimed(numFrames);
+                        }
 
                         if ((bufferFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0 || dataPtr == IntPtr.Zero)
                         {

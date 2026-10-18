@@ -17,7 +17,9 @@ public sealed partial class SummarizationService
 {
     private const string ModelRevision = "bc640142c66e1fdd12af0bd68f40445458f3869b";
 
-    private const string ModelSha256 = "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5";
+    internal const string ModelSha256 = "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5";
+
+    internal const string ModelName = "Qwen3-4B-Q4_K_M";
 
     private const string ModelDownloadUrl =
         "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/" + ModelRevision + "/Qwen3-4B-Q4_K_M.gguf";
@@ -28,7 +30,9 @@ public sealed partial class SummarizationService
         IProgress<string>? progress = null, IProgress<double>? percentProgress = null,
         CancellationToken cancellationToken = default)
     {
-        if (File.Exists(destinationPath))
+        if (File.Exists(destinationPath)
+            && await ModelIntegrity.EnsureVerifiedAsync(destinationPath, ModelSha256, ModelName, progress, cancellationToken)
+                .ConfigureAwait(false))
         {
             return;
         }
@@ -121,7 +125,7 @@ public sealed partial class SummarizationService
 
         try
         {
-            await ModelIntegrity.VerifySha256Async(tempPath, ModelSha256, "Qwen3-4B-Q4_K_M", progress, cancellationToken)
+            await ModelIntegrity.VerifySha256Async(tempPath, ModelSha256, ModelName, progress, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -135,6 +139,7 @@ public sealed partial class SummarizationService
         }
 
         File.Move(tempPath, destinationPath, overwrite: true);
+        ModelIntegrity.WriteMarker(destinationPath, ModelSha256);
         percentProgress?.Report(100);
         progress?.Report(Strings.Instance.Get("SummaryModelDownloaded"));
     }

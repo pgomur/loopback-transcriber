@@ -107,6 +107,8 @@ namespace LoopbackTranscriber
                 Strings.Instance.Get("TrayHintBody"));
         }
 
+        internal void ShowFromOtherInstance() => RestoreFromTray();
+
         private void RestoreFromTray()
         {
             _hiddenToTray = false;

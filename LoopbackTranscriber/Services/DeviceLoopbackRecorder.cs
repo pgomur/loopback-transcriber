@@ -11,6 +11,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
         public required string WavPath;
         public double PeakAbs;
         public long BytesCaptured;
+        public long? FirstSampleTimestamp;
     }
 
     private sealed class Channel
@@ -19,6 +20,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
         public required WasapiLoopbackCapture Capture;
         public required WaveFileWriter Writer;
         public required string WavPath;
+        public required CaptureTimeline Timeline;
         public readonly object WriteLock = new();
         public readonly ManualResetEventSlim StoppedEvent = new(false);
         public double PeakAbs;
@@ -97,7 +99,8 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
                 Label = $"{roleLabel} ({device.FriendlyName})",
                 Capture = capture,
                 Writer = writer,
-                WavPath = wavPath
+                WavPath = wavPath,
+                Timeline = new CaptureTimeline(capture.WaveFormat.SampleRate)
             };
 
             capture.DataAvailable += (_, e) => OnDataAvailable(channel, e);
@@ -120,14 +123,25 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
 
     private static void OnDataAvailable(Channel channel, WaveInEventArgs e)
     {
+        var arrival = CaptureTimeline.Now();
+        var format = channel.Capture.WaveFormat;
+
         lock (channel.WriteLock)
         {
-            channel.Writer.Write(e.Buffer, 0, e.BytesRecorded);
+            if (e.BytesRecorded > 0)
+            {
+                var blockAlign = Math.Max(1, format.BlockAlign);
+                var paddingFrames = channel.Timeline.PaddingBeforeArrival(arrival, e.BytesRecorded / blockAlign);
+                if (paddingFrames > 0)
+                {
+                    CaptureTimeline.WriteSilence(channel.Writer, paddingFrames * blockAlign);
+                }
+
+                channel.Writer.Write(e.Buffer, 0, e.BytesRecorded);
+            }
         }
 
         channel.BytesCaptured += e.BytesRecorded;
-
-        var format = channel.Capture.WaveFormat;
 
         if (format.Encoding == WaveFormatEncoding.IeeeFloat && format.BitsPerSample == 32)
         {
@@ -189,12 +203,18 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             channel.Capture.Dispose();
             channel.StoppedEvent.Dispose();
 
+            if (channel.Timeline.PaddedFrames > 0)
+            {
+                AppLog.Info($"DeviceLoopbackRecorder: huecos rellenados con silencio en \"{channel.Label}\" = {channel.Timeline.PaddedDuration.TotalSeconds:0.0}s");
+            }
+
             results.Add(new DeviceTrack
             {
                 Label = channel.Label,
                 WavPath = channel.WavPath,
                 PeakAbs = channel.PeakAbs,
-                BytesCaptured = channel.BytesCaptured
+                BytesCaptured = channel.BytesCaptured,
+                FirstSampleTimestamp = channel.Timeline.FirstSampleTimestamp
             });
         }
 

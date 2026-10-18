@@ -53,6 +53,21 @@ public sealed partial class WhisperTranscriptionService
         _ => "ggml-small"
     };
 
+    internal static bool TryGetPinnedModel(string modelSize, out string sha256, out string modelName)
+    {
+        var type = ParseModelSize(modelSize);
+        modelName = GetModelFileName(type);
+
+        if (PinnedSha256.TryGetValue(type, out var pinned))
+        {
+            sha256 = pinned;
+            return true;
+        }
+
+        sha256 = string.Empty;
+        return false;
+    }
+
     private static string GetModelUrl(GgmlType type) =>
         $"{HuggingFaceRepository}/{ModelRevision}/q5_1/{GetModelFileName(type)}.bin";
 
@@ -71,7 +86,12 @@ public sealed partial class WhisperTranscriptionService
     {
         if (File.Exists(destinationPath))
         {
-            return;
+            if (!TryGetPinnedModel(modelSize, out var existingSha256, out var existingName)
+                || await ModelIntegrity.EnsureVerifiedAsync(destinationPath, existingSha256, existingName, progress,
+                    cancellationToken).ConfigureAwait(false))
+            {
+                return;
+            }
         }
 
         var directory = Path.GetDirectoryName(destinationPath);
@@ -128,6 +148,7 @@ public sealed partial class WhisperTranscriptionService
         }
 
         File.Move(tempPath, destinationPath, overwrite: true);
+        ModelIntegrity.WriteMarker(destinationPath, expectedSha256);
         percentProgress?.Report(100);
         progress?.Report(Strings.Instance.Get("ProgressModelDownloaded"));
     }

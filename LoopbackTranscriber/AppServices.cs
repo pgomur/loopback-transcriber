@@ -18,6 +18,7 @@ internal static class AppServices
         services.AddSingleton<TranscriptHistoryService>();
         services.AddSingleton<TranscriptsFolderWatcher>();
         services.AddSingleton<ISummarizer, SummarizationService>();
+        services.AddSingleton<IModelVerifier, ModelVerifier>();
 
         services.AddSingleton<WhisperTranscriptionService>();
         services.AddSingleton<IWhisperTranscriber>(sp => sp.GetRequiredService<WhisperTranscriptionService>());

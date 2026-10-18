@@ -21,12 +21,21 @@ namespace LoopbackTranscriber
         }
 
         private ServiceProvider? _services;
+        private SingleInstance? _singleInstance;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             CrashHandler.Install(this);
 
             base.OnStartup(e);
+
+            _singleInstance = SingleInstance.TryAcquire();
+            if (_singleInstance is null)
+            {
+                AppLog.Info("App.OnStartup: ya hay otra copia abierta; se le pide que se muestre y esta termina");
+                Shutdown();
+                return;
+            }
 
             var settingsService = new SettingsService();
             settingsService.EnsureDefaultUserName();
@@ -40,6 +49,7 @@ namespace LoopbackTranscriber
             var window = _services.GetRequiredService<global::LoopbackTranscriber.MainWindow>();
             MainWindow = window;
             CrashHandler.Attach(_services.GetRequiredService<ViewModels.RecordingViewModel>(), window);
+            _singleInstance.ListenForActivation(() => Dispatcher.InvokeAsync(window.ShowFromOtherInstance));
             window.Show();
         }
 
@@ -53,6 +63,8 @@ namespace LoopbackTranscriber
             {
                 AppLog.Warn("App.OnExit: fallo al liberar los servicios", ex);
             }
+
+            _singleInstance?.Dispose();
 
             base.OnExit(e);
         }
