@@ -386,9 +386,20 @@
                                                            Opacity="0.55" FontSize="11" VerticalAlignment="Center" />
                                             </Grid>
 
-                                            <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,4,0,0" Text="{Binding Preview}"
+                                            <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,4,0,0"
                                                        Opacity="0.7" FontSize="12" VerticalAlignment="Center"
-                                                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                                                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding Preview}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Preview}" Value="">
+                                                                <Setter Property="Text" Value="{Binding Path=[HistoryAudioOnlyText], Source={x:Static services:Strings.Instance}}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
 
                                         </Grid>
                                     </Border>

@@ -26,7 +26,7 @@ public partial class ConfigView : UserControl
         }
         catch (Exception ex)
         {
-            AppLog.Warn("ConfigView.OnThirdPartyLicensesClick: no se pudo abrir el fichero de licencias", ex);
+            AppLog.Warn("ConfigView.OnThirdPartyLicensesClick: could not open the licenses file", ex);
         }
     }
 
@@ -38,7 +38,7 @@ public partial class ConfigView : UserControl
         }
         catch (Exception ex)
         {
-            AppLog.Warn("ConfigView.OnGitHubCardClick: no se pudo abrir GitHub", ex);
+            AppLog.Warn("ConfigView.OnGitHubCardClick: could not open GitHub", ex);
         }
     }
 }

@@ -6,28 +6,16 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using LoopbackTranscriber.Interop;
 using LoopbackTranscriber.Services;
 
 namespace LoopbackTranscriber.Views;
 
 public partial class TrayMenuWindow : Window
 {
-    public const string RecordGlyph = "glyph:record";
-    public const string StopGlyph = "glyph:stop";
-
     private const double OuterMargin = 14;
+    private const double PointerGap = 8;
     private const int IconColumnWidth = 26;
-    private const int MonitorDefaultToNearest = 2;
-    private const uint SwpNoSize = 0x1;
-    private const uint SwpNoActivate = 0x10;
-    private const int GwlExStyle = -20;
-    private const int WsExToolWindow = 0x80;
-    private const int WsExNoActivate = 0x08000000;
-    private const int WhMouseLl = 14;
-    private const int WmLButtonDown = 0x201;
-    private const int WmRButtonDown = 0x204;
-    private const int WmMButtonDown = 0x207;
-    private const int WmXButtonDown = 0x20B;
 
     private static readonly Brush RecordingBackground = CreateFrozenBrush(Color.FromArgb(0x30, 0xE5, 0x39, 0x35));
     private static readonly Brush RecordingDot = CreateFrozenBrush(Color.FromRgb(0xE5, 0x39, 0x35));
@@ -86,42 +74,26 @@ public partial class TrayMenuWindow : Window
     {
         var handle = new WindowInteropHelper(this).EnsureHandle();
         _handle = handle;
-        _openForeground = GetForegroundWindow();
+        _openForeground = User32.GetForegroundWindow();
 
-        SetWindowLong(handle, GwlExStyle, GetWindowLong(handle, GwlExStyle) | WsExNoActivate | WsExToolWindow);
+        User32.SetWindowLong(handle, User32.GwlExStyle,
+            User32.GetWindowLong(handle, User32.GwlExStyle) | User32.WsExNoActivate | User32.WsExToolWindow);
 
         Opacity = 0;
-        SetWindowPos(handle, new IntPtr(-1), cursorX, cursorY, 0, 0, SwpNoSize | SwpNoActivate);
+        User32.SetWindowPos(handle, User32.HwndTopMost, cursorX, cursorY, 0, 0, User32.SwpNoSize | User32.SwpNoActivate);
         Show();
         UpdateLayout();
 
-        var dpi = GetDpiForWindow(handle);
+        var dpi = User32.GetDpiForWindow(handle);
         var scale = dpi > 0 ? dpi / 96.0 : 1.0;
         var width = (int)Math.Ceiling(ActualWidth * scale);
         var height = (int)Math.Ceiling(ActualHeight * scale);
         var margin = (int)Math.Round(OuterMargin * scale);
-        var gap = (int)Math.Round(8 * scale);
+        var gap = (int)Math.Round(PointerGap * scale);
 
-        var work = GetWorkArea(cursorX, cursorY);
+        var (x, y) = TrayMenuPlacement.Compute(cursorX, cursorY, width, height, margin, gap, GetWorkArea(cursorX, cursorY));
 
-        var x = cursorX - width / 2;
-        x = Math.Min(x, work.Right - width + margin - gap);
-        x = Math.Max(x, work.Left - margin + gap);
-
-        int y;
-        if (cursorY > (work.Top + work.Bottom) / 2)
-        {
-            y = Math.Min(cursorY, work.Bottom) - height + margin - gap;
-        }
-        else
-        {
-            y = Math.Max(cursorY, work.Top) - margin + gap;
-        }
-
-        y = Math.Min(y, work.Bottom - height + margin - gap);
-        y = Math.Max(y, work.Top - margin + gap);
-
-        SetWindowPos(handle, new IntPtr(-1), x, y, 0, 0, SwpNoSize | SwpNoActivate);
+        User32.SetWindowPos(handle, User32.HwndTopMost, x, y, 0, 0, User32.SwpNoSize | User32.SwpNoActivate);
         Opacity = 1;
 
         _bodyMargin = margin;
@@ -133,11 +105,11 @@ public partial class TrayMenuWindow : Window
         try
         {
             _mouseProc = MouseHookProc;
-            _mouseHook = SetWindowsHookEx(WhMouseLl, _mouseProc, GetModuleHandle(null), 0);
+            _mouseHook = User32.SetWindowsHookEx(User32.WhMouseLl, _mouseProc, User32.GetModuleHandle(null), 0);
         }
         catch (Exception ex)
         {
-            AppLog.Warn("TrayMenuWindow.InstallMouseHook: no se pudo vigilar los clics fuera del menu", ex);
+            AppLog.Warn("TrayMenuWindow.InstallMouseHook: could not watch for clicks outside the menu", ex);
         }
     }
 
@@ -145,7 +117,7 @@ public partial class TrayMenuWindow : Window
     {
         if (_mouseHook != IntPtr.Zero)
         {
-            UnhookWindowsHookEx(_mouseHook);
+            User32.UnhookWindowsHookEx(_mouseHook);
             _mouseHook = IntPtr.Zero;
         }
 
@@ -158,7 +130,7 @@ public partial class TrayMenuWindow : Window
         {
             var message = (int)wParam;
 
-            if (message is WmLButtonDown or WmRButtonDown or WmMButtonDown or WmXButtonDown)
+            if (message is User32.WmLButtonDown or User32.WmRButtonDown or User32.WmMButtonDown or User32.WmXButtonDown)
             {
                 var data = Marshal.PtrToStructure<MouseHookData>(lParam);
 
@@ -169,12 +141,12 @@ public partial class TrayMenuWindow : Window
             }
         }
 
-        return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+        return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
     }
 
     private bool IsInsideMenu(int x, int y)
     {
-        if (_handle == IntPtr.Zero || !GetWindowRect(_handle, out var rect))
+        if (_handle == IntPtr.Zero || !User32.GetWindowRect(_handle, out var rect))
         {
             return false;
         }
@@ -185,7 +157,7 @@ public partial class TrayMenuWindow : Window
 
     private void OnLiveTimerTick(object? sender, EventArgs e)
     {
-        var foreground = GetForegroundWindow();
+        var foreground = User32.GetForegroundWindow();
         if (foreground != _openForeground && foreground != _handle)
         {
             CloseMenu();
@@ -302,9 +274,9 @@ public partial class TrayMenuWindow : Window
             };
         }
 
-        if (entry.Icon is RecordGlyph or StopGlyph)
+        if (entry.Icon is TrayMenuEntry.RecordGlyph or TrayMenuEntry.StopGlyph)
         {
-            return CreateRecordGlyph(isStop: entry.Icon == StopGlyph);
+            return CreateRecordGlyph(isStop: entry.Icon == TrayMenuEntry.StopGlyph);
         }
 
         if (entry.Icon is not null && Enum.TryParse<Wpf.Ui.Controls.SymbolRegular>(entry.Icon, out var symbol))
@@ -373,86 +345,16 @@ public partial class TrayMenuWindow : Window
         return brush;
     }
 
-    private static NativeRect GetWorkArea(int x, int y)
+    private static ScreenArea GetWorkArea(int x, int y)
     {
-        var monitor = MonitorFromPoint(new NativePoint { X = x, Y = y }, MonitorDefaultToNearest);
+        var monitor = User32.MonitorFromPoint(new NativePoint { X = x, Y = y }, User32.MonitorDefaultToNearest);
         var info = new MonitorInfo { cbSize = (uint)Marshal.SizeOf<MonitorInfo>() };
 
-        return monitor != IntPtr.Zero && GetMonitorInfo(monitor, ref info)
-            ? info.rcWork
-            : new NativeRect { Left = 0, Top = 0, Right = (int)SystemParameters.PrimaryScreenWidth, Bottom = (int)SystemParameters.PrimaryScreenHeight };
+        if (monitor != IntPtr.Zero && User32.GetMonitorInfo(monitor, ref info))
+        {
+            return new ScreenArea(info.rcWork.Left, info.rcWork.Top, info.rcWork.Right, info.rcWork.Bottom);
+        }
+
+        return new ScreenArea(0, 0, (int)SystemParameters.PrimaryScreenWidth, (int)SystemParameters.PrimaryScreenHeight);
     }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativePoint
-    {
-        public int X;
-        public int Y;
-    }
-
-    private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MouseHookData
-    {
-        public NativePoint Point;
-        public uint MouseData;
-        public uint Flags;
-        public uint Time;
-        public IntPtr ExtraInfo;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MonitorInfo
-    {
-        public uint cbSize;
-        public NativeRect rcMonitor;
-        public NativeRect rcWork;
-        public uint dwFlags;
-    }
-
-    [DllImport("user32.dll")]
-    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hWnd, out NativeRect lpRect);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
-
-    [DllImport("user32.dll")]
-    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr GetModuleHandle(string? lpModuleName);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetDpiForWindow(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr MonitorFromPoint(NativePoint pt, int flags);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo lpmi);
 }
