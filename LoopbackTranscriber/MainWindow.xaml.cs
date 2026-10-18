@@ -142,6 +142,10 @@ namespace LoopbackTranscriber
             });
         }
 
-        private void OnSessionEnding(object sender, SessionEndingCancelEventArgs e) => _allowClose = true;
+        private void OnSessionEnding(object sender, SessionEndingCancelEventArgs e)
+        {
+            _allowClose = true;
+            _viewModel.Recording.PreserveInterruptedRecording(TimeSpan.FromSeconds(3));
+        }
     }
 }

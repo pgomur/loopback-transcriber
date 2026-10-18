@@ -456,33 +456,13 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
             {
                 IsRecording = false;
                 session.StopEvent.Set();
-                var abandonedPath = FinishStop(session);
-                TryDeleteFile(abandonedPath);
+                var keptPath = FinishStop(session);
+                AppLog.Error($"ProcessLoopbackRecorder.Dispose: se cerro con una grabacion en curso; el audio se conserva sin procesar en \"{keptPath}\"");
             }
             catch (Exception ex)
             {
                 AppLog.Warn("ProcessLoopbackRecorder.Dispose: fallo al detener la grabacion en curso", ex);
             }
-        }
-    }
-
-    private static void TryDeleteFile(string? path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            return;
-        }
-
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn($"ProcessLoopbackRecorder: no se pudo borrar \"{path}\"", ex);
         }
     }
 }

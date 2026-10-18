@@ -237,11 +237,6 @@ public sealed class MicrophoneRecorder : IMicCapture
 
         _stoppedEvent?.Dispose();
 
-        if (_wavPath is not null)
-        {
-            TryDeleteFile(_wavPath);
-        }
-
         _capture = null;
         _writer = null;
         _wavPath = null;

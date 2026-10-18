@@ -57,15 +57,36 @@ public sealed class RecordingWorkflow
         {
             AppLog.Warn("RecordingWorkflow.StopAndProcessAsync: fallo al procesar la grabacion", ex);
 
-            var outcome = _capture.PreserveFailed(stopped, appName, recordedAt, ex.Message);
-
-            if (!outcome.KeepOriginals)
-            {
-                _capture.DeleteOriginals(stopped);
-            }
-
-            return new RecordingResult(null, ex.Message, outcome.Saved, outcome.TempFolder);
+            return Preserve(stopped, appName, recordedAt, ex.Message);
         }
+    }
+
+    public async Task<RecordingResult> StopAndPreserveAsync(string appName, DateTime recordedAt, string reason)
+    {
+        StoppedRecording? stopped = null;
+
+        try
+        {
+            stopped = await _capture.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("RecordingWorkflow.StopAndPreserveAsync: fallo al parar la captura", ex);
+        }
+
+        return Preserve(stopped, appName, recordedAt, reason);
+    }
+
+    private RecordingResult Preserve(StoppedRecording? stopped, string appName, DateTime recordedAt, string error)
+    {
+        var outcome = _capture.PreserveFailed(stopped, appName, recordedAt, error);
+
+        if (!outcome.KeepOriginals)
+        {
+            _capture.DeleteOriginals(stopped);
+        }
+
+        return new RecordingResult(null, error, outcome.Saved, outcome.TempFolder);
     }
 
     public async Task<RecordingResult> RetryAsync(FailedRecording recording, RecordingCallbacks callbacks,

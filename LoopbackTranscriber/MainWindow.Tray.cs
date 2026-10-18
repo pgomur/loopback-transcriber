@@ -148,23 +148,97 @@ namespace LoopbackTranscriber
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
-        private void ExitFromTray()
+        private bool _exitPending;
+
+        private void ExitFromTray() => RunTrayAction(ExitFromTrayAsync);
+
+        private async Task ExitFromTrayAsync()
         {
-            if (_viewModel.Recording.IsRecording)
+            if (_exitPending)
+            {
+                return;
+            }
+
+            var recording = _viewModel.Recording;
+
+            if (recording.IsRecording)
             {
                 var answer = System.Windows.MessageBox.Show(
                     Strings.Instance.Get("ExitDuringRecordingBody"),
                     Strings.Instance.Get("ExitDuringRecordingTitle"),
+                    System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Warning);
+
+                if (answer == System.Windows.MessageBoxResult.Yes)
+                {
+                    _exitPending = true;
+                    try
+                    {
+                        RestoreFromTray();
+                        await _recordingHost.StopRecordingAsync();
+                    }
+                    finally
+                    {
+                        _exitPending = false;
+                    }
+                }
+                else if (answer != System.Windows.MessageBoxResult.No)
+                {
+                    return;
+                }
+
+                if (recording.IsRecording)
+                {
+                    recording.PreserveInterruptedRecording(TimeSpan.FromSeconds(10));
+                }
+            }
+            else if (recording.IsBusy)
+            {
+                var answer = System.Windows.MessageBox.Show(
+                    Strings.Instance.Get("ExitWhileProcessingBody"),
+                    Strings.Instance.Get("ExitWhileProcessingTitle"),
                     System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
 
                 if (answer != System.Windows.MessageBoxResult.Yes)
                 {
                     return;
                 }
+
+                _exitPending = true;
+                try
+                {
+                    RestoreFromTray();
+                    await WaitUntilNotBusyAsync(recording);
+                }
+                finally
+                {
+                    _exitPending = false;
+                }
             }
 
             _allowClose = true;
             Close();
+        }
+
+        private static Task WaitUntilNotBusyAsync(RecordingViewModel recording)
+        {
+            if (!recording.IsBusy)
+            {
+                return Task.CompletedTask;
+            }
+
+            var completion = new TaskCompletionSource();
+
+            void OnChanged(object? sender, PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == nameof(RecordingViewModel.IsBusy) && !recording.IsBusy)
+                {
+                    recording.PropertyChanged -= OnChanged;
+                    completion.TrySetResult();
+                }
+            }
+
+            recording.PropertyChanged += OnChanged;
+            return completion.Task;
         }
 
         private void ShowTrayMenu(int cursorX, int cursorY)

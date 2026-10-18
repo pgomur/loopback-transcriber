@@ -178,6 +178,43 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
     }
 
+    public bool PreserveInterruptedRecording(TimeSpan timeout)
+    {
+        if (!IsRecording)
+        {
+            return false;
+        }
+
+        _elapsedTimer.Stop();
+
+        var appName = _selectedTarget?.DisplayName ?? "reunion";
+        var recordedAt = _recordingStartedAt;
+        var reason = Strings.Instance.Get("RecordingInterruptedReason");
+
+        var preserving = Task.Run(() => _workflow.StopAndPreserveAsync(appName, recordedAt, reason));
+
+        var finished = false;
+        try
+        {
+            finished = preserving.Wait(timeout);
+        }
+        catch (AggregateException ex)
+        {
+            AppLog.Warn("RecordingViewModel.PreserveInterruptedRecording: fallo al conservar la grabacion", ex);
+        }
+
+        IsRecording = false;
+
+        if (!finished)
+        {
+            AppLog.Error("RecordingViewModel.PreserveInterruptedRecording: no se pudo conservar la grabacion a tiempo");
+            return false;
+        }
+
+        RefreshFailedRecordings();
+        return preserving.Result.Preserved is not null;
+    }
+
     private async Task StartRecordingAsync()
     {
         var target = _selectedTarget;
