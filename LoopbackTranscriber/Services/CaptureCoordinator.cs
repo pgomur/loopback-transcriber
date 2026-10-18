@@ -10,6 +10,8 @@ public interface IProcessCapture : IDisposable
     Task StartAsync(uint processId, string outputWavPath, bool includeProcessTree = true);
 
     Task<string> StopAsync();
+
+    double LastPeakAbs { get; }
 }
 
 public interface IDeviceCapture : IDisposable
@@ -132,10 +134,19 @@ public sealed class CaptureCoordinator : IDisposable
             micWavPath = null;
         }
 
-        var bestDeviceTrack = deviceTracks
-            .Where(t => t.PeakAbs >= DeviceSignalThreshold)
-            .OrderByDescending(t => t.PeakAbs)
-            .FirstOrDefault();
+        var processHasSignal = rawWavPath is not null && _process.LastPeakAbs >= DeviceSignalThreshold;
+
+        var bestDeviceTrack = processHasSignal
+            ? null
+            : deviceTracks
+                .Where(t => t.PeakAbs >= DeviceSignalThreshold)
+                .OrderByDescending(t => t.PeakAbs)
+                .FirstOrDefault();
+
+        if (bestDeviceTrack is not null)
+        {
+            AppLog.Info($"CaptureCoordinator.StopAsync: la pista del proceso no tiene senal; se usa la del dispositivo \"{bestDeviceTrack.Label}\" como respaldo");
+        }
 
         var sourceWavPath = bestDeviceTrack is not null ? bestDeviceTrack.WavPath : rawWavPath;
 

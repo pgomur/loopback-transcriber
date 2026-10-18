@@ -39,6 +39,8 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
 
     public string LastCaptureStats { get; private set; } = string.Empty;
 
+    public double LastPeakAbs { get; private set; }
+
     public event Action<byte[], int>? AudioCaptured;
 
     public bool IsRecording { get; private set; }
@@ -108,6 +110,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
             ThrowIfFailed(hr, "IAudioClient.Start");
 
             LastCaptureStats = string.Empty;
+            LastPeakAbs = 0;
             _session = session;
             IsRecording = true;
 
@@ -186,6 +189,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         session.SampleEvent.Dispose();
         session.StopEvent.Dispose();
 
+        LastPeakAbs = session.PeakSampleAbs / 32768.0;
         LastCaptureStats =
             $"paquetes={session.PacketCount}, en_silencio={session.SilentPacketCount}, frames={session.FramesCaptured}, pico_senal={session.PeakSampleAbs}/32768";
 
@@ -240,6 +244,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
             }
         }
 
+        LastPeakAbs = session.PeakSampleAbs / 32768.0;
         LastCaptureStats = "captura abandonada: el hilo de captura no respondio";
 
         if (ReferenceEquals(_session, session))

@@ -32,7 +32,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         _elapsedTimer.Tick += (_, _) =>
         {
             var elapsed = DateTime.Now - _recordingStartedAt;
-            ElapsedText = elapsed.ToString(@"mm\:ss");
+            ElapsedText = elapsed.TotalHours >= 1 ? elapsed.ToString(@"h\:mm\:ss") : elapsed.ToString(@"mm\:ss");
         };
 
         RefreshFailedRecordings();
