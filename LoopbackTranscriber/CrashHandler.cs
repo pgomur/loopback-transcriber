@@ -40,11 +40,11 @@ internal static class CrashHandler
 
         if (Interlocked.Exchange(ref _crashing, 1) != 0)
         {
-            AppLog.Error($"CrashHandler: excepcion no controlada en el hilo de la interfaz mientras se gestionaba otra: {e.Exception}");
+            AppLog.Error($"CrashHandler: unhandled exception on the UI thread while handling another one: {e.Exception}");
             return;
         }
 
-        AppLog.Error($"CrashHandler: excepcion no controlada en el hilo de la interfaz: {e.Exception}");
+        AppLog.Error($"CrashHandler: unhandled exception on the UI thread: {e.Exception}");
 
         var rescue = RescueRecording();
         ShowCrashMessage(rescue);
@@ -53,7 +53,7 @@ internal static class CrashHandler
 
     private static void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        AppLog.Error($"CrashHandler: excepcion no controlada en un hilo de fondo (terminando={e.IsTerminating}): {e.ExceptionObject}");
+        AppLog.Error($"CrashHandler: unhandled exception on a background thread (terminating={e.IsTerminating}): {e.ExceptionObject}");
 
         if (Interlocked.Exchange(ref _crashing, 1) != 0)
         {
@@ -66,7 +66,7 @@ internal static class CrashHandler
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
-        AppLog.Warn("CrashHandler: excepcion no observada en una tarea", e.Exception);
+        AppLog.Warn("CrashHandler: unobserved task exception", e.Exception);
         e.SetObserved();
     }
 
@@ -86,7 +86,7 @@ internal static class CrashHandler
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CrashHandler: fallo al conservar la grabacion en curso", ex);
+            AppLog.Warn("CrashHandler: failed to preserve the recording in progress", ex);
             return RecordingRescue.Lost;
         }
     }
@@ -106,12 +106,12 @@ internal static class CrashHandler
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CrashHandler: no se pudo conservar la grabacion desde el hilo de la interfaz", ex);
+            AppLog.Warn("CrashHandler: could not preserve the recording from the UI thread", ex);
         }
 
         if (rescue is null)
         {
-            AppLog.Error("CrashHandler: el hilo de la interfaz no respondio a tiempo para conservar la grabacion");
+            AppLog.Error("CrashHandler: the UI thread did not respond in time to preserve the recording");
         }
 
         return rescue ?? (_recording?.IsRecording == true ? RecordingRescue.Lost : RecordingRescue.NotRecording);
@@ -133,7 +133,7 @@ internal static class CrashHandler
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CrashHandler: no se pudo mostrar el aviso de error", ex);
+            AppLog.Warn("CrashHandler: could not show the error dialog", ex);
         }
     }
 
@@ -145,7 +145,7 @@ internal static class CrashHandler
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CrashHandler: fallo al cerrar la ventana principal", ex);
+            AppLog.Warn("CrashHandler: failed to close the main window", ex);
         }
 
         try
@@ -154,7 +154,7 @@ internal static class CrashHandler
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CrashHandler: fallo al cerrar la aplicacion; se fuerza la salida", ex);
+            AppLog.Warn("CrashHandler: failed to shut down the application; forcing exit", ex);
             Environment.Exit(1);
         }
     }

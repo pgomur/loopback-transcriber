@@ -11,15 +11,6 @@ namespace LoopbackTranscriber
     {
         private static readonly Color AppAccentColor = Color.FromRgb(0x6A, 0x2B, 0xD9);
 
-        static App()
-        {
-            var commandLineArgs = Environment.GetCommandLineArgs();
-            if (WorkerHost.IsWorkerInvocation(commandLineArgs))
-            {
-                Environment.Exit(WorkerHost.Run(commandLineArgs));
-            }
-        }
-
         private ServiceProvider? _services;
         private SingleInstance? _singleInstance;
 
@@ -32,7 +23,7 @@ namespace LoopbackTranscriber
             _singleInstance = SingleInstance.TryAcquire();
             if (_singleInstance is null)
             {
-                AppLog.Info("App.OnStartup: ya hay otra copia abierta; se le pide que se muestre y esta termina");
+                AppLog.Info("App.OnStartup: another instance is already running; asking it to show itself and exiting");
                 Shutdown();
                 return;
             }
@@ -61,7 +52,7 @@ namespace LoopbackTranscriber
             }
             catch (Exception ex)
             {
-                AppLog.Warn("App.OnExit: fallo al liberar los servicios", ex);
+                AppLog.Warn("App.OnExit: failed to dispose services", ex);
             }
 
             _singleInstance?.Dispose();

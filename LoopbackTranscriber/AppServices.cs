@@ -25,7 +25,7 @@ internal static class AppServices
         services.AddSingleton<IAudioPreparer, NaudioAudioPreparer>();
         services.AddSingleton<RecordingProcessor>();
         services.AddSingleton<TranscriptSaver>();
-        services.AddSingleton(FailedRecordingStore.Default);
+        services.AddSingleton(new FailedRecordingStore(FailedRecordingStore.DefaultRootFolder));
 
         services.AddSingleton(sp => new CaptureCoordinator(
             new ProcessLoopbackRecorder(), new DeviceLoopbackRecorder(), new MicrophoneRecorder(),
@@ -33,6 +33,7 @@ internal static class AppServices
         services.AddSingleton<RecordingWorkflow>();
 
         services.AddSingleton<IDialogService, WpfDialogService>();
+        services.AddSingleton<IUiDispatcher>(WpfUiDispatcher.Instance);
         services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
         services.AddSingleton<HistoryViewModel>();
         services.AddSingleton<ViewerViewModel>();
@@ -41,6 +42,8 @@ internal static class AppServices
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<IRecordingHost, RecordingHost>();
         services.AddSingleton<ILiveTranslationFactory, LiveTranslationFactory>();
+        services.AddSingleton<TrayMenuViewModel>();
+        services.AddSingleton<AppExitWorkflow>();
 
         services.AddTransient<FirstRunViewModel>();
         services.AddTransient<ConfigViewModel>();

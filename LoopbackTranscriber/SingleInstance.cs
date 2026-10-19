@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+using LoopbackTranscriber.Interop;
 using LoopbackTranscriber.Services;
 
 namespace LoopbackTranscriber;
@@ -7,7 +7,6 @@ internal sealed class SingleInstance : IDisposable
 {
     private const string MutexName = @"Local\LoopbackTranscriber-B6E1F6C4-6E8B-4A6E-9C2A-6C7B9A9E9C3D";
     private const string ActivateEventName = @"Local\LoopbackTranscriber-B6E1F6C4-6E8B-4A6E-9C2A-6C7B9A9E9C3D-Activate";
-    private const int AsfwAny = -1;
 
     private readonly Mutex _mutex;
     private readonly EventWaitHandle _activateEvent;
@@ -29,7 +28,7 @@ internal sealed class SingleInstance : IDisposable
             return new SingleInstance(mutex, activateEvent);
         }
 
-        AllowSetForegroundWindow(AsfwAny);
+        User32.AllowSetForegroundWindow(User32.AsfwAny);
         activateEvent.Set();
 
         mutex.Dispose();
@@ -47,7 +46,7 @@ internal sealed class SingleInstance : IDisposable
             }
             catch (Exception ex)
             {
-                AppLog.Warn("SingleInstance: fallo al mostrar la ventana a peticion de otra copia", ex);
+                AppLog.Warn("SingleInstance: failed to show the window at another instance's request", ex);
             }
         }, null, Timeout.Infinite, executeOnlyOnce: false);
     }
@@ -60,7 +59,7 @@ internal sealed class SingleInstance : IDisposable
         }
         catch (AbandonedMutexException)
         {
-            AppLog.Info("SingleInstance: la copia anterior termino sin liberar el mutex; se toma el relevo");
+            AppLog.Info("SingleInstance: the previous instance exited without releasing the mutex; taking over");
             return true;
         }
     }
@@ -76,12 +75,9 @@ internal sealed class SingleInstance : IDisposable
         }
         catch (ApplicationException ex)
         {
-            AppLog.Warn("SingleInstance: no se pudo liberar el mutex", ex);
+            AppLog.Warn("SingleInstance: could not release the mutex", ex);
         }
 
         _mutex.Dispose();
     }
-
-    [DllImport("user32.dll")]
-    private static extern bool AllowSetForegroundWindow(int dwProcessId);
 }

@@ -25,11 +25,11 @@ namespace LoopbackTranscriber
 
         private readonly MainViewModel _viewModel;
         private bool _translucentUiEnabled;
-        private readonly ISettingsStore _settingsService;
-        private readonly IRecordingHost _recordingHost;
+        private readonly TrayMenuViewModel _trayMenuViewModel;
+        private readonly AppExitWorkflow _exitWorkflow;
+        private readonly BackgroundMemoryTrimmer _backgroundTrimmer = new();
         private readonly ILiveTranslationFactory _liveFactory;
         private TrayIconService? _trayIcon;
-        private System.Threading.Timer? _backgroundTrimTimer;
         private Views.TrayMenuWindow? _trayMenu;
         private bool _allowClose;
         private bool _closingAfterCrash;
@@ -37,10 +37,11 @@ namespace LoopbackTranscriber
         private WindowState _stateBeforeMinimize = WindowState.Normal;
 
         public MainWindow(MainViewModel viewModel, ISettingsStore settingsService,
-            IRecordingHost recordingHost, ILiveTranslationFactory liveFactory)
+            ILiveTranslationFactory liveFactory, CommunityToolkit.Mvvm.Messaging.IMessenger messenger,
+            TrayMenuViewModel trayMenuViewModel, AppExitWorkflow exitWorkflow)
         {
-            _settingsService = settingsService;
-            _recordingHost = recordingHost;
+            _trayMenuViewModel = trayMenuViewModel;
+            _exitWorkflow = exitWorkflow;
             _liveFactory = liveFactory;
             _viewModel = viewModel;
             ApplyCalendarCulture(Strings.Instance.Language);
@@ -51,7 +52,8 @@ namespace LoopbackTranscriber
 
             _translucentUiEnabled = settingsService.Load().TranslucentUi;
             ApplyTranslucency(_translucentUiEnabled);
-            UiPreferences.TranslucentUiChanged += OnTranslucentUiChanged;
+            CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Register<MainWindow, TranslucentUiChangedMessage>(messenger, this,
+                static (window, message) => window.OnTranslucentUiChanged(null, message.Enabled));
 
             foreach (var target in _viewModel.Targets.Items)
             {
@@ -69,7 +71,7 @@ namespace LoopbackTranscriber
 
             _viewModel.Start();
 
-            _trayIcon = new TrayIconService(RestoreFromTray, ShowTrayMenu, GetTrayTooltip());
+            _trayIcon = new TrayIconService(RestoreFromTray, ShowTrayMenu, _trayMenuViewModel.Tooltip);
             StateChanged += OnWindowStateChanged;
             ContentRendered += OnFirstContentRendered;
             Strings.Instance.LanguageChanged += OnTrayLanguageChanged;
@@ -106,15 +108,14 @@ namespace LoopbackTranscriber
                 _trayMenu?.CloseMenu();
                 _trayIcon?.Dispose();
                 _trayIcon = null;
-                _backgroundTrimTimer?.Dispose();
-                _backgroundTrimTimer = null;
+                _backgroundTrimmer.Dispose();
                 _viewModel.Targets.Items.CollectionChanged -= OnTargetsCollectionChanged;
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
                 _viewModel.Recording.PropertyChanged -= OnViewModelPropertyChanged;
                 _viewModel.Targets.PropertyChanged -= OnViewModelPropertyChanged;
                 _viewModel.LiveTranslationToggleRequested -= OnLiveTranslationToggleRequested;
                 _liveWindow?.Close();
-                UiPreferences.TranslucentUiChanged -= OnTranslucentUiChanged;
+                CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Unregister<TranslucentUiChangedMessage>(messenger, this);
                 Strings.Instance.LanguageChanged -= OnAppLanguageChangedForCalendar;
             };
         }
@@ -128,7 +129,7 @@ namespace LoopbackTranscriber
             else if (e.PropertyName is nameof(RecordingViewModel.IsRecording) or nameof(TargetsViewModel.SelectedTarget))
             {
                 _trayIcon?.SetRecording(_viewModel.Recording.IsRecording);
-                _trayIcon?.SetTooltip(GetTrayTooltip());
+                _trayIcon?.SetTooltip(_trayMenuViewModel.Tooltip);
             }
         }
 

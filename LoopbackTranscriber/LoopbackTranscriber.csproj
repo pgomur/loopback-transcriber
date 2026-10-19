@@ -24,6 +24,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\AppIcon.ico" />
   </ItemGroup>
 
@@ -46,5 +51,7 @@
     <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
     <PackageReference Include="LLamaSharp.Backend.Vulkan" Version="0.27.0" />
   </ItemGroup>
+
+  <Import Project="Build\LocalizationCheck.targets" />
 
 </Project>
