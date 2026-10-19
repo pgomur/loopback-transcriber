@@ -194,6 +194,18 @@ internal static class TranscriptFilters
         return union == 0 ? 0.0 : (double)intersection / union;
     }
 
+    public static double WordContainmentRatio(string contained, string container)
+    {
+        var wordsContained = new HashSet<string>(NormalizeWords(contained));
+        var wordsContainer = new HashSet<string>(NormalizeWords(container));
+        if (wordsContained.Count == 0 || wordsContainer.Count == 0)
+        {
+            return 0.0;
+        }
+
+        return (double)wordsContained.Count(wordsContainer.Contains) / wordsContained.Count;
+    }
+
     private static List<string> NormalizeWords(string text)
     {
         return text

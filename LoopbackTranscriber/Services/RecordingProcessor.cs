@@ -24,6 +24,8 @@ public interface IAudioPreparer
 
     bool[]? GetActivityMap(string wavPath);
 
+    double[]? GetLevelMap(string wavPath);
+
     double GetDurationSeconds(string wavPath);
 }
 
@@ -35,6 +37,8 @@ public sealed class NaudioAudioPreparer : IAudioPreparer
     public void ApplyNoiseGate(string wavPath) => AudioConverter.ApplyNoiseGate(wavPath);
 
     public bool[]? GetActivityMap(string wavPath) => AudioConverter.GetActivityMap(wavPath);
+
+    public double[]? GetLevelMap(string wavPath) => AudioConverter.GetLevelMap(wavPath);
 
     public double GetDurationSeconds(string wavPath)
     {
@@ -126,11 +130,15 @@ public sealed class RecordingProcessor
                 micSegments = await Task.Run(() => FilterMicSegmentsByActivity(micSegmentsToFilter, micWavForActivity), cancellationToken);
             }
 
-            var filteredMicSegments = hasMicTrack
-                ? MeetingEchoFilter.RemoveEchoes(micSegments, otherSegments, micStartOffset)
-                : micSegments;
+            if (hasMicTrack)
+            {
+                var micLevels = await Task.Run(() => ReadLevelMap(micWhisperWavPath!), cancellationToken);
+                var resolution = MeetingEchoFilter.Resolve(micSegments, otherSegments, micStartOffset, MicLoudness.Create(micLevels));
+                micSegments = resolution.MicSegments;
+                otherSegments = resolution.OtherSegments;
+            }
 
-            var text = TranscriptComposer.Compose(otherSegments, filteredMicSegments, micStartOffset, settings.UserName);
+            var text = TranscriptComposer.Compose(otherSegments, micSegments, micStartOffset, settings.UserName);
 
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -187,6 +195,19 @@ public sealed class RecordingProcessor
         await Task.WhenAll(otherTask, micTask);
 
         return (await otherTask, await micTask);
+    }
+
+    private double[]? ReadLevelMap(string wavPath)
+    {
+        try
+        {
+            return _audio.GetLevelMap(wavPath);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("RecordingProcessor: could not measure microphone levels; the echo filter will rely on timing only", ex);
+            return null;
+        }
     }
 
     private List<TranscriptSegment> FilterMicSegmentsByActivity(List<TranscriptSegment> micSegments, string micWhisperWavPath)

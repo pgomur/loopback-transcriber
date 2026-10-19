@@ -16,11 +16,11 @@ public static class TranscriptComposer
             .Where(s => s.Text.Trim().Length > 0)
             .ToList();
 
-        var distinctSpeakers = orderedSegments.Select(s => s.Speaker).Distinct().Count();
+        var hasSelfSpeech = orderedSegments.Any(s => s.Speaker != SpeakerLabels.Others);
 
         var textBuilder = new StringBuilder();
 
-        if (distinctSpeakers <= 1)
+        if (!hasSelfSpeech)
         {
             foreach (var segment in orderedSegments)
             {

@@ -31,7 +31,10 @@ public static class AudioConverter
 
     public const int ActivityWindowMs = 50;
 
-    public static bool[]? GetActivityMap(string wavPath, double minRms = 4.0)
+    public static bool[]? GetActivityMap(string wavPath, double minRms = 4.0) =>
+        GetLevelMap(wavPath)?.Select(rms => rms >= minRms).ToArray();
+
+    public static double[]? GetLevelMap(string wavPath)
     {
         using var reader = new WaveFileReader(wavPath);
         var format = reader.WaveFormat;
@@ -42,7 +45,7 @@ public static class AudioConverter
 
         var windowSamples = Math.Max(1, format.SampleRate * ActivityWindowMs / 1000);
         var buffer = new byte[windowSamples * 2];
-        var map = new List<bool>();
+        var map = new List<double>();
 
         while (true)
         {
@@ -71,7 +74,7 @@ public static class AudioConverter
                 sumSquares += (double)sample * sample;
             }
 
-            map.Add(Math.Sqrt(sumSquares / sampleCount) >= minRms);
+            map.Add(Math.Sqrt(sumSquares / sampleCount));
 
             if (read < buffer.Length)
             {
