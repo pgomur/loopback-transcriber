@@ -19,7 +19,7 @@ internal static class OrphanRecordingRecovery
     private const string MicSuffix = "_mic";
     private const string DerivedSuffix = ".16k.wav";
 
-    public static List<FailedRecording> Run(string tempFolder, FailedRecordingStore store, string reason,
+    public static List<FailedRecording> Run(string tempFolder, FailedRecordingStore store, UserMessage reason,
         Func<string, bool> isOwned, double signalThreshold)
     {
         var recovered = new List<FailedRecording>();
@@ -36,7 +36,7 @@ internal static class OrphanRecordingRecovery
         }
         catch (Exception ex)
         {
-            AppLog.Warn("OrphanRecordingRecovery: no se pudo leer la carpeta temporal", ex);
+            AppLog.Warn("OrphanRecordingRecovery: could not read the temp folder", ex);
             return recovered;
         }
 
@@ -58,7 +58,7 @@ internal static class OrphanRecordingRecovery
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"OrphanRecordingRecovery: no se pudo recuperar la grabacion \"{baseName}\"", ex);
+                AppLog.Warn($"OrphanRecordingRecovery: could not recover recording \"{baseName}\"", ex);
             }
         }
 
@@ -66,15 +66,15 @@ internal static class OrphanRecordingRecovery
     }
 
     private static FailedRecording? RecoverSession(string tempFolder, string baseName, string sessionFile,
-        FailedRecordingStore store, string reason, double signalThreshold)
+        FailedRecordingStore store, UserMessage reason, double signalThreshold)
     {
         var info = JsonSerializer.Deserialize<CaptureSessionInfo>(File.ReadAllText(sessionFile))
-                   ?? throw new InvalidDataException($"Fichero de sesion vacio: \"{sessionFile}\"");
+                   ?? throw new InvalidDataException($"Empty session file: \"{sessionFile}\"");
 
         var wavs = Directory.GetFiles(tempFolder, baseName + "*.wav");
         if (wavs.Any(WavRepair.IsInUse))
         {
-            AppLog.Info($"OrphanRecordingRecovery: \"{baseName}\" tiene ficheros en uso; se deja para mas tarde");
+            AppLog.Info($"OrphanRecordingRecovery: \"{baseName}\" has files in use; leaving it for later");
             return null;
         }
 
@@ -111,7 +111,7 @@ internal static class OrphanRecordingRecovery
 
         if (source is null)
         {
-            AppLog.Info($"OrphanRecordingRecovery: \"{baseName}\" no tiene audio; se descarta");
+            AppLog.Info($"OrphanRecordingRecovery: \"{baseName}\" has no audio; discarding it");
             DeleteAll(wavs, sessionFile);
             return null;
         }
@@ -124,14 +124,14 @@ internal static class OrphanRecordingRecovery
         var saved = store.TryPreserve(source, mic, micStartOffset, info.AppName, info.RecordedAt, reason);
         if (saved is null)
         {
-            AppLog.Error($"OrphanRecordingRecovery: no se pudo conservar \"{baseName}\"; se reintentara en el proximo arranque");
+            AppLog.Error($"OrphanRecordingRecovery: could not preserve \"{baseName}\"; will retry on next startup");
             return null;
         }
 
         var leftovers = wavs.Where(p => p != source && p != mic);
         DeleteAll(leftovers, sessionFile);
 
-        AppLog.Info($"OrphanRecordingRecovery: recuperada \"{baseName}\" ({info.AppName}) desde \"{Path.GetFileName(source)}\"");
+        AppLog.Info($"OrphanRecordingRecovery: recovered \"{baseName}\" ({info.AppName}) from \"{Path.GetFileName(source)}\"");
         return saved;
     }
 

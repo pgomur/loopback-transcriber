@@ -17,7 +17,7 @@ internal static class WavRepair
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"WavRepair.HasAudioData: no se pudo leer \"{path}\"", ex);
+            AppLog.Warn($"WavRepair.HasAudioData: could not read \"{path}\"", ex);
             return false;
         }
     }
@@ -84,7 +84,7 @@ internal static class WavRepair
                     writer.Write((uint)Math.Min(length - 8, uint.MaxValue));
                     writer.Flush();
 
-                    AppLog.Info($"WavRepair: cabecera reparada en \"{path}\" ({available} bytes de audio)");
+                    AppLog.Info($"WavRepair: header repaired in \"{path}\" ({available} bytes of audio)");
                     return true;
                 }
 
@@ -101,7 +101,7 @@ internal static class WavRepair
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"WavRepair.TryRepairHeader: no se pudo reparar \"{path}\"", ex);
+            AppLog.Warn($"WavRepair.TryRepairHeader: could not repair \"{path}\"", ex);
             return false;
         }
     }
@@ -135,7 +135,7 @@ internal static class WavRepair
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"WavRepair.MeasurePeak: no se pudo leer \"{path}\"", ex);
+            AppLog.Warn($"WavRepair.MeasurePeak: could not read \"{path}\"", ex);
             return 0;
         }
     }

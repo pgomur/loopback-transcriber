@@ -10,5 +10,8 @@ public sealed record TrayMenuEntry(
     bool IsStatus = false,
     Func<string>? LiveText = null)
 {
+    public const string RecordGlyph = "glyph:record";
+    public const string StopGlyph = "glyph:stop";
+
     public static TrayMenuEntry Separator { get; } = new(string.Empty, false, null, IsSeparator: true);
 }

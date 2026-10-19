@@ -53,7 +53,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
     {
         if (IsRecording)
         {
-            throw new InvalidOperationException(Strings.Instance.Get("ErrorRecordingAlreadyRunning"));
+            throw UserError.InvalidOperation("ErrorRecordingAlreadyRunning");
         }
 
         var audioClient = await Wasapi.ActivateProcessLoopbackAsync(processId, includeProcessTree)
@@ -141,7 +141,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
     {
         if (!IsRecording || _session is null)
         {
-            throw new InvalidOperationException(Strings.Instance.Get("ErrorNoRecordingRunning"));
+            throw UserError.InvalidOperation("ErrorNoRecordingRunning");
         }
 
         var session = _session;
@@ -155,10 +155,10 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         {
             if (session.DataBytesWritten <= 0)
             {
-                throw new InvalidOperationException(Strings.Instance.Get("ErrorAudioCapture"), error);
+                throw UserError.InvalidOperation(error, "ErrorAudioCapture");
             }
 
-            AppLog.Warn("ProcessLoopbackRecorder: la captura termino con error; se conserva el audio grabado hasta ese momento", error);
+            AppLog.Warn("ProcessLoopbackRecorder: capture ended with an error; keeping the audio recorded so far", error);
         }
 
         return path;
@@ -169,7 +169,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         var thread = session.Thread;
         if (thread is not null && !thread.Join(TimeSpan.FromSeconds(5)))
         {
-            AppLog.Info("ProcessLoopbackRecorder: el hilo de captura tarda en terminar, se detiene el cliente de audio");
+            AppLog.Info("ProcessLoopbackRecorder: capture thread is slow to finish; stopping the audio client");
             TryStop(session.AudioClient);
 
             if (!thread.Join(TimeSpan.FromSeconds(5)))
@@ -198,7 +198,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         LastPeakAbs = session.PeakSampleAbs / 32768.0;
         FirstSampleTimestamp = session.Timeline.FirstSampleTimestamp;
         LastCaptureStats =
-            $"paquetes={session.PacketCount}, en_silencio={session.SilentPacketCount}, frames={session.FramesCaptured}, pico_senal={session.PeakSampleAbs}/32768, huecos_rellenados={session.Timeline.PaddedDuration.TotalSeconds:0.0}s";
+            $"packets={session.PacketCount}, silent={session.SilentPacketCount}, frames={session.FramesCaptured}, peak={session.PeakSampleAbs}/32768, gaps_filled={session.Timeline.PaddedDuration.TotalSeconds:0.0}s";
         AppLog.Info($"ProcessLoopbackRecorder: {LastCaptureStats}");
 
         if (ReferenceEquals(_session, session))
@@ -212,7 +212,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
     private string AbandonStuckCapture(CaptureSession session)
     {
         var path = session.FileStream.Name;
-        AppLog.Error($"ProcessLoopbackRecorder: el hilo de captura no termino; se abandona la sesion (\"{path}\")");
+        AppLog.Error($"ProcessLoopbackRecorder: capture thread did not finish; abandoning the session (\"{path}\")");
 
         session.Abandoned = true;
 
@@ -227,7 +227,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn("ProcessLoopbackRecorder: no se pudo cerrar el WAV de la sesion abandonada", ex);
+                AppLog.Warn("ProcessLoopbackRecorder: could not close the WAV of the abandoned session", ex);
             }
             finally
             {
@@ -248,13 +248,13 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn("ProcessLoopbackRecorder: no se pudo reparar la cabecera del WAV abandonado", ex);
+                AppLog.Warn("ProcessLoopbackRecorder: could not repair the header of the abandoned WAV", ex);
             }
         }
 
         LastPeakAbs = session.PeakSampleAbs / 32768.0;
         FirstSampleTimestamp = session.Timeline.FirstSampleTimestamp;
-        LastCaptureStats = "captura abandonada: el hilo de captura no respondio";
+        LastCaptureStats = "capture abandoned: the capture thread did not respond";
 
         if (ReferenceEquals(_session, session))
         {
@@ -391,7 +391,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         }
         catch (Exception ex)
         {
-            AppLog.Warn("ProcessLoopbackRecorder: fallo en un suscriptor del audio capturado", ex);
+            AppLog.Warn("ProcessLoopbackRecorder: a captured-audio subscriber failed", ex);
         }
     }
 
@@ -435,7 +435,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         }
         catch (Exception ex)
         {
-            AppLog.Warn("ProcessLoopbackRecorder: fallo al detener el cliente de audio", ex);
+            AppLog.Warn("ProcessLoopbackRecorder: failed to stop the audio client", ex);
         }
     }
 
@@ -447,7 +447,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         }
         catch (Exception ex)
         {
-            AppLog.Warn("ProcessLoopbackRecorder: fallo al liberar un recurso", ex);
+            AppLog.Warn("ProcessLoopbackRecorder: failed to release a resource", ex);
         }
     }
 
@@ -464,7 +464,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         }
         catch (Exception ex)
         {
-            AppLog.Warn("ProcessLoopbackRecorder: fallo al liberar un objeto COM", ex);
+            AppLog.Warn("ProcessLoopbackRecorder: failed to release a COM object", ex);
         }
     }
 
@@ -486,11 +486,11 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
                 IsRecording = false;
                 session.StopEvent.Set();
                 var keptPath = FinishStop(session);
-                AppLog.Error($"ProcessLoopbackRecorder.Dispose: se cerro con una grabacion en curso; el audio se conserva sin procesar en \"{keptPath}\"");
+                AppLog.Error($"ProcessLoopbackRecorder.Dispose: disposed with a recording in progress; the audio is kept unprocessed at \"{keptPath}\"");
             }
             catch (Exception ex)
             {
-                AppLog.Warn("ProcessLoopbackRecorder.Dispose: fallo al detener la grabacion en curso", ex);
+                AppLog.Warn("ProcessLoopbackRecorder.Dispose: failed to stop the recording in progress", ex);
             }
         }
     }

@@ -182,7 +182,7 @@ public sealed class TrayIconService : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("TrayIconService.EnsureRecordingIcon: no se pudo crear el icono de grabacion", ex);
+            AppLog.Warn("TrayIconService.EnsureRecordingIcon: could not create the recording icon", ex);
         }
     }
 
@@ -353,7 +353,7 @@ public sealed class TrayIconService : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("TrayIconService.LoadTrayIcon: no se pudo extraer el icono de la aplicacion", ex);
+            AppLog.Warn("TrayIconService.LoadTrayIcon: could not extract the application icon", ex);
         }
 
         return (LoadIcon(IntPtr.Zero, new IntPtr(IdiApplication)), false);

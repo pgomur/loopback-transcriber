@@ -13,11 +13,13 @@ public sealed class Strings : System.ComponentModel.INotifyPropertyChanged
 
     public string this[string key] => Get(key);
 
-    public string Get(string key)
+    public string Get(string key) => GetIn(_language, key);
+
+    public string GetIn(string language, string key)
     {
         if (Translations.TryGetValue(key, out var byLanguage))
         {
-            if (byLanguage.TryGetValue(_language, out var text))
+            if (byLanguage.TryGetValue(language, out var text))
             {
                 return text;
             }
@@ -32,6 +34,8 @@ public sealed class Strings : System.ComponentModel.INotifyPropertyChanged
     }
 
     public string Format(string key, params object?[] args) => string.Format(Get(key), args);
+
+    public string FormatIn(string language, string key, params object?[] args) => string.Format(GetIn(language, key), args);
 
     public void SetLanguage(string language)
     {
@@ -90,6 +94,7 @@ public sealed class Strings : System.ComponentModel.INotifyPropertyChanged
         ["CrashBody"] = new() { ["es"] = "Se ha producido un error inesperado y la aplicación se va a cerrar.\n\nDetalles en:\n{0}", ["en"] = "An unexpected error occurred and the app will close.\n\nDetails in:\n{0}", ["pt"] = "Ocorreu um erro inesperado e o aplicativo será fechado.\n\nDetalhes em:\n{0}", ["de"] = "Ein unerwarteter Fehler ist aufgetreten, die App wird geschlossen.\n\nDetails in:\n{0}", ["ru"] = "Произошла непредвиденная ошибка, приложение будет закрыто.\n\nПодробности в:\n{0}" },
         ["CrashBodyPreserved"] = new() { ["es"] = "Se ha producido un error inesperado y la aplicación se va a cerrar. La grabación en curso se ha conservado sin procesar: podrás reintentarla al volver a abrir la aplicación.\n\nDetalles en:\n{0}", ["en"] = "An unexpected error occurred and the app will close. The recording in progress was kept unprocessed: you can retry it when you reopen the app.\n\nDetails in:\n{0}", ["pt"] = "Ocorreu um erro inesperado e o aplicativo será fechado. A gravação em andamento foi mantida sem processar: você poderá tentar novamente ao reabrir o aplicativo.\n\nDetalhes em:\n{0}", ["de"] = "Ein unerwarteter Fehler ist aufgetreten, die App wird geschlossen. Die laufende Aufnahme wurde unverarbeitet aufbewahrt: Du kannst sie beim nächsten Öffnen der App erneut versuchen.\n\nDetails in:\n{0}", ["ru"] = "Произошла непредвиденная ошибка, приложение будет закрыто. Текущая запись сохранена без обработки: её можно будет обработать повторно при следующем запуске приложения.\n\nПодробности в:\n{0}" },
         ["CrashBodyLost"] = new() { ["es"] = "Se ha producido un error inesperado y la aplicación se va a cerrar. No se ha podido conservar la grabación en curso.\n\nDetalles en:\n{0}", ["en"] = "An unexpected error occurred and the app will close. The recording in progress could not be kept.\n\nDetails in:\n{0}", ["pt"] = "Ocorreu um erro inesperado e o aplicativo será fechado. Não foi possível manter a gravação em andamento.\n\nDetalhes em:\n{0}", ["de"] = "Ein unerwarteter Fehler ist aufgetreten, die App wird geschlossen. Die laufende Aufnahme konnte nicht aufbewahrt werden.\n\nDetails in:\n{0}", ["ru"] = "Произошла непредвиденная ошибка, приложение будет закрыто. Не удалось сохранить текущую запись.\n\nПодробности в:\n{0}" },
+        ["ErrorDownloadIncomplete"] = new() { ["es"] = "Descarga incompleta: {0} de {1} bytes.", ["en"] = "Incomplete download: {0} of {1} bytes.", ["pt"] = "Download incompleto: {0} de {1} bytes.", ["de"] = "Unvollständiger Download: {0} von {1} Bytes.", ["ru"] = "Загрузка не завершена: {0} из {1} байт." },
         ["RecordingRecoveredReason"] = new() { ["es"] = "La aplicación se cerró de forma inesperada durante la grabación o el procesado; el audio se recuperó sin procesar.", ["en"] = "The app closed unexpectedly during the recording or processing; the audio was recovered unprocessed.", ["pt"] = "O aplicativo foi fechado inesperadamente durante a gravação ou o processamento; o áudio foi recuperado sem processar.", ["de"] = "Die App wurde während der Aufnahme oder Verarbeitung unerwartet beendet; das Audio wurde unverarbeitet wiederhergestellt.", ["ru"] = "Приложение неожиданно закрылось во время записи или обработки; аудио восстановлено без обработки." },
         ["RecordingInterruptedReason"] = new() { ["es"] = "La aplicación se cerró durante la grabación; el audio se conservó sin procesar.", ["en"] = "The app closed during the recording; the audio was kept unprocessed.", ["pt"] = "O aplicativo foi fechado durante a gravação; o áudio foi mantido sem processar.", ["de"] = "Die App wurde während der Aufnahme geschlossen; das Audio wurde unverarbeitet aufbewahrt.", ["ru"] = "Приложение закрылось во время записи; аудио сохранено без обработки." },
         ["CloseDuringSummaryTitle"] = new() { ["es"] = "Resumen en curso", ["en"] = "Summary in progress", ["pt"] = "Resumo em andamento", ["de"] = "Zusammenfassung läuft", ["ru"] = "Идёт создание резюме" },
@@ -128,7 +133,6 @@ public sealed class Strings : System.ComponentModel.INotifyPropertyChanged
         ["FirstRunDownloadModels"] = new() { ["es"] = "Descargar modelos", ["en"] = "Download models", ["pt"] = "Baixar modelos", ["de"] = "Modelle herunterladen", ["ru"] = "Скачать модели" },
         ["FirstRunContinue"] = new() { ["es"] = "Continuar", ["en"] = "Continue", ["pt"] = "Continuar", ["de"] = "Weiter", ["ru"] = "Продолжить" },
         ["FirstRunContinueHint"] = new() { ["es"] = "Descarga los dos modelos para poder continuar.", ["en"] = "Download both models to continue.", ["pt"] = "Baixe os dois modelos para continuar.", ["de"] = "Lade beide Modelle herunter, um fortzufahren.", ["ru"] = "Загрузите обе модели, чтобы продолжить." },
-        ["ConfigUse"] = new() { ["es"] = "Usar", ["en"] = "Use", ["pt"] = "Usar", ["de"] = "Verwenden", ["ru"] = "Использовать" },
         ["ConfigFoldersSection"] = new() { ["es"] = "Carpetas y guardado", ["en"] = "Folders and saving", ["pt"] = "Pastas e salvamento", ["de"] = "Ordner und Speichern", ["ru"] = "Папки и сохранение" },
         ["ConfigModelsFolderLabel"] = new() { ["es"] = "Carpeta de modelos", ["en"] = "Models folder", ["pt"] = "Pasta de modelos", ["de"] = "Modellordner", ["ru"] = "Папка моделей" },
         ["ConfigOpen"] = new() { ["es"] = "Abrir", ["en"] = "Open", ["pt"] = "Abrir", ["de"] = "Öffnen", ["ru"] = "Открыть" },

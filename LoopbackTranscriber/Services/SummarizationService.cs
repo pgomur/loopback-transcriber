@@ -50,7 +50,7 @@ public sealed partial class SummarizationService : ISummarizer, IDisposable
         _idleUnloadTimer = new Timer(_ => UnloadIfIdle(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
-    public async Task<RecordingSummary> SummarizeAsync(string transcriptText, string modelPath,
+    public async Task<RecordingSummary> SummarizeAsync(string transcriptText, string modelPath, string language,
         IProgress<double>? percentProgress = null, CancellationToken cancellationToken = default)
     {
         try
@@ -59,7 +59,7 @@ public sealed partial class SummarizationService : ISummarizer, IDisposable
             {
                 TranscriptText = transcriptText,
                 ModelPath = modelPath,
-                UiLanguage = Strings.Instance.Language
+                UiLanguage = language
             };
 
             var resultJson = await WorkerProcess.RunAsync("summary", JsonSerializer.Serialize(job),
@@ -67,11 +67,11 @@ public sealed partial class SummarizationService : ISummarizer, IDisposable
                 .ConfigureAwait(false);
 
             var result = JsonSerializer.Deserialize<SummaryJobResult>(resultJson)
-                         ?? throw new InvalidOperationException(Strings.Instance.Get("ErrorBackgroundProcessStart"));
+                         ?? throw UserError.InvalidOperation("ErrorBackgroundProcessStart");
 
             if (!string.IsNullOrEmpty(result.Error))
             {
-                throw new InvalidOperationException(result.Error);
+                throw UserError.FromWorker(result.ErrorKey, result.ErrorArgs, result.Error);
             }
 
             return new RecordingSummary { Title = result.Title ?? string.Empty, Summary = result.Summary ?? string.Empty };
@@ -82,7 +82,7 @@ public sealed partial class SummarizationService : ISummarizer, IDisposable
         }
     }
 
-    internal Task<RecordingSummary> SummarizeInProcessAsync(string transcriptText, string modelPath,
+    internal Task<RecordingSummary> SummarizeInProcessAsync(string transcriptText, string modelPath, string language,
         IProgress<double>? percentProgress = null, CancellationToken cancellationToken = default)
     {
 
@@ -111,14 +111,14 @@ public sealed partial class SummarizationService : ISummarizer, IDisposable
                 var condensed = await CondenseIfNeededAsync(executor, transcriptText, tracker, cancellationToken)
                     .ConfigureAwait(false);
 
-                var prompt = SummaryPrompts.Final(condensed, GetSummaryLanguageName(Strings.Instance.Language));
+                var prompt = SummaryPrompts.Final(condensed, GetSummaryLanguageName(language));
                 var rawOutput = await RunInferenceAsync(executor, prompt, MaxOutputTokens, FinalExpectedTokens, tracker,
                         cancellationToken)
                     .ConfigureAwait(false);
 
                 var parsed = ParseResult(rawOutput);
                 var summaryText = RemoveRepeatedLines(parsed.Summary);
-                summaryText = await AddMissingSectionsAsync(executor, condensed, summaryText, cancellationToken)
+                summaryText = await AddMissingSectionsAsync(executor, condensed, summaryText, language, cancellationToken)
                     .ConfigureAwait(false);
 
                 var cleaned = new RecordingSummary
@@ -127,7 +127,7 @@ public sealed partial class SummarizationService : ISummarizer, IDisposable
                     Summary = summaryText
                 };
 
-                var result = LocalizeSectionLabels(cleaned, Strings.Instance.Language);
+                var result = LocalizeSectionLabels(cleaned, language);
                 tracker.Complete();
                 return result;
             }

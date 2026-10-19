@@ -37,12 +37,12 @@ public sealed class SettingsService : ISettingsStore
             }
             catch (JsonException ex)
             {
-                AppLog.Warn($"SettingsService.Load: \"{SettingsPath}\" esta corrupto, se aparta y se usan valores por defecto", ex);
+                AppLog.Warn($"SettingsService.Load: \"{SettingsPath}\" is corrupt; quarantining it and using defaults", ex);
                 QuarantineCorruptFile();
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"SettingsService.Load: no se pudo leer \"{SettingsPath}\", se usaran valores por defecto", ex);
+                AppLog.Warn($"SettingsService.Load: could not read \"{SettingsPath}\"; using defaults", ex);
             }
 
             return new AppSettings();
@@ -57,7 +57,7 @@ public sealed class SettingsService : ISettingsStore
         }
         catch (Exception ex)
         {
-            AppLog.Warn("SettingsService: no se pudo apartar el fichero de ajustes corrupto", ex);
+            AppLog.Warn("SettingsService: could not quarantine the corrupt settings file", ex);
         }
     }
 

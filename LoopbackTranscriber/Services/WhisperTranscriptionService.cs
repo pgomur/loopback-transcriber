@@ -67,7 +67,7 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"WhisperTranscriptionService.IsEffectivelySilent: no se pudo analizar el audio en {wavPath}", ex);
+            AppLog.Warn($"WhisperTranscriptionService.IsEffectivelySilent: could not analyze the audio in {wavPath}", ex);
             return false;
         }
     }
@@ -96,11 +96,11 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
             .ConfigureAwait(false);
 
         var result = JsonSerializer.Deserialize<WhisperJobResult>(resultJson)
-                     ?? throw new InvalidOperationException(Strings.Instance.Get("ErrorBackgroundProcessStart"));
+                     ?? throw UserError.InvalidOperation("ErrorBackgroundProcessStart");
 
         if (!string.IsNullOrEmpty(result.Error))
         {
-            throw new InvalidOperationException(result.Error);
+            throw UserError.FromWorker(result.ErrorKey, result.ErrorArgs, result.Error);
         }
 
         MemoryTrimmer.ReleaseInBackground();

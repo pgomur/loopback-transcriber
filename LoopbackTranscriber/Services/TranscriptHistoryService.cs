@@ -78,7 +78,7 @@ public sealed class TranscriptHistoryService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"TranscriptHistoryService.HasTranscripts: no se pudo comprobar \"{appName}\"", ex);
+            AppLog.Warn($"TranscriptHistoryService.HasTranscripts: could not check \"{appName}\"", ex);
         }
 
         return false;
@@ -92,7 +92,7 @@ public sealed class TranscriptHistoryService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"TranscriptHistoryService: no se pudo listar \"{directory}\"", ex);
+            AppLog.Warn($"TranscriptHistoryService: could not list \"{directory}\"", ex);
             return [];
         }
     }
@@ -161,7 +161,7 @@ public sealed class TranscriptHistoryService
                 ? BuildPreview(summary.Summary)
                 : !string.IsNullOrWhiteSpace(transcriptPreviewSource)
                     ? BuildPreview(TimestampSpeakerPrefixRegex.Replace(transcriptPreviewSource, string.Empty))
-                    : Strings.Instance.Get("HistoryAudioOnlyText");
+                    : string.Empty;
 
             return new TranscriptHistoryItem
             {
@@ -181,7 +181,7 @@ public sealed class TranscriptHistoryService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"TranscriptHistoryService: no se pudo leer \"{directory}\", se omite del historial", ex);
+            AppLog.Warn($"TranscriptHistoryService: could not read \"{directory}\"; skipping it in the history", ex);
             return null;
         }
     }
@@ -195,7 +195,7 @@ public sealed class TranscriptHistoryService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"TranscriptHistoryService: no se pudo leer la duracion de \"{wavPath}\"", ex);
+            AppLog.Warn($"TranscriptHistoryService: could not read the duration of \"{wavPath}\"", ex);
             return null;
         }
     }
@@ -216,7 +216,7 @@ public sealed class TranscriptHistoryService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"TranscriptHistoryService: no se pudo leer el resumen \"{summaryPath}\"", ex);
+            AppLog.Warn($"TranscriptHistoryService: could not read the summary \"{summaryPath}\"", ex);
             return null;
         }
     }
@@ -302,7 +302,7 @@ public sealed class TranscriptHistoryService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"TranscriptHistoryService: no se pudo borrar \"{path}\"", ex);
+            AppLog.Warn($"TranscriptHistoryService: could not delete \"{path}\"", ex);
         }
     }
 }

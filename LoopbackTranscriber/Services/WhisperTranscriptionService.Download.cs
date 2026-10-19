@@ -39,7 +39,7 @@ public sealed partial class WhisperTranscriptionService
         "medium" => GgmlType.Medium,
         "large" => GgmlType.LargeV3,
         "turbo" => GgmlType.LargeV3Turbo,
-        _ => throw new InvalidOperationException(Strings.Instance.Format("ErrorModelNotPinned", modelSize))
+        _ => throw UserError.InvalidOperation("ErrorModelNotPinned", modelSize)
     };
 
     private static string GetModelFileName(GgmlType type) => type switch
@@ -81,7 +81,7 @@ public sealed partial class WhisperTranscriptionService
     }
 
     public async Task EnsureModelDownloadedAsync(string modelSize, string destinationPath,
-        IProgress<string>? progress = null, IProgress<double>? percentProgress = null,
+        IProgress<UserMessage>? progress = null, IProgress<double>? percentProgress = null,
         CancellationToken cancellationToken = default)
     {
         if (File.Exists(destinationPath))
@@ -104,7 +104,7 @@ public sealed partial class WhisperTranscriptionService
 
         if (!PinnedSha256.TryGetValue(ggmlType, out var expectedSha256))
         {
-            throw new InvalidOperationException(Strings.Instance.Format("ErrorModelNotPinned", GetModelFileName(ggmlType)));
+            throw UserError.InvalidOperation("ErrorModelNotPinned", GetModelFileName(ggmlType));
         }
 
         var tempPath = destinationPath + ".download";
@@ -114,14 +114,14 @@ public sealed partial class WhisperTranscriptionService
 
         if (!downloaded)
         {
-            progress?.Report(Strings.Instance.Get("ProgressDownloadingModel"));
+            progress?.Report(UserMessage.FromKey("ProgressDownloadingModel"));
             downloaded = await TryDownloadWithProgressAsync(ggmlType, modelSize, tempPath, progress,
                 percentProgress, cancellationToken).ConfigureAwait(false);
         }
 
         if (!downloaded)
         {
-            throw new IOException(Strings.Instance.Format("ErrorModelDownloadFailed", GetModelFileName(ggmlType)));
+            throw UserError.IO("ErrorModelDownloadFailed", GetModelFileName(ggmlType));
         }
 
         try
@@ -141,7 +141,7 @@ public sealed partial class WhisperTranscriptionService
             }
             catch (Exception deleteEx)
             {
-                AppLog.Warn($"WhisperTranscriptionService: no se pudo borrar \"{tempPath}\"", deleteEx);
+                AppLog.Warn($"WhisperTranscriptionService: could not delete \"{tempPath}\"", deleteEx);
             }
 
             throw;
@@ -150,11 +150,11 @@ public sealed partial class WhisperTranscriptionService
         File.Move(tempPath, destinationPath, overwrite: true);
         ModelIntegrity.WriteMarker(destinationPath, expectedSha256);
         percentProgress?.Report(100);
-        progress?.Report(Strings.Instance.Get("ProgressModelDownloaded"));
+        progress?.Report(UserMessage.FromKey("ProgressModelDownloaded"));
     }
 
     private static async Task<bool> TryDownloadWithProgressAsync(GgmlType type, string modelSize, string tempPath,
-        IProgress<string>? progress, IProgress<double>? percentProgress, CancellationToken cancellationToken)
+        IProgress<UserMessage>? progress, IProgress<double>? percentProgress, CancellationToken cancellationToken)
     {
         try
         {
@@ -212,18 +212,18 @@ public sealed partial class WhisperTranscriptionService
                 {
                     var percent = Math.Min(100.0, totalRead * 100.0 / totalBytes.Value);
                     percentProgress?.Report(percent);
-                    progress?.Report(Strings.Instance.Format("ProgressDownloadingWithPercent",
+                    progress?.Report(UserMessage.FromKey("ProgressDownloadingWithPercent",
                         $"{percent:0}", FormatBytes(totalRead), FormatBytes(totalBytes.Value)));
                 }
                 else
                 {
-                    progress?.Report(Strings.Instance.Format("ProgressDownloadingBytes", FormatBytes(totalRead)));
+                    progress?.Report(UserMessage.FromKey("ProgressDownloadingBytes", FormatBytes(totalRead)));
                 }
             }
 
             if (totalBytes is > 0 && totalRead != totalBytes.Value)
             {
-                throw new IOException($"Descarga incompleta: {totalRead} de {totalBytes.Value} bytes.");
+                throw UserError.IO("ErrorDownloadIncomplete", totalRead, totalBytes.Value);
             }
 
             return true;
@@ -234,7 +234,7 @@ public sealed partial class WhisperTranscriptionService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"WhisperTranscriptionService: fallo la descarga con progreso del modelo \"{modelSize}\", se usara el descargador de respaldo", ex);
+            AppLog.Warn($"WhisperTranscriptionService: the progress download of model \"{modelSize}\" failed; using the fallback downloader", ex);
 
             try
             {
@@ -245,7 +245,7 @@ public sealed partial class WhisperTranscriptionService
             }
             catch (Exception cleanupEx)
             {
-                AppLog.Warn($"WhisperTranscriptionService: no se pudo borrar el fichero temporal \"{tempPath}\"", cleanupEx);
+                AppLog.Warn($"WhisperTranscriptionService: could not delete temp file \"{tempPath}\"", cleanupEx);
             }
 
             return false;
@@ -264,7 +264,7 @@ public sealed partial class WhisperTranscriptionService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"WhisperTranscriptionService: no se pudo borrar el fichero temporal \"{tempPath}\"", ex);
+            AppLog.Warn($"WhisperTranscriptionService: could not delete temp file \"{tempPath}\"", ex);
         }
     }
 }

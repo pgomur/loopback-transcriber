@@ -64,7 +64,7 @@ internal static class WorkerProcess
                 }
                 catch (Exception ex)
                 {
-                    AppLog.Warn("WorkerProcess: no se pudo cancelar el proceso auxiliar", ex);
+                    AppLog.Warn("WorkerProcess: could not cancel the worker", ex);
                 }
             });
 
@@ -78,10 +78,9 @@ internal static class WorkerProcess
                 return await File.ReadAllTextAsync(resultPath, cancellationToken).ConfigureAwait(false);
             }
 
-            AppLog.Error($"WorkerProcess[{kind}]: el proceso termino sin resultado (codigo {process.ExitCode}).\n{stderrTail.Dump()}");
+            AppLog.Error($"WorkerProcess[{kind}]: the worker exited without a result (code {process.ExitCode}).\n{stderrTail.Dump()}");
 
-            throw new InvalidOperationException(
-                Strings.Instance.Format("ErrorBackgroundProcessEnded", process.ExitCode));
+            throw UserError.InvalidOperation("ErrorBackgroundProcessEnded", process.ExitCode);
         }
         finally
         {
@@ -93,7 +92,7 @@ internal static class WorkerProcess
     internal static ProcessStartInfo CreateStartInfo(string kind, string jobPath, string resultPath, bool redirectInput = false)
     {
         var executable = Environment.ProcessPath
-                         ?? throw new InvalidOperationException(Strings.Instance.Get("ErrorBackgroundProcessStart"));
+                         ?? throw UserError.InvalidOperation("ErrorBackgroundProcessStart");
 
         var startInfo = new ProcessStartInfo
         {
@@ -139,7 +138,7 @@ internal static class WorkerProcess
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"WorkerProcess: no se pudo borrar \"{path}\"", ex);
+            AppLog.Warn($"WorkerProcess: could not delete \"{path}\"", ex);
         }
     }
 }
@@ -181,7 +180,7 @@ internal static class WorkerHost
             {
                 "whisper" => RunWhisperAsync(jobJson),
                 "summary" => RunSummaryAsync(jobJson),
-                _ => throw new InvalidOperationException($"Tipo de trabajo desconocido: {kind}")
+                _ => throw new InvalidOperationException($"Unknown job type: {kind}")
             }).GetAwaiter().GetResult();
 
             File.WriteAllText(resultPath, resultJson);
@@ -189,15 +188,22 @@ internal static class WorkerHost
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"WorkerHost: fallo el trabajo '{kind}'", ex);
+            AppLog.Warn($"WorkerHost: job '{kind}' failed", ex);
 
             try
             {
-                File.WriteAllText(resultPath, JsonSerializer.Serialize(new WorkerErrorResult { Error = ex.Message }));
+                var error = new WorkerErrorResult { Error = ex.Message };
+                if (UserError.TryGetKey(ex, out var errorKey, out var errorArgs))
+                {
+                    error.ErrorKey = errorKey;
+                    error.ErrorArgs = UserError.ToTextArgs(errorArgs);
+                }
+
+                File.WriteAllText(resultPath, JsonSerializer.Serialize(error));
             }
             catch (Exception writeEx)
             {
-                AppLog.Warn("WorkerHost: no se pudo escribir el error del trabajo", writeEx);
+                AppLog.Warn("WorkerHost: could not write the job error", writeEx);
             }
 
             return 1;
@@ -209,7 +215,7 @@ internal static class WorkerHost
         try
         {
             var config = JsonSerializer.Deserialize<LiveWhisperConfig>(File.ReadAllText(configPath))
-                         ?? throw new InvalidOperationException("Configuracion de transcripcion en vivo invalida.");
+                         ?? throw new InvalidOperationException("Invalid live transcription configuration.");
 
             using var engine = new LiveWhisperEngine(config);
             WriteLiveMessage(new LiveWorkerMessage { Ready = true });
@@ -238,7 +244,7 @@ internal static class WorkerHost
                 }
                 catch (Exception ex)
                 {
-                    AppLog.Warn("WorkerHost: fallo una peticion en vivo", ex);
+                    AppLog.Warn("WorkerHost: a live request failed", ex);
                     response.Error = ex.Message;
                 }
 
@@ -259,7 +265,7 @@ internal static class WorkerHost
         try
         {
             var config = JsonSerializer.Deserialize<LiveTranslatorConfig>(File.ReadAllText(configPath))
-                         ?? throw new InvalidOperationException("Configuracion de traduccion en vivo invalida.");
+                         ?? throw new InvalidOperationException("Invalid live translation configuration.");
 
             using var engine = new LiveTranslatorEngine(config);
 
@@ -269,7 +275,7 @@ internal static class WorkerHost
             }
             catch (Exception ex)
             {
-                AppLog.Warn("WorkerHost: fallo en el calentamiento del traductor", ex);
+                AppLog.Warn("WorkerHost: translator warm-up failed", ex);
             }
 
             WriteLiveMessage(new LiveWorkerMessage { Ready = true });
@@ -298,7 +304,7 @@ internal static class WorkerHost
                 }
                 catch (Exception ex)
                 {
-                    AppLog.Warn("WorkerHost: fallo una peticion en vivo", ex);
+                    AppLog.Warn("WorkerHost: a live request failed", ex);
                     response.Error = ex.Message;
                 }
 
@@ -323,18 +329,18 @@ internal static class WorkerHost
         }
         catch (Exception ex)
         {
-            AppLog.Warn("WorkerHost: no se pudo enviar un mensaje de la transcripcion en vivo", ex);
+            AppLog.Warn("WorkerHost: could not send a live transcription message", ex);
         }
     }
 
     private static void InstallUnhandledExceptionLogging(string kind)
     {
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            AppLog.Error($"WorkerHost[{kind}]: excepcion no controlada (terminando={e.IsTerminating}): {e.ExceptionObject}");
+            AppLog.Error($"WorkerHost[{kind}]: unhandled exception (terminating={e.IsTerminating}): {e.ExceptionObject}");
 
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
-            AppLog.Warn($"WorkerHost[{kind}]: excepcion no observada en una tarea", e.Exception);
+            AppLog.Warn($"WorkerHost[{kind}]: unobserved task exception", e.Exception);
             e.SetObserved();
         };
     }
@@ -370,7 +376,7 @@ internal static class WorkerHost
         }
         catch (Exception ex)
         {
-            AppLog.Warn("WorkerHost: no se pudo notificar el progreso", ex);
+            AppLog.Warn("WorkerHost: could not report progress", ex);
         }
     }
 
@@ -382,7 +388,7 @@ internal static class WorkerHost
     private static async Task<string> RunWhisperAsync(string jobJson)
     {
         var job = JsonSerializer.Deserialize<WhisperJob>(jobJson)
-                  ?? throw new InvalidOperationException("Trabajo de transcripcion invalido.");
+                  ?? throw new InvalidOperationException("Invalid transcription job.");
 
         var service = new WhisperTranscriptionService();
         var segments = await service.TranscribeSegmentsInProcessAsync(job.WavPath, job.ModelPath, job.Language,
@@ -401,12 +407,10 @@ internal static class WorkerHost
     private static async Task<string> RunSummaryAsync(string jobJson)
     {
         var job = JsonSerializer.Deserialize<SummaryJob>(jobJson)
-                  ?? throw new InvalidOperationException("Trabajo de resumen invalido.");
-
-        Strings.Instance.SetLanguage(job.UiLanguage);
+                  ?? throw new InvalidOperationException("Invalid summary job.");
 
         using var service = new SummarizationService();
-        var summary = await service.SummarizeInProcessAsync(job.TranscriptText, job.ModelPath,
+        var summary = await service.SummarizeInProcessAsync(job.TranscriptText, job.ModelPath, job.UiLanguage,
             new ConsoleProgress<double>(p => p));
 
         return JsonSerializer.Serialize(new SummaryJobResult { Title = summary.Title, Summary = summary.Summary });
@@ -416,6 +420,8 @@ internal static class WorkerHost
 internal sealed class WorkerErrorResult
 {
     public string? Error { get; set; }
+    public string? ErrorKey { get; set; }
+    public string[]? ErrorArgs { get; set; }
 }
 
 internal sealed class WhisperJob
@@ -437,6 +443,8 @@ internal sealed class SegmentDto
 internal sealed class WhisperJobResult
 {
     public string? Error { get; set; }
+    public string? ErrorKey { get; set; }
+    public string[]? ErrorArgs { get; set; }
     public List<SegmentDto> Segments { get; set; } = new();
 }
 
@@ -450,6 +458,8 @@ internal sealed class SummaryJob
 internal sealed class SummaryJobResult
 {
     public string? Error { get; set; }
+    public string? ErrorKey { get; set; }
+    public string[]? ErrorArgs { get; set; }
     public string? Title { get; set; }
     public string? Summary { get; set; }
 }

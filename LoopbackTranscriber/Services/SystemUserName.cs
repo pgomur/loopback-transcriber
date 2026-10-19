@@ -32,7 +32,7 @@ public static class SystemUserName
         }
         catch (Exception ex)
         {
-            AppLog.Warn("SystemUserName.Detect: no se pudo obtener el nombre del usuario del equipo", ex);
+            AppLog.Warn("SystemUserName.Detect: could not get the computer's user name", ex);
         }
 
         return string.Empty;

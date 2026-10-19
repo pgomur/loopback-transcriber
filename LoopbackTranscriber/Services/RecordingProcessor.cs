@@ -8,7 +8,7 @@ namespace LoopbackTranscriber.Services;
 public interface IWhisperTranscriber
 {
     Task EnsureModelDownloadedAsync(string modelSize, string destinationPath,
-        IProgress<string>? progress = null, IProgress<double>? percentProgress = null,
+        IProgress<UserMessage>? progress = null, IProgress<double>? percentProgress = null,
         CancellationToken cancellationToken = default);
 
     Task<List<TranscriptSegment>> TranscribeSegmentsAsync(string wavPath, string modelPath,
@@ -45,13 +45,13 @@ public sealed class NaudioAudioPreparer : IAudioPreparer
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"NaudioAudioPreparer.GetDurationSeconds: no se pudo leer la duracion de \"{wavPath}\"", ex);
+            AppLog.Warn($"NaudioAudioPreparer.GetDurationSeconds: could not read the duration of \"{wavPath}\"", ex);
             return 0;
         }
     }
 }
 
-public sealed record RecordingCallbacks(Action<string> Status, Action<double> Percent, Action<bool> TranscribingActive);
+public sealed record RecordingCallbacks(Action<UserMessage> Status, Action<double> Percent, Action<bool> TranscribingActive);
 
 public sealed class RecordingProcessor
 {
@@ -76,14 +76,14 @@ public sealed class RecordingProcessor
         {
             var modelPath = settings.GetModelFilePath();
 
-            var progress = new Progress<string>(callbacks.Status);
+            var progress = new Progress<UserMessage>(callbacks.Status);
 
-            callbacks.Status(Strings.Instance.Get("StatusCheckingModel"));
+            callbacks.Status(UserMessage.FromKey("StatusCheckingModel"));
             await _whisper.EnsureModelDownloadedAsync(settings.ModelSize, modelPath, progress, null, cancellationToken);
 
             callbacks.TranscribingActive(true);
             callbacks.Percent(0);
-            callbacks.Status(Strings.Instance.Format("StatusTranscribingWithPercent", 0));
+            callbacks.Status(UserMessage.FromKey("StatusTranscribingWithPercent", 0));
 
             whisperWavPath = DerivedPath(sourceWavPath);
 
@@ -107,7 +107,7 @@ public sealed class RecordingProcessor
                     }
                     catch (Exception ex)
                     {
-                        AppLog.Warn("RecordingProcessor: fallo al aplicar la puerta de ruido al microfono, se transcribe sin filtrar", ex);
+                        AppLog.Warn("RecordingProcessor: failed to apply the noise gate to the microphone; transcribing unfiltered", ex);
                     }
                 }, cancellationToken);
             }
@@ -137,7 +137,7 @@ public sealed class RecordingProcessor
                 var audioSeconds = _audio.GetDurationSeconds(sourceWavPath);
                 if (audioSeconds >= MinSecondsForEmptyTranscriptToBeAnError)
                 {
-                    throw new InvalidOperationException(Strings.Instance.Format("ErrorNoTextInAudio", (int)audioSeconds));
+                    throw UserError.InvalidOperation("ErrorNoTextInAudio", (int)audioSeconds);
                 }
             }
 
@@ -171,7 +171,7 @@ public sealed class RecordingProcessor
             }
 
             callbacks.Percent(combined);
-            callbacks.Status(Strings.Instance.Format("StatusTranscribingWithPercent", combined));
+            callbacks.Status(UserMessage.FromKey("StatusTranscribingWithPercent", combined));
         }
 
         var otherPercentProgress = new Progress<int>(percent => Report(() => otherPercent = percent));
@@ -205,7 +205,7 @@ public sealed class RecordingProcessor
         }
         catch (Exception ex)
         {
-            AppLog.Warn("RecordingProcessor: no se pudo analizar la actividad del microfono, se conservan todos los segmentos", ex);
+            AppLog.Warn("RecordingProcessor: could not analyze microphone activity; keeping all segments", ex);
         }
 
         return micSegments;

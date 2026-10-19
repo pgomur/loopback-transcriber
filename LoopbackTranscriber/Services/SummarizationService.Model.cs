@@ -33,7 +33,7 @@ public sealed partial class SummarizationService
                 return;
             }
 
-            Debug.WriteLine("[LoopbackTranscriber] SummarizationService: modelo de resumen descargado de la RAM por inactividad");
+            Debug.WriteLine("[LoopbackTranscriber] SummarizationService: summary model unloaded from RAM after inactivity");
 
             DisposeExecutorContext(_executor);
             _weights.Dispose();
@@ -58,7 +58,7 @@ public sealed partial class SummarizationService
         }
         catch (Exception ex)
         {
-            AppLog.Warn("SummarizationService.DisposeExecutorContext: no se pudo liberar el contexto del modelo", ex);
+            AppLog.Warn("SummarizationService.DisposeExecutorContext: could not release the model context", ex);
         }
     }
 

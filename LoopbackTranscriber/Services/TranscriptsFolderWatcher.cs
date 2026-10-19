@@ -54,7 +54,7 @@ public sealed class TranscriptsFolderWatcher : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"TranscriptsFolderWatcher.Watch: no se pudo observar \"{folder}\"", ex);
+            AppLog.Warn($"TranscriptsFolderWatcher.Watch: could not watch \"{folder}\"", ex);
         }
     }
 
@@ -62,7 +62,7 @@ public sealed class TranscriptsFolderWatcher : IDisposable
 
     private void OnWatcherError(object? sender, ErrorEventArgs e)
     {
-        AppLog.Warn("TranscriptsFolderWatcher: el observador de la carpeta de transcripciones fallo, se reiniciara", e.GetException());
+        AppLog.Warn("TranscriptsFolderWatcher: the transcripts folder watcher failed; it will be restarted", e.GetException());
         RestartDebounce(forgetFolder: true);
     }
 

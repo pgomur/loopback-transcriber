@@ -4,8 +4,10 @@ namespace LoopbackTranscriber.Services;
 
 public sealed record SavedTranscript(string Text, string? MarkdownPath);
 
-public sealed record RecordingResult(SavedTranscript? Transcript, string? Error, FailedRecording? Preserved, string? TempFolder)
+public sealed record RecordingResult(SavedTranscript? Transcript, UserMessage? ErrorMessage, FailedRecording? Preserved, string? TempFolder)
 {
+    public string? Error => ErrorMessage?.Localize();
+
     public bool Succeeded => Transcript is not null;
 }
 
@@ -34,7 +36,7 @@ public sealed class RecordingWorkflow
     public Task StartAsync(uint processId, string? appName = null) => _capture.StartAsync(processId, appName);
 
     public IReadOnlyList<FailedRecording> RecoverOrphans() =>
-        _capture.RecoverOrphans(Strings.Instance.Get("RecordingRecoveredReason"));
+        _capture.RecoverOrphans(UserMessage.FromKey("RecordingRecoveredReason"));
 
     public async Task<RecordingResult> StopAndProcessAsync(string appName, DateTime recordedAt,
         RecordingCallbacks callbacks, CancellationToken cancellationToken = default)
@@ -47,7 +49,7 @@ public sealed class RecordingWorkflow
 
             if (stopped.SourceWavPath is null)
             {
-                throw new InvalidOperationException(Strings.Instance.Get("ErrorAudioCapture"), stopped.ProcessStopError);
+                throw UserError.InvalidOperation(stopped.ProcessStopError, "ErrorAudioCapture");
             }
 
             var saved = await ProcessAndSaveAsync(stopped.SourceWavPath, stopped.MicWavPath, stopped.MicStartOffset,
@@ -58,13 +60,13 @@ public sealed class RecordingWorkflow
         }
         catch (Exception ex)
         {
-            AppLog.Warn("RecordingWorkflow.StopAndProcessAsync: fallo al procesar la grabacion", ex);
+            AppLog.Warn("RecordingWorkflow.StopAndProcessAsync: failed to process the recording", ex);
 
-            return Preserve(stopped, appName, recordedAt, ex.Message);
+            return Preserve(stopped, appName, recordedAt, UserMessage.From(ex));
         }
     }
 
-    public async Task<RecordingResult> StopAndPreserveAsync(string appName, DateTime recordedAt, string reason)
+    public async Task<RecordingResult> StopAndPreserveAsync(string appName, DateTime recordedAt, UserMessage reason)
     {
         StoppedRecording? stopped = null;
 
@@ -74,13 +76,13 @@ public sealed class RecordingWorkflow
         }
         catch (Exception ex)
         {
-            AppLog.Warn("RecordingWorkflow.StopAndPreserveAsync: fallo al parar la captura", ex);
+            AppLog.Warn("RecordingWorkflow.StopAndPreserveAsync: failed to stop capture", ex);
         }
 
         return Preserve(stopped, appName, recordedAt, reason);
     }
 
-    private RecordingResult Preserve(StoppedRecording? stopped, string appName, DateTime recordedAt, string error)
+    private RecordingResult Preserve(StoppedRecording? stopped, string appName, DateTime recordedAt, UserMessage error)
     {
         var outcome = _capture.PreserveFailed(stopped, appName, recordedAt, error);
 
@@ -105,8 +107,8 @@ public sealed class RecordingWorkflow
         }
         catch (Exception ex)
         {
-            AppLog.Warn("RecordingWorkflow.RetryAsync: el reintento tambien fallo", ex);
-            return new RecordingResult(null, ex.Message, null, null);
+            AppLog.Warn("RecordingWorkflow.RetryAsync: the retry failed too", ex);
+            return new RecordingResult(null, UserMessage.From(ex), null, null);
         }
     }
 

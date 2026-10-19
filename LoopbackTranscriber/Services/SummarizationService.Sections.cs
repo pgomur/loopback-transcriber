@@ -50,9 +50,9 @@ public sealed partial class SummarizationService
         SectionLabelRegex.Matches(summaryText).Any(match => isLabel(match.Groups["label"].Value));
 
     private static async Task<string> AddMissingSectionsAsync(StatelessExecutor executor, string source,
-        string summaryText, CancellationToken cancellationToken)
+        string summaryText, string language, CancellationToken cancellationToken)
     {
-        var languageName = GetSummaryLanguageName(Strings.Instance.Language);
+        var languageName = GetSummaryLanguageName(language);
         var result = summaryText;
 
         if (!HasSection(result, label => label.StartsWith("objetiv", StringComparison.OrdinalIgnoreCase)))

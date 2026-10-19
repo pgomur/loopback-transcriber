@@ -54,7 +54,7 @@ internal sealed class ModelVerifier(ISettingsStore settings) : IModelVerifier
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"ModelVerifier: no se pudo verificar {modelName}", ex);
+            AppLog.Warn($"ModelVerifier: could not verify {modelName}", ex);
             return false;
         }
     }

@@ -45,7 +45,7 @@ public sealed partial class SummarizationService
                 _ => "SummaryLabelTasks"
             };
 
-            return match.Groups["lead"].Value + Strings.Instance.Get(key) + ":";
+            return match.Groups["lead"].Value + Strings.Instance.GetIn(languageCode, key) + ":";
         });
 
         return new RecordingSummary { Title = summary.Title, Summary = localized };
@@ -134,7 +134,7 @@ public sealed partial class SummarizationService
         }
         catch (Exception ex)
         {
-            AppLog.Warn("SummarizationService.ParseResult: la respuesta tampoco era JSON valido, se usa el texto en bruto", ex);
+            AppLog.Warn("SummarizationService.ParseResult: the response was not valid JSON either; using the raw text", ex);
             return null;
         }
     }

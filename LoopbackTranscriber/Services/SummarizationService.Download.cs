@@ -27,7 +27,7 @@ public sealed partial class SummarizationService
     private const int DownloadBufferSize = 1024 * 1024;
 
     public async Task EnsureModelDownloadedAsync(string destinationPath,
-        IProgress<string>? progress = null, IProgress<double>? percentProgress = null,
+        IProgress<UserMessage>? progress = null, IProgress<double>? percentProgress = null,
         CancellationToken cancellationToken = default)
     {
         if (File.Exists(destinationPath)
@@ -99,18 +99,18 @@ public sealed partial class SummarizationService
                 {
                     var percent = Math.Min(100.0, totalRead * 100.0 / totalBytes.Value);
                     percentProgress?.Report(percent);
-                    progress?.Report(Strings.Instance.Format("SummaryModelDownloadingWithPercent",
+                    progress?.Report(UserMessage.FromKey("SummaryModelDownloadingWithPercent",
                         $"{percent:0}", FormatBytes(totalRead), FormatBytes(totalBytes.Value)));
                 }
                 else
                 {
-                    progress?.Report(Strings.Instance.Format("SummaryModelDownloadingBytes", FormatBytes(totalRead)));
+                    progress?.Report(UserMessage.FromKey("SummaryModelDownloadingBytes", FormatBytes(totalRead)));
                 }
             }
 
             if (totalBytes is > 0 && totalRead != totalBytes.Value)
             {
-                throw new IOException($"Descarga incompleta: {totalRead} de {totalBytes.Value} bytes.");
+                throw UserError.IO("ErrorDownloadIncomplete", totalRead, totalBytes.Value);
             }
         }
         catch (OperationCanceledException)
@@ -141,7 +141,7 @@ public sealed partial class SummarizationService
         File.Move(tempPath, destinationPath, overwrite: true);
         ModelIntegrity.WriteMarker(destinationPath, ModelSha256);
         percentProgress?.Report(100);
-        progress?.Report(Strings.Instance.Get("SummaryModelDownloaded"));
+        progress?.Report(UserMessage.FromKey("SummaryModelDownloaded"));
     }
 
     internal static string FormatBytes(long bytes)
@@ -164,7 +164,7 @@ public sealed partial class SummarizationService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"SummarizationService: no se pudo borrar el fichero temporal \"{path}\"", ex);
+            AppLog.Warn($"SummarizationService: could not delete temp file \"{path}\"", ex);
         }
     }
 

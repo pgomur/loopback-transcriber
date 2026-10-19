@@ -61,7 +61,7 @@ public sealed partial class SummarizationService
             return firstAttempt.Text;
         }
 
-        Debug.WriteLine("[LoopbackTranscriber] SummarizationService: bucle de repeticion detectado, se reintenta con penalizaciones mas fuertes");
+        Debug.WriteLine("[LoopbackTranscriber] SummarizationService: repetition loop detected; retrying with stronger penalties");
 
         var secondAttempt = await GenerateAsync(executor, prompt, maxTokens, expectedTokens, tracker: null,
                 strongPenalties: true, detectLoops: false, cancellationToken)
