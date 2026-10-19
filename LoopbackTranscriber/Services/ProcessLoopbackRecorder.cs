@@ -49,7 +49,10 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
 
     public bool IsRecording { get; private set; }
 
-    public async Task StartAsync(uint processId, string outputWavPath, bool includeProcessTree = true)
+    public Task StartAsync(uint processId, string outputWavPath, bool includeProcessTree = true) =>
+        Task.Run(() => StartOnMtaThreadAsync(processId, outputWavPath, includeProcessTree));
+
+    private async Task StartOnMtaThreadAsync(uint processId, string outputWavPath, bool includeProcessTree)
     {
         if (IsRecording)
         {
@@ -485,7 +488,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
             {
                 IsRecording = false;
                 session.StopEvent.Set();
-                var keptPath = FinishStop(session);
+                var keptPath = Task.Run(() => FinishStop(session)).GetAwaiter().GetResult();
                 AppLog.Error($"ProcessLoopbackRecorder.Dispose: disposed with a recording in progress; the audio is kept unprocessed at \"{keptPath}\"");
             }
             catch (Exception ex)
