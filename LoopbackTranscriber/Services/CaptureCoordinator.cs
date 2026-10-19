@@ -64,7 +64,7 @@ public sealed class CaptureCoordinator : IDisposable
         _mic = mic;
         _utcNow = utcNow ?? (() => DateTime.UtcNow);
         _tempFolder = tempFolder ?? Path.Combine(Path.GetTempPath(), "LoopbackTranscriber");
-        _failedStore = failedStore ?? FailedRecordingStore.Default;
+        _failedStore = failedStore ?? new FailedRecordingStore(Path.Combine(_tempFolder, "failed"));
 
         _process.AudioCaptured += (buffer, count) => AudioCaptured?.Invoke(buffer, count);
     }
@@ -111,7 +111,7 @@ public sealed class CaptureCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator.StartAsync: fallo al iniciar la captura por dispositivo, se continua solo con la captura por proceso", ex);
+            AppLog.Warn("CaptureCoordinator.StartAsync: failed to start device capture; continuing with process capture only", ex);
         }
 
         try
@@ -121,7 +121,7 @@ public sealed class CaptureCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator.StartAsync: fallo al iniciar la captura del microfono, el resumen solo identificara al interlocutor", ex);
+            AppLog.Warn("CaptureCoordinator.StartAsync: failed to start microphone capture; the summary will only identify the remote speaker", ex);
         }
 
         session.DeviceStartedUtc = _deviceStartedAt;
@@ -129,7 +129,7 @@ public sealed class CaptureCoordinator : IDisposable
         WriteSessionInfo(baseName, session);
     }
 
-    public IReadOnlyList<FailedRecording> RecoverOrphans(string reason) =>
+    public IReadOnlyList<FailedRecording> RecoverOrphans(UserMessage reason) =>
         OrphanRecordingRecovery.Run(_tempFolder, _failedStore, reason,
             baseName => _ownedBaseNames.ContainsKey(baseName), DeviceSignalThreshold);
 
@@ -144,7 +144,7 @@ public sealed class CaptureCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator: no se pudo escribir el fichero de sesion; la grabacion no se podra recuperar si la app se cierra de golpe", ex);
+            AppLog.Warn("CaptureCoordinator: could not write the session file; the recording cannot be recovered if the app crashes", ex);
         }
     }
 
@@ -159,7 +159,7 @@ public sealed class CaptureCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator.StopAsync: fallo al parar la captura por proceso, se intenta seguir con las demas pistas", ex);
+            AppLog.Warn("CaptureCoordinator.StopAsync: failed to stop process capture; trying to continue with the other tracks", ex);
             processStopError = ex;
         }
 
@@ -170,7 +170,7 @@ public sealed class CaptureCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator.StopAsync: fallo al parar la captura por dispositivo, se usa solo la captura por proceso", ex);
+            AppLog.Warn("CaptureCoordinator.StopAsync: failed to stop device capture; using process capture only", ex);
             deviceTracks = new List<DeviceLoopbackRecorder.DeviceTrack>();
         }
 
@@ -181,7 +181,7 @@ public sealed class CaptureCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator.StopAsync: fallo al parar la captura del microfono, el resumen solo tendra el audio del interlocutor", ex);
+            AppLog.Warn("CaptureCoordinator.StopAsync: failed to stop microphone capture; the summary will only have the remote speaker's audio", ex);
             micWavPath = null;
         }
 
@@ -196,7 +196,7 @@ public sealed class CaptureCoordinator : IDisposable
 
         if (bestDeviceTrack is not null)
         {
-            AppLog.Info($"CaptureCoordinator.StopAsync: la pista del proceso no tiene senal; se usa la del dispositivo \"{bestDeviceTrack.Label}\" como respaldo");
+            AppLog.Info($"CaptureCoordinator.StopAsync: the process track has no signal; falling back to device track \"{bestDeviceTrack.Label}\"");
         }
 
         var sourceWavPath = bestDeviceTrack is not null ? bestDeviceTrack.WavPath : rawWavPath;
@@ -234,7 +234,7 @@ public sealed class CaptureCoordinator : IDisposable
             allPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), processStopError, baseName);
     }
 
-    public PreserveOutcome PreserveFailed(StoppedRecording? stopped, string appName, DateTime recordedAt, string error)
+    public PreserveOutcome PreserveFailed(StoppedRecording? stopped, string appName, DateTime recordedAt, UserMessage error)
     {
         if (stopped is null)
         {
@@ -297,7 +297,7 @@ public sealed class CaptureCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator.DeleteStaleRecordings: no se pudo limpiar la carpeta temporal", ex);
+            AppLog.Warn("CaptureCoordinator.DeleteStaleRecordings: could not clean the temp folder", ex);
         }
     }
 

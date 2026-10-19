@@ -90,8 +90,8 @@ internal sealed class WorkerStderrTail
         lock (_lock)
         {
             return _lines.Count == 0
-                ? "(stderr vacio)"
-                : "stderr del proceso auxiliar:\n" + string.Join("\n", _lines);
+                ? "(stderr empty)"
+                : "worker stderr:\n" + string.Join("\n", _lines);
         }
     }
 }

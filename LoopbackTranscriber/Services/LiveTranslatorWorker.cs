@@ -109,7 +109,7 @@ internal sealed class LiveTranslatorEngine : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("LiveTranslatorEngine.Dispose: no se pudo liberar el contexto del modelo", ex);
+            AppLog.Warn("LiveTranslatorEngine.Dispose: could not release the model context", ex);
         }
 
         _weights.Dispose();

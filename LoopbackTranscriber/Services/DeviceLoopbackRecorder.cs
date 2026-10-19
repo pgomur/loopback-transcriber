@@ -41,7 +41,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
         }
         catch (Exception ex)
         {
-            AppLog.Warn("DeviceLoopbackRecorder.Start: no se pudo crear MMDeviceEnumerator, se omite la captura por dispositivo", ex);
+            AppLog.Warn("DeviceLoopbackRecorder.Start: could not create MMDeviceEnumerator; skipping device capture", ex);
             return;
         }
 
@@ -60,7 +60,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Start: no se pudo obtener el dispositivo de salida por defecto ({roleLabel})", ex);
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not get the default output device ({roleLabel})", ex);
                 continue;
             }
 
@@ -76,7 +76,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Start: no se pudo abrir captura WASAPI para \"{device.FriendlyName}\" ({roleLabel})", ex);
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not open WASAPI capture for \"{device.FriendlyName}\" ({roleLabel})", ex);
                 continue;
             }
 
@@ -89,7 +89,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Start: no se pudo crear el fichero WAV \"{wavPath}\"", ex);
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not create WAV file \"{wavPath}\"", ex);
                 capture.Dispose();
                 continue;
             }
@@ -113,7 +113,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Start: no se pudo iniciar la captura para \"{channel.Label}\"", ex);
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not start capture for \"{channel.Label}\"", ex);
                 writer.Dispose();
                 capture.Dispose();
                 TryDeleteFile(wavPath);
@@ -181,7 +181,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Stop: fallo al parar la captura de \"{channel.Label}\"", ex);
+                AppLog.Warn($"DeviceLoopbackRecorder.Stop: failed to stop capture for \"{channel.Label}\"", ex);
             }
 
             channel.StoppedEvent.Wait(TimeSpan.FromSeconds(3));
@@ -194,7 +194,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
                 }
                 catch (Exception ex)
                 {
-                    AppLog.Warn($"DeviceLoopbackRecorder.Stop: fallo al volcar el WAV de \"{channel.Label}\"", ex);
+                    AppLog.Warn($"DeviceLoopbackRecorder.Stop: failed to flush WAV for \"{channel.Label}\"", ex);
                 }
 
                 channel.Writer.Dispose();
@@ -205,7 +205,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
 
             if (channel.Timeline.PaddedFrames > 0)
             {
-                AppLog.Info($"DeviceLoopbackRecorder: huecos rellenados con silencio en \"{channel.Label}\" = {channel.Timeline.PaddedDuration.TotalSeconds:0.0}s");
+                AppLog.Info($"DeviceLoopbackRecorder: gaps filled with silence in \"{channel.Label}\" = {channel.Timeline.PaddedDuration.TotalSeconds:0.0}s");
             }
 
             results.Add(new DeviceTrack
@@ -233,7 +233,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"DeviceLoopbackRecorder: no se pudo borrar \"{path}\"", ex);
+            AppLog.Warn($"DeviceLoopbackRecorder: could not delete \"{path}\"", ex);
         }
     }
 
@@ -247,7 +247,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Dispose: fallo al cerrar el WAV de \"{channel.Label}\"", ex);
+                AppLog.Warn($"DeviceLoopbackRecorder.Dispose: failed to close WAV for \"{channel.Label}\"", ex);
             }
 
             try
@@ -256,7 +256,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Dispose: fallo al liberar la captura de \"{channel.Label}\"", ex);
+                AppLog.Warn($"DeviceLoopbackRecorder.Dispose: failed to release capture for \"{channel.Label}\"", ex);
             }
 
             channel.StoppedEvent.Dispose();

@@ -19,9 +19,9 @@ internal static class ModelIntegrity
     }
 
     public static async Task VerifySha256Async(string path, string expectedHex, string modelName,
-        IProgress<string>? progress, CancellationToken cancellationToken)
+        IProgress<UserMessage>? progress, CancellationToken cancellationToken)
     {
-        progress?.Report(Strings.Instance.Get("ProgressVerifyingModel"));
+        progress?.Report(UserMessage.FromKey("ProgressVerifyingModel"));
 
         string actual;
         await using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
@@ -33,15 +33,15 @@ internal static class ModelIntegrity
 
         if (!string.Equals(actual, expectedHex, StringComparison.OrdinalIgnoreCase))
         {
-            AppLog.Error($"ModelIntegrity: SHA256 incorrecto para {modelName}. Esperado {expectedHex}, obtenido {actual}.");
-            throw new InvalidDataException(Strings.Instance.Format("ErrorModelHashMismatch", modelName));
+            AppLog.Error($"ModelIntegrity: SHA256 mismatch for {modelName}. Expected {expectedHex}, got {actual}.");
+            throw UserError.InvalidData("ErrorModelHashMismatch", modelName);
         }
 
-        AppLog.Info($"ModelIntegrity: SHA256 de {modelName} verificado.");
+        AppLog.Info($"ModelIntegrity: SHA256 of {modelName} verified.");
     }
 
     public static async Task<bool> EnsureVerifiedAsync(string path, string expectedHex, string modelName,
-        IProgress<string>? progress, CancellationToken cancellationToken)
+        IProgress<UserMessage>? progress, CancellationToken cancellationToken)
     {
         var gate = Gates.GetOrAdd(Path.GetFullPath(path), _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -57,7 +57,7 @@ internal static class ModelIntegrity
                 return true;
             }
 
-            AppLog.Info($"ModelIntegrity: {modelName} no tiene una verificacion vigente; se comprueba su SHA256");
+            AppLog.Info($"ModelIntegrity: {modelName} has no valid verification marker; checking its SHA256");
 
             try
             {
@@ -94,7 +94,7 @@ internal static class ModelIntegrity
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"ModelIntegrity: no se pudo guardar la marca de verificacion de \"{path}\"; se volvera a verificar en el proximo uso", ex);
+            AppLog.Warn($"ModelIntegrity: could not save the verification marker for \"{path}\"; it will be verified again on next use", ex);
         }
     }
 
@@ -119,7 +119,7 @@ internal static class ModelIntegrity
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"ModelIntegrity: marca de verificacion ilegible en \"{markerPath}\"", ex);
+            AppLog.Warn($"ModelIntegrity: unreadable verification marker \"{markerPath}\"", ex);
             return false;
         }
     }
@@ -130,12 +130,12 @@ internal static class ModelIntegrity
         {
             File.Delete(path);
             FileCleanup.TryDelete(path + MarkerSuffix, "ModelIntegrity");
-            AppLog.Error($"ModelIntegrity: {modelName} estaba danado y se ha borrado para volver a descargarlo (\"{path}\")");
+            AppLog.Error($"ModelIntegrity: {modelName} was corrupt and has been deleted so it can be downloaded again (\"{path}\")");
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"ModelIntegrity: no se pudo borrar el modelo danado \"{path}\"", ex);
-            throw new InvalidDataException(Strings.Instance.Format("ErrorModelHashMismatch", modelName), ex);
+            AppLog.Warn($"ModelIntegrity: could not delete the corrupt model \"{path}\"", ex);
+            throw UserError.InvalidData(ex, "ErrorModelHashMismatch", modelName);
         }
     }
 }

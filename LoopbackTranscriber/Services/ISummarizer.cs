@@ -4,10 +4,10 @@ namespace LoopbackTranscriber.Services;
 
 public interface ISummarizer
 {
-    Task<RecordingSummary> SummarizeAsync(string transcriptText, string modelPath,
+    Task<RecordingSummary> SummarizeAsync(string transcriptText, string modelPath, string language,
         IProgress<double>? percentProgress = null, CancellationToken cancellationToken = default);
 
     Task EnsureModelDownloadedAsync(string destinationPath,
-        IProgress<string>? progress = null, IProgress<double>? percentProgress = null,
+        IProgress<UserMessage>? progress = null, IProgress<double>? percentProgress = null,
         CancellationToken cancellationToken = default);
 }

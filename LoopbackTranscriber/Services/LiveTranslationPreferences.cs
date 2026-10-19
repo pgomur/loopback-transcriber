@@ -11,17 +11,13 @@ public static class LiveTranslationPreferences
 
     private static readonly string[] SupportedLanguages = ["es", "en", "pt", "de", "ru"];
 
-    public static event EventHandler? Changed;
-
-    public static void NotifyChanged() => Changed?.Invoke(null, EventArgs.Empty);
-
     public static double ClampOpacity(double value) =>
         double.IsNaN(value) ? 1.0 : Math.Clamp(value, MinOpacity, 1.0);
 
     public static double ClampTextSize(double value) =>
         double.IsNaN(value) || value <= 0 ? DefaultTextSize : Math.Clamp(Math.Round(value), MinTextSize, MaxTextSize);
 
-    public static string ResolveLanguage(AppSettings settings)
+    public static string ResolveLanguage(AppSettings settings, string uiLanguage)
     {
         var saved = settings.LiveTranslationLanguage;
         if (Array.IndexOf(SupportedLanguages, saved) >= 0)
@@ -29,6 +25,6 @@ public static class LiveTranslationPreferences
             return saved;
         }
 
-        return Array.IndexOf(SupportedLanguages, Strings.Instance.Language) >= 0 ? Strings.Instance.Language : "en";
+        return Array.IndexOf(SupportedLanguages, uiLanguage) >= 0 ? uiLanguage : "en";
     }
 }

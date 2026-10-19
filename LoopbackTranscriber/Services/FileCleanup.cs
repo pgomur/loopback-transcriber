@@ -20,7 +20,7 @@ internal static class FileCleanup
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"{context}: no se pudo borrar el fichero temporal \"{path}\"", ex);
+            AppLog.Warn($"{context}: could not delete temp file \"{path}\"", ex);
         }
     }
 }

@@ -220,7 +220,7 @@ internal sealed class LiveWorkerClient : IDisposable
         {
             if (_disposed || _process.HasExited)
             {
-                throw new InvalidOperationException(Strings.Instance.Get("ErrorBackgroundProcessStart"));
+                throw UserError.InvalidOperation("ErrorBackgroundProcessStart");
             }
 
             _pending[id] = completion;
@@ -271,7 +271,7 @@ internal sealed class LiveWorkerClient : IDisposable
         }
         catch (JsonException ex)
         {
-            AppLog.Warn("LiveWorkerClient: mensaje ilegible del proceso auxiliar", ex);
+            AppLog.Warn("LiveWorkerClient: unreadable message from the worker", ex);
             return;
         }
 
@@ -299,7 +299,7 @@ internal sealed class LiveWorkerClient : IDisposable
         {
             if (!_pending.Remove(message.Id, out pending))
             {
-                AppLog.Info($"LiveWorkerClient[{_kind}]: respuesta descartada (Id {message.Id} ya no esta pendiente)");
+                AppLog.Info($"LiveWorkerClient[{_kind}]: discarded response (Id {message.Id} is no longer pending)");
                 return;
             }
         }
@@ -312,11 +312,10 @@ internal sealed class LiveWorkerClient : IDisposable
         var exitCode = SafeExitCode();
         if (!_disposed)
         {
-            AppLog.Error($"LiveWorkerClient[{_kind}]: el proceso auxiliar termino de forma inesperada (codigo {exitCode}).\n{_stderrTail.Dump()}");
+            AppLog.Error($"LiveWorkerClient[{_kind}]: the worker exited unexpectedly (code {exitCode}).\n{_stderrTail.Dump()}");
         }
 
-        var error = new InvalidOperationException(
-            Strings.Instance.Format("ErrorBackgroundProcessEnded", exitCode));
+        var error = UserError.InvalidOperation("ErrorBackgroundProcessEnded", exitCode);
         _ready.TrySetException(error);
         FailPending(error);
     }
@@ -370,7 +369,7 @@ internal sealed class LiveWorkerClient : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("LiveWorkerClient: no se pudo cerrar la entrada del proceso auxiliar", ex);
+            AppLog.Warn("LiveWorkerClient: could not close the worker's stdin", ex);
         }
 
         try
@@ -382,7 +381,7 @@ internal sealed class LiveWorkerClient : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("LiveWorkerClient: no se pudo terminar el proceso auxiliar", ex);
+            AppLog.Warn("LiveWorkerClient: could not kill the worker", ex);
         }
 
         try
@@ -391,7 +390,7 @@ internal sealed class LiveWorkerClient : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("LiveWorkerClient: no se pudo liberar el proceso auxiliar", ex);
+            AppLog.Warn("LiveWorkerClient: could not dispose the worker process", ex);
         }
 
         try
@@ -403,7 +402,7 @@ internal sealed class LiveWorkerClient : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"LiveWorkerClient: no se pudo borrar \"{_configPath}\"", ex);
+            AppLog.Warn($"LiveWorkerClient: could not delete \"{_configPath}\"", ex);
         }
     }
 }

@@ -27,7 +27,7 @@ public sealed class MicrophoneRecorder : IMicCapture
     {
         if (_isRecording)
         {
-            throw new InvalidOperationException(Strings.Instance.Get("ErrorRecordingAlreadyRunning"));
+            throw UserError.InvalidOperation("ErrorRecordingAlreadyRunning");
         }
 
         MMDevice micDevice;
@@ -39,7 +39,7 @@ public sealed class MicrophoneRecorder : IMicCapture
         catch (Exception ex)
         {
             IsAvailable = false;
-            AppLog.Warn("MicrophoneRecorder.Start: no se pudo obtener el microfono por defecto, se omite la pista de microfono", ex);
+            AppLog.Warn("MicrophoneRecorder.Start: could not get the default microphone; skipping the microphone track", ex);
             return;
         }
 
@@ -50,7 +50,7 @@ public sealed class MicrophoneRecorder : IMicCapture
         catch (Exception ex)
         {
             LastUsedDeviceName = null;
-            AppLog.Warn("MicrophoneRecorder.Start: no se pudo leer el nombre del dispositivo de microfono", ex);
+            AppLog.Warn("MicrophoneRecorder.Start: could not read the microphone device name", ex);
         }
 
         WasapiCapture capture;
@@ -61,7 +61,7 @@ public sealed class MicrophoneRecorder : IMicCapture
         catch (Exception ex)
         {
             IsAvailable = false;
-            AppLog.Warn($"MicrophoneRecorder.Start: no se pudo abrir captura WASAPI para \"{micDevice.FriendlyName}\"", ex);
+            AppLog.Warn($"MicrophoneRecorder.Start: could not open WASAPI capture for \"{micDevice.FriendlyName}\"", ex);
             return;
         }
 
@@ -73,7 +73,7 @@ public sealed class MicrophoneRecorder : IMicCapture
         catch (Exception ex)
         {
             IsAvailable = false;
-            AppLog.Warn($"MicrophoneRecorder.Start: no se pudo crear el fichero WAV \"{wavPath}\"", ex);
+            AppLog.Warn($"MicrophoneRecorder.Start: could not create WAV file \"{wavPath}\"", ex);
             capture.Dispose();
             return;
         }
@@ -97,7 +97,7 @@ public sealed class MicrophoneRecorder : IMicCapture
         catch (Exception ex)
         {
             IsAvailable = false;
-            AppLog.Warn("MicrophoneRecorder.Start: no se pudo iniciar la grabacion del microfono", ex);
+            AppLog.Warn("MicrophoneRecorder.Start: could not start microphone recording", ex);
             writer.Dispose();
             capture.Dispose();
             TryDeleteFile(wavPath);
@@ -170,7 +170,7 @@ public sealed class MicrophoneRecorder : IMicCapture
         }
         catch (Exception ex)
         {
-            AppLog.Warn("MicrophoneRecorder.Stop: fallo al parar la captura del microfono", ex);
+            AppLog.Warn("MicrophoneRecorder.Stop: failed to stop microphone capture", ex);
         }
 
         _stoppedEvent.Wait(TimeSpan.FromSeconds(3));
@@ -183,7 +183,7 @@ public sealed class MicrophoneRecorder : IMicCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn("MicrophoneRecorder.Stop: fallo al volcar el WAV del microfono", ex);
+                AppLog.Warn("MicrophoneRecorder.Stop: failed to flush the microphone WAV", ex);
             }
 
             _writer.Dispose();
@@ -200,7 +200,7 @@ public sealed class MicrophoneRecorder : IMicCapture
             FirstSampleTimestamp = _timeline.FirstSampleTimestamp;
             if (_timeline.PaddedFrames > 0)
             {
-                AppLog.Info($"MicrophoneRecorder: huecos rellenados con silencio = {_timeline.PaddedDuration.TotalSeconds:0.0}s");
+                AppLog.Info($"MicrophoneRecorder: gaps filled with silence = {_timeline.PaddedDuration.TotalSeconds:0.0}s");
             }
         }
 
@@ -232,7 +232,7 @@ public sealed class MicrophoneRecorder : IMicCapture
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"MicrophoneRecorder: no se pudo borrar \"{path}\"", ex);
+            AppLog.Warn($"MicrophoneRecorder: could not delete \"{path}\"", ex);
         }
     }
 
@@ -246,7 +246,7 @@ public sealed class MicrophoneRecorder : IMicCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn("MicrophoneRecorder.Dispose: fallo al cerrar el WAV del microfono", ex);
+                AppLog.Warn("MicrophoneRecorder.Dispose: failed to close the microphone WAV", ex);
             }
         }
 
@@ -258,7 +258,7 @@ public sealed class MicrophoneRecorder : IMicCapture
             }
             catch (Exception ex)
             {
-                AppLog.Warn("MicrophoneRecorder.Dispose: fallo al liberar la captura del microfono", ex);
+                AppLog.Warn("MicrophoneRecorder.Dispose: failed to release microphone capture", ex);
             }
         }
 

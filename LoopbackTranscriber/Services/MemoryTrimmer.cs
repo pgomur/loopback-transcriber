@@ -17,7 +17,7 @@ public static class MemoryTrimmer
         }
         catch (Exception ex)
         {
-            AppLog.Warn("MemoryTrimmer.TrimWorkingSet: no se pudo reducir la memoria en uso", ex);
+            AppLog.Warn("MemoryTrimmer.TrimWorkingSet: could not trim the working set", ex);
         }
     }
 
@@ -40,7 +40,7 @@ public static class MemoryTrimmer
         }
         catch (Exception ex)
         {
-            AppLog.Warn("MemoryTrimmer.Release: no se pudo devolver la memoria al sistema", ex);
+            AppLog.Warn("MemoryTrimmer.Release: could not release memory to the OS", ex);
         }
         finally
         {
