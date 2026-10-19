@@ -1,5 +1,6 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using LoopbackTranscriber.Models;
 using LoopbackTranscriber.Services;
 
@@ -8,6 +9,7 @@ namespace LoopbackTranscriber.ViewModels;
 public partial class LiveTranslationSettingsViewModel : ObservableObject
 {
     private readonly ISettingsStore _settingsService;
+    private readonly IMessenger _messenger;
     private bool _applying;
 
     public List<LanguageOption> AvailableLanguages { get; } =
@@ -34,18 +36,20 @@ public partial class LiveTranslationSettingsViewModel : ObservableObject
     [ObservableProperty]
     private double _liveWindowOpacity;
 
-    public LiveTranslationSettingsViewModel(ISettingsStore settingsService)
+    public LiveTranslationSettingsViewModel(ISettingsStore settingsService, IMessenger? messenger = null)
     {
         _settingsService = settingsService;
+        _messenger = messenger ?? WeakReferenceMessenger.Default;
 
         var settings = _settingsService.Load();
-        _liveTranslationLanguage = LiveTranslationPreferences.ResolveLanguage(settings);
+        _liveTranslationLanguage = LiveTranslationPreferences.ResolveLanguage(settings, Strings.Instance.Language);
         _liveShowOriginal = settings.LiveShowOriginal;
         _liveShowMetrics = settings.LiveShowMetrics;
         _liveTextSize = LiveTranslationPreferences.ClampTextSize(settings.LiveTextSize);
         _liveWindowOpacity = LiveTranslationPreferences.ClampOpacity(settings.LiveWindowOpacity);
 
-        LiveTranslationPreferences.Changed += OnPreferencesChanged;
+        _messenger.Register<LiveTranslationSettingsViewModel, LiveTranslationPreferencesChangedMessage>(this,
+            static (recipient, _) => recipient.ApplyFromSettings());
         Strings.Instance.LanguageChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(PreviewSignalText));
@@ -167,10 +171,8 @@ public partial class LiveTranslationSettingsViewModel : ObservableObject
         settings.LiveWindowOpacity = opacity;
         _settingsService.Save(settings);
 
-        LiveTranslationPreferences.NotifyChanged();
+        _messenger.Send(new LiveTranslationPreferencesChangedMessage());
     }
-
-    private void OnPreferencesChanged(object? sender, EventArgs e) => ApplyFromSettings();
 
     private void ApplyFromSettings()
     {
@@ -179,7 +181,7 @@ public partial class LiveTranslationSettingsViewModel : ObservableObject
         _applying = true;
         try
         {
-            LiveTranslationLanguage = LiveTranslationPreferences.ResolveLanguage(settings);
+            LiveTranslationLanguage = LiveTranslationPreferences.ResolveLanguage(settings, Strings.Instance.Language);
             LiveShowOriginal = settings.LiveShowOriginal;
             LiveShowMetrics = settings.LiveShowMetrics;
             LiveTextSize = LiveTranslationPreferences.ClampTextSize(settings.LiveTextSize);

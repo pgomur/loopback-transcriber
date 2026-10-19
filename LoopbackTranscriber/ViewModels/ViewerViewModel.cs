@@ -91,7 +91,7 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("ViewerViewModel.RefreshSummaryModelAvailability: no se pudo comprobar el modelo de resumen", ex);
+            AppLog.Warn("ViewerViewModel.RefreshSummaryModelAvailability: could not check the summary model", ex);
         }
     }
 
@@ -149,7 +149,7 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"ViewerViewModel.ViewHistoryTranscript: no se pudo leer \"{item.FilePath}\", se muestra el resumen", ex);
+            AppLog.Warn($"ViewerViewModel.ViewHistoryTranscript: could not read \"{item.FilePath}\"; showing the summary", ex);
             TranscriptText = item.Preview;
         }
     }
@@ -295,7 +295,7 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"ViewerViewModel.GenerateSummaryAsync: no se pudo leer \"{item.FilePath}\"", ex);
+            AppLog.Warn($"ViewerViewModel.GenerateSummaryAsync: could not read \"{item.FilePath}\"", ex);
             transcriptText = item.Preview;
         }
 
@@ -317,7 +317,7 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
                 }
             });
 
-            var summary = await _summarizer.SummarizeAsync(transcriptText, modelPath, percentProgress);
+            var summary = await _summarizer.SummarizeAsync(transcriptText, modelPath, Strings.Instance.Language, percentProgress);
 
             _historyService.SaveSummary(item.SummaryFilePath, summary);
 
@@ -334,8 +334,8 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"ViewerViewModel.GenerateSummaryAsync: fallo al generar el resumen de \"{item.FilePath}\"", ex);
-            _dialogs.ShowError(Strings.Instance.Format("SummaryErrorBody", ex.Message), Strings.Instance.Get("ErrorTitle"));
+            AppLog.Warn($"ViewerViewModel.GenerateSummaryAsync: failed to generate the summary of \"{item.FilePath}\"", ex);
+            _dialogs.ShowError(Strings.Instance.Format("SummaryErrorBody", ex.ToUserMessage()), Strings.Instance.Get("ErrorTitle"));
         }
         finally
         {

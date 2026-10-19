@@ -310,7 +310,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IDisposable
         }
 
         _dialogs.ShowError(
-            Strings.Instance.Format("ErrorDeleteTranscriptBody", item.AppName, item.TimestampText, error!.Message),
+            Strings.Instance.Format("ErrorDeleteTranscriptBody", item.AppName, item.TimestampText, error!.ToUserMessage()),
             Strings.Instance.Get("ErrorTitle"));
         return false;
     }

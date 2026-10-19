@@ -173,7 +173,7 @@ internal sealed class LiveSessionController : IDisposable
         session.TranslationFailed += message => OnUi(() =>
         {
             _model.TranslationFailed();
-            TranslatorStatus = Strings.Instance.Format("LiveWindowTranslationError", message);
+            TranslatorStatus = Strings.Instance.Format("LiveWindowTranslationError", message.Localize());
             DraftChanged?.Invoke();
             StateChanged?.Invoke();
         });
@@ -188,7 +188,7 @@ internal sealed class LiveSessionController : IDisposable
 
         session.Failed += message => OnUi(() =>
         {
-            EngineStatus = Strings.Instance.Format("LiveWindowEngineError", message);
+            EngineStatus = Strings.Instance.Format("LiveWindowEngineError", message.Localize());
             _model.ClearDrafts();
             DraftChanged?.Invoke();
             StateChanged?.Invoke();

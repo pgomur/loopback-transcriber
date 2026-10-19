@@ -152,7 +152,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
 
     private async Task StopAfterAppClosedAsync(string closedAppName)
     {
-        AppLog.Info($"RecordingViewModel: {closedAppName} se cerro durante la grabacion; se procesa como una parada normal");
+        AppLog.Info($"RecordingViewModel: {closedAppName} closed during the recording; processing it as a normal stop");
         await StopAndTranscribeAsync();
     }
 
@@ -191,7 +191,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
 
         var appName = _selectedTarget?.DisplayName ?? "reunion";
         var recordedAt = _recordingStartedAt;
-        var reason = Strings.Instance.Get("RecordingInterruptedReason");
+        var reason = UserMessage.FromKey("RecordingInterruptedReason");
 
         var preserving = Task.Run(() => _workflow.StopAndPreserveAsync(appName, recordedAt, reason));
 
@@ -202,14 +202,14 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
         catch (AggregateException ex)
         {
-            AppLog.Warn("RecordingViewModel.PreserveInterruptedRecording: fallo al conservar la grabacion", ex);
+            AppLog.Warn("RecordingViewModel.PreserveInterruptedRecording: failed to preserve the recording", ex);
         }
 
         IsRecording = false;
 
         if (!finished)
         {
-            AppLog.Error("RecordingViewModel.PreserveInterruptedRecording: no se pudo conservar la grabacion a tiempo");
+            AppLog.Error("RecordingViewModel.PreserveInterruptedRecording: could not preserve the recording in time");
             return false;
         }
 
@@ -229,7 +229,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("RecordingViewModel.RecoverOrphanRecordingsAsync: fallo al recuperar grabaciones huerfanas", ex);
+            AppLog.Warn("RecordingViewModel.RecoverOrphanRecordingsAsync: failed to recover orphan recordings", ex);
         }
     }
 
@@ -254,7 +254,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = Strings.Instance.Format("StatusRecordFailed", ex.Message);
+            StatusText = Strings.Instance.Format("StatusRecordFailed", ex.ToUserMessage());
         }
         finally
         {
@@ -297,7 +297,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
     }
 
     private RecordingCallbacks CreateRecordingCallbacks() => new(
-        text => StatusText = text,
+        message => StatusText = message.Localize(),
         percent => TranscriptionProgressPercent = percent,
         active => IsTranscribingActive = active);
 
@@ -413,8 +413,8 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("RecordingViewModel.ApplyRecordingResult: no se pudo mostrar el resultado de la grabacion", ex);
-            StatusText = Strings.Instance.Format("StatusErrorProcessing", ex.Message);
+            AppLog.Warn("RecordingViewModel.ApplyRecordingResult: could not show the recording result", ex);
+            StatusText = Strings.Instance.Format("StatusErrorProcessing", ex.ToUserMessage());
         }
     }
 

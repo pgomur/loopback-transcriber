@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using LoopbackTranscriber.Models;
 using LoopbackTranscriber.Services;
 
@@ -22,6 +23,8 @@ public enum LiveWindowState
 public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
 {
     private readonly IRecordingHost _host;
+    private readonly IMessenger _messenger;
+    private readonly IUiDispatcher _dispatcher;
     private readonly ISettingsStore _settingsService;
     private readonly Action _openMainWindow;
     private const double MinWindowOpacity = LiveTranslationPreferences.MinOpacity;
@@ -43,8 +46,11 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
     private double _textSize;
     private bool _applyingSettings;
 
-    public LiveTranslationViewModel(IRecordingHost host, TargetItemViewModel target, ISettingsStore settingsService, Action openMainWindow)
+    public LiveTranslationViewModel(IRecordingHost host, TargetItemViewModel target, ISettingsStore settingsService,
+        Action openMainWindow, IMessenger? messenger = null, IUiDispatcher? dispatcher = null)
     {
+        _messenger = messenger ?? WeakReferenceMessenger.Default;
+        _dispatcher = dispatcher ?? WpfUiDispatcher.Instance;
         _host = host;
         Target = target;
         _settingsService = settingsService;
@@ -83,7 +89,8 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
         _host.PropertyChanged += OnMainPropertyChanged;
         Target.PropertyChanged += OnTargetPropertyChanged;
         Strings.Instance.LanguageChanged += OnLanguageChanged;
-        LiveTranslationPreferences.Changed += OnPreferencesChanged;
+        _messenger.Register<LiveTranslationViewModel, LiveTranslationPreferencesChangedMessage>(this,
+            static (recipient, _) => recipient.RunOnUi(recipient.ApplySettings));
 
         UpdateSession();
     }
@@ -240,7 +247,7 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
                 {
                     settings.LiveTranslationLanguage = value;
                     _settingsService.Save(settings);
-                    LiveTranslationPreferences.NotifyChanged();
+                    _messenger.Send(new LiveTranslationPreferencesChangedMessage());
                 }
             }
 
@@ -273,10 +280,9 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
 
         settings.LiveWindowOpacity = WindowOpacity;
         _settingsService.Save(settings);
-        LiveTranslationPreferences.NotifyChanged();
+        _messenger.Send(new LiveTranslationPreferencesChangedMessage());
     }
 
-    private void OnPreferencesChanged(object? sender, EventArgs e) => RunOnUi(ApplySettings);
 
     private void ApplySettings()
     {
@@ -285,7 +291,7 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
         _applyingSettings = true;
         try
         {
-            SelectedLanguageCode = LiveTranslationPreferences.ResolveLanguage(settings);
+            SelectedLanguageCode = LiveTranslationPreferences.ResolveLanguage(settings, Strings.Instance.Language);
         }
         finally
         {
@@ -491,18 +497,7 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
         StartStopCommand.NotifyCanExecuteChanged();
     }
 
-    private static void RunOnUi(Action action)
-    {
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess())
-        {
-            action();
-        }
-        else
-        {
-            dispatcher.BeginInvoke(action);
-        }
-    }
+    private void RunOnUi(Action action) => _dispatcher.Run(action);
 
     public void Dispose()
     {
@@ -511,6 +506,6 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
         _host.PropertyChanged -= OnMainPropertyChanged;
         Target.PropertyChanged -= OnTargetPropertyChanged;
         Strings.Instance.LanguageChanged -= OnLanguageChanged;
-        LiveTranslationPreferences.Changed -= OnPreferencesChanged;
+        _messenger.Unregister<LiveTranslationPreferencesChangedMessage>(this);
     }
 }

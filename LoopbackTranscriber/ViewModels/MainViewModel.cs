@@ -110,7 +110,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("MainViewModel.VerifyInstalledModelsAsync: fallo al verificar los modelos instalados", ex);
+            AppLog.Warn("MainViewModel.VerifyInstalledModelsAsync: failed to verify installed models", ex);
         }
     }
 

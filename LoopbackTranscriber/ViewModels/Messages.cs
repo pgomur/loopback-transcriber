@@ -19,6 +19,10 @@ public sealed record TargetStatusesSyncedMessage;
 
 public sealed record TargetListChangedMessage;
 
+public sealed record LiveTranslationPreferencesChangedMessage;
+
+public sealed record TranslucentUiChangedMessage(bool Enabled);
+
 public sealed class FindTranscriptRequest(string filePath) : RequestMessage<TranscriptHistoryItem?>
 {
     public string FilePath { get; } = filePath;

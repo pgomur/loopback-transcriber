@@ -85,7 +85,7 @@ public sealed partial class HistorySearchState : ObservableObject
         }
         catch (Exception ex)
         {
-            AppLog.Warn("HistorySearchState.RunSearchAsync: fallo al buscar en el historial", ex);
+            AppLog.Warn("HistorySearchState.RunSearchAsync: history search failed", ex);
         }
     }
 
@@ -201,7 +201,7 @@ public sealed partial class HistorySearchState : ObservableObject
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"HistorySearchState: no se pudo leer \"{path}\" para buscar", ex);
+            AppLog.Warn($"HistorySearchState: could not read \"{path}\" for searching", ex);
             return null;
         }
     }

@@ -4,6 +4,7 @@ using System.Windows;
 using Microsoft.Win32;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using LoopbackTranscriber.Models;
 using LoopbackTranscriber.Services;
 using System.IO;
@@ -93,9 +94,15 @@ public partial class ConfigViewModel : ObservableObject
 
     partial void OnIsSummaryModelDownloadedChanged(bool value) => OnPropertyChanged(nameof(CanDownloadSummaryModel));
 
-    public ConfigViewModel(ISettingsStore settingsService, IWhisperTranscriber whisper, ISummarizer summarizer)
+    private readonly IMessenger _messenger;
+    private readonly IUiDispatcher _dispatcher;
+
+    public ConfigViewModel(ISettingsStore settingsService, IWhisperTranscriber whisper, ISummarizer summarizer,
+        IMessenger messenger, IUiDispatcher dispatcher)
     {
         _settingsService = settingsService;
+        _messenger = messenger;
+        _dispatcher = dispatcher;
         _whisper = whisper;
         _summarizer = summarizer;
 
@@ -193,7 +200,7 @@ public partial class ConfigViewModel : ObservableObject
 
     private void OnModelsFolderFileChanged(object sender, FileSystemEventArgs e)
     {
-        Application.Current?.Dispatcher.BeginInvoke(() =>
+        _dispatcher.Run(() =>
         {
             RefreshModelStatus();
             RefreshSummaryModelStatus();
@@ -214,7 +221,7 @@ public partial class ConfigViewModel : ObservableObject
     partial void OnTranslucentUiChanged(bool value)
     {
         SaveSettings();
-        UiPreferences.NotifyTranslucentUiChanged(value);
+        _messenger.Send(new TranslucentUiChangedMessage(value));
     }
 
     private void RefreshModelStatus()
@@ -248,7 +255,7 @@ public partial class ConfigViewModel : ObservableObject
         try
         {
             var settings = new AppSettings { ModelSize = FixedModelSize, ModelsFolder = ModelsFolder };
-            var progress = new Progress<string>(text => DownloadStatus = text);
+            var progress = new Progress<UserMessage>(message => DownloadStatus = message.Localize());
             var percentProgress = new Progress<double>(percent =>
             {
                 IsProgressIndeterminate = false;
@@ -264,7 +271,7 @@ public partial class ConfigViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            DownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.Message);
+            DownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.ToUserMessage());
         }
         finally
         {
@@ -348,7 +355,7 @@ public partial class ConfigViewModel : ObservableObject
         try
         {
             var settings = new AppSettings { ModelsFolder = ModelsFolder };
-            var progress = new Progress<string>(text => SummaryDownloadStatus = text);
+            var progress = new Progress<UserMessage>(message => SummaryDownloadStatus = message.Localize());
             var percentProgress = new Progress<double>(percent =>
             {
                 IsSummaryProgressIndeterminate = false;
@@ -365,7 +372,7 @@ public partial class ConfigViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            SummaryDownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.Message);
+            SummaryDownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.ToUserMessage());
         }
         finally
         {

@@ -176,7 +176,7 @@ public partial class FirstRunViewModel : ObservableObject
         {
             var settings = _settingsService.Load();
             var modelSettings = new AppSettings { ModelSize = FixedModelSize, ModelsFolder = settings.ModelsFolder };
-            var progress = new Progress<string>(text => DownloadStatus = text);
+            var progress = new Progress<UserMessage>(message => DownloadStatus = message.Localize());
             var percentProgress = new Progress<double>(percent =>
             {
                 IsProgressIndeterminate = false;
@@ -213,7 +213,7 @@ public partial class FirstRunViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            DownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.Message);
+            DownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.ToUserMessage());
         }
         finally
         {
@@ -239,7 +239,7 @@ public partial class FirstRunViewModel : ObservableObject
         {
             var settings = _settingsService.Load();
             var modelSettings = new AppSettings { ModelsFolder = settings.ModelsFolder };
-            var progress = new Progress<string>(text => SummaryDownloadStatus = text);
+            var progress = new Progress<UserMessage>(message => SummaryDownloadStatus = message.Localize());
             var percentProgress = new Progress<double>(percent =>
             {
                 IsSummaryProgressIndeterminate = false;
@@ -276,7 +276,7 @@ public partial class FirstRunViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            SummaryDownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.Message);
+            SummaryDownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.ToUserMessage());
         }
         finally
         {

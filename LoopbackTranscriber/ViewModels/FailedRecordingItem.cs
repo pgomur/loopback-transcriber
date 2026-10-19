@@ -10,7 +10,9 @@ public sealed class FailedRecordingItem(FailedRecording recording)
         ? $"{FailedRecording.RecordedAt:g} · {FormatDuration(duration)}"
         : FailedRecording.RecordedAt.ToString("g");
 
-    public string ReasonText => FailedRecording.Error ?? string.Empty;
+    public string ReasonText => FailedRecording.ErrorKey is { } key
+        ? Strings.Instance.Format(key, FailedRecording.ErrorArgs ?? Array.Empty<string>())
+        : FailedRecording.Error ?? string.Empty;
 
     public bool HasReason => !string.IsNullOrWhiteSpace(FailedRecording.Error);
 
