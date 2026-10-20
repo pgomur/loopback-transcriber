@@ -75,6 +75,18 @@
                                           SelectedValuePath="Code"
                                           SelectedValue="{Binding UiLanguage, Mode=TwoWay}" />
                             </StackPanel>
+
+                            <StackPanel Margin="32,0,0,0">
+                                <TextBlock Style="{StaticResource ConfigFieldLabelStyle}"
+                                           Text="{Binding Path=[ConfigMeetingLanguageLabel], Source={x:Static services:Strings.Instance}}" />
+                                <ComboBox Width="220" HorizontalAlignment="Left"
+                                          ItemsSource="{Binding AvailableMeetingLanguages}"
+                                          DisplayMemberPath="DisplayName"
+                                          SelectedValuePath="Code"
+                                          SelectedValue="{Binding MeetingLanguage, Mode=TwoWay}" />
+                                <TextBlock Style="{StaticResource ConfigHintStyle}" MaxWidth="520" HorizontalAlignment="Left"
+                                           Text="{Binding Path=[ConfigMeetingLanguageHint], Source={x:Static services:Strings.Instance}}" />
+                            </StackPanel>
                         </StackPanel>
 
                         <Border Style="{StaticResource ConfigInnerDividerStyle}" />

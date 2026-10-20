@@ -85,7 +85,7 @@ internal sealed class LiveSessionController : IDisposable
         var session = new LiveTranscriptionSession(new LiveWhisperConfig
         {
             ModelPath = modelPath,
-            Language = string.IsNullOrWhiteSpace(settings.Language) ? "auto" : settings.Language,
+            Language = settings.ResolveMeetingLanguage(),
             ThreadCount = WhisperTranscriptionService.GetRecommendedThreadCount(1),
             UseGpu = true,
             AudioContext = Math.Max(0, settings.LiveAudioContext),

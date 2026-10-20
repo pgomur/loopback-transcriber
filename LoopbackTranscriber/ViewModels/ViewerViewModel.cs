@@ -15,23 +15,26 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
     private readonly TranscriptHistoryService _historyService;
     private readonly IDialogService _dialogs;
     private readonly IMessenger _messenger;
+    private readonly TranscriptRetranscriber _retranscriber;
 
     public ViewerViewModel(
         ISettingsStore settings,
         ISummarizer summarizer,
         TranscriptHistoryService historyService,
         IDialogService dialogs,
-        IMessenger messenger)
+        IMessenger messenger,
+        TranscriptRetranscriber retranscriber)
     {
         _settings = settings;
         _summarizer = summarizer;
         _historyService = historyService;
         _dialogs = dialogs;
         _messenger = messenger;
+        _retranscriber = retranscriber;
 
         _messenger.Register<ViewerViewModel, TranscriptDeletedMessage>(this, static (recipient, message) => recipient.ClearViewedTranscriptIfDeleted(message.FilePath));
         _messenger.Register<ViewerViewModel, TranscriptReadyMessage>(this, static (recipient, message) => recipient.ShowTranscript(message.Text, message.FilePath));
-        _messenger.Register<ViewerViewModel, CaptureStateChangedMessage>(this, static (recipient, message) => recipient._captureActive = message.IsActive);
+        _messenger.Register<ViewerViewModel, CaptureStateChangedMessage>(this, static (recipient, message) => recipient.OnCaptureStateChanged(message.IsActive));
     }
 
     public void Dispose() => _messenger.UnregisterAll(this);
@@ -97,6 +100,7 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
 
     partial void OnIsShowingSummaryTabChanged(bool value)
     {
+        OnPropertyChanged(nameof(ShowRetranscribeButton));
         OnPropertyChanged(nameof(ShowViewedSummaryButton));
         OnPropertyChanged(nameof(ShowSummaryModelWarning));
     }
@@ -202,9 +206,93 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
 
     public void RefreshLanguage() => ViewedSummarySections = SummaryFormatter.Parse(ViewedSummaryText);
 
-    public string? ViewedFilePath { get; private set; }
+    private string? _viewedFilePath;
+
+    public string? ViewedFilePath
+    {
+        get => _viewedFilePath;
+        private set
+        {
+            _viewedFilePath = value;
+            ViewedHasAudio = TranscriptRetranscriber.HasAudio(value);
+        }
+    }
 
     private bool _captureActive;
+
+    private void OnCaptureStateChanged(bool isActive)
+    {
+        _captureActive = isActive;
+        OnPropertyChanged(nameof(CanRetranscribeViewed));
+    }
+
+    [ObservableProperty]
+    private bool _viewedHasAudio;
+
+    [ObservableProperty]
+    private bool _isRetranscribing;
+
+    [ObservableProperty]
+    private double _retranscribeProgressPercent;
+
+    public bool ShowRetranscribeButton => !IsShowingSummaryTab && (ViewedHasAudio || IsRetranscribing);
+
+    public bool CanRetranscribeViewed => ViewedHasAudio && !IsRetranscribing && !_captureActive;
+
+    partial void OnViewedHasAudioChanged(bool value) => NotifyRetranscribeState();
+
+    partial void OnIsRetranscribingChanged(bool value) => NotifyRetranscribeState();
+
+    private void NotifyRetranscribeState()
+    {
+        OnPropertyChanged(nameof(ShowRetranscribeButton));
+        OnPropertyChanged(nameof(CanRetranscribeViewed));
+    }
+
+    [RelayCommand]
+    private async Task RetranscribeViewedAsync()
+    {
+        if (!CanRetranscribeViewed || ViewedFilePath is null)
+        {
+            return;
+        }
+
+        if (!_dialogs.Confirm(Strings.Instance.Get("ConfirmRetranscribeBody"), Strings.Instance.Get("ConfirmRetranscribeTitle")))
+        {
+            return;
+        }
+
+        var filePath = ViewedFilePath;
+        RetranscribeProgressPercent = 0;
+        IsRetranscribing = true;
+
+        try
+        {
+            var callbacks = new RecordingCallbacks(
+                _ => { },
+                percent => RetranscribeProgressPercent = percent,
+                _ => { });
+
+            var result = await _retranscriber.RetranscribeAsync(filePath, callbacks);
+
+            if (ViewedFilePath is not null && string.Equals(ViewedFilePath, filePath, StringComparison.OrdinalIgnoreCase))
+            {
+                ViewedFilePath = result.FilePath;
+                TranscriptText = result.FileText;
+            }
+
+            _messenger.Send(new RecordingSavedMessage());
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"ViewerViewModel.RetranscribeViewedAsync: failed to re-transcribe \"{filePath}\"", ex);
+            _dialogs.ShowError(Strings.Instance.Format("RetranscribeErrorBody", ex.ToUserMessage()), Strings.Instance.Get("ErrorTitle"));
+        }
+        finally
+        {
+            IsRetranscribing = false;
+        }
+    }
 
     private int _summaryGenerationCount;
 

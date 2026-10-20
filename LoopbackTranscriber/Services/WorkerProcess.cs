@@ -391,12 +391,12 @@ internal static class WorkerHost
                   ?? throw new InvalidOperationException("Invalid transcription job.");
 
         var service = new WhisperTranscriptionService();
-        var segments = await service.TranscribeSegmentsInProcessAsync(job.WavPath, job.ModelPath, job.Language,
-            job.ThreadCount, job.UseGpu, new ConsoleProgress<int>(p => p));
+        var transcription = await service.TranscribeInProcessAsync(job, new ConsoleProgress<int>(p => p));
 
         var result = new WhisperJobResult
         {
-            Segments = segments
+            Language = transcription.Language,
+            Segments = transcription.Segments
                 .Select(s => new SegmentDto { StartTicks = s.Start.Ticks, EndTicks = s.End.Ticks, Text = s.Text })
                 .ToList()
         };
@@ -429,7 +429,9 @@ internal sealed class WhisperJob
     public string WavPath { get; set; } = string.Empty;
     public string ModelPath { get; set; } = string.Empty;
     public string Language { get; set; } = string.Empty;
+    public string? FallbackLanguage { get; set; }
     public int ThreadCount { get; set; }
+    public bool StrictNoSpeech { get; set; }
     public bool UseGpu { get; set; }
 }
 
@@ -445,6 +447,7 @@ internal sealed class WhisperJobResult
     public string? Error { get; set; }
     public string? ErrorKey { get; set; }
     public string[]? ErrorArgs { get; set; }
+    public string? Language { get; set; }
     public List<SegmentDto> Segments { get; set; } = new();
 }
 

@@ -32,6 +32,16 @@ public partial class ConfigViewModel : ObservableObject
     ];
 
     [ObservableProperty]
+    private IReadOnlyList<LanguageOption> _availableMeetingLanguages = [];
+
+    [ObservableProperty]
+    private string _meetingLanguage;
+
+    private bool _meetingLanguageFollowsUi;
+
+    private bool _syncingMeetingLanguage;
+
+    [ObservableProperty]
     private string _uiLanguage;
 
     [ObservableProperty]
@@ -113,6 +123,10 @@ public partial class ConfigViewModel : ObservableObject
             ? settings.UiLanguage
             : "es";
         _translucentUi = settings.TranslucentUi;
+        var savedMeetingLanguage = NormalizeMeetingLanguage(settings.MeetingLanguage);
+        _meetingLanguageFollowsUi = savedMeetingLanguage.Length == 0;
+        _meetingLanguage = _meetingLanguageFollowsUi ? UiLanguage : savedMeetingLanguage;
+        _availableMeetingLanguages = BuildMeetingLanguages();
         _userName = settings.UserName ?? string.Empty;
 
         Strings.Instance.LanguageChanged += OnAppLanguageChanged;
@@ -131,6 +145,43 @@ public partial class ConfigViewModel : ObservableObject
     private void OnAppLanguageChanged(object? sender, EventArgs e)
     {
         RefreshModelStatus();
+
+        var selected = _meetingLanguageFollowsUi ? UiLanguage : MeetingLanguage;
+        _syncingMeetingLanguage = true;
+        try
+        {
+            AvailableMeetingLanguages = BuildMeetingLanguages();
+            MeetingLanguage = selected;
+        }
+        finally
+        {
+            _syncingMeetingLanguage = false;
+        }
+    }
+
+    private string NormalizeMeetingLanguage(string? code)
+    {
+        var normalized = (code ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized == AppSettings.MeetingLanguageAuto || AvailableUiLanguages.Any(l => l.Code == normalized)
+            ? normalized
+            : string.Empty;
+    }
+
+    private IReadOnlyList<LanguageOption> BuildMeetingLanguages() =>
+    [
+        new LanguageOption { Code = AppSettings.MeetingLanguageAuto, DisplayName = Strings.Instance.Get("MeetingLanguageAuto") },
+        .. AvailableUiLanguages
+    ];
+
+    partial void OnMeetingLanguageChanged(string value)
+    {
+        if (value is null || _syncingMeetingLanguage)
+        {
+            return;
+        }
+
+        _meetingLanguageFollowsUi = false;
+        SaveSettings();
     }
 
     private void SaveSettings()
@@ -140,6 +191,7 @@ public partial class ConfigViewModel : ObservableObject
         settings.ModelsFolder = ModelsFolder;
         settings.TranscriptsFolder = TranscriptsFolder;
         settings.UiLanguage = UiLanguage;
+        settings.MeetingLanguage = _meetingLanguageFollowsUi ? string.Empty : MeetingLanguage ?? string.Empty;
         settings.TranslucentUi = TranslucentUi;
         settings.UserName = (UserName ?? string.Empty).Trim();
 

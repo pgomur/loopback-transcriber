@@ -25,6 +25,7 @@ internal static class AppServices
         services.AddSingleton<IAudioPreparer, NaudioAudioPreparer>();
         services.AddSingleton<RecordingProcessor>();
         services.AddSingleton<TranscriptSaver>();
+        services.AddSingleton<TranscriptRetranscriber>();
         services.AddSingleton(new FailedRecordingStore(FailedRecordingStore.DefaultRootFolder));
 
         services.AddSingleton(sp => new CaptureCoordinator(
