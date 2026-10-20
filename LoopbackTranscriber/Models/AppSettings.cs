@@ -27,8 +27,12 @@ public sealed class AppSettings
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LoopbackTranscriber", "transcripts");
 
-    [System.Text.Json.Serialization.JsonIgnore]
-    public string Language => "auto";
+    public const string MeetingLanguageAuto = "auto";
+
+    public string MeetingLanguage { get; set; } = string.Empty;
+
+    public string ResolveMeetingLanguage() =>
+        string.IsNullOrWhiteSpace(MeetingLanguage) ? UiLanguage : MeetingLanguage.Trim().ToLowerInvariant();
 
     public string UiLanguage { get; set; } = DetectSystemLanguage();
 

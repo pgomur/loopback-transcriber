@@ -11,8 +11,7 @@ public interface IWhisperTranscriber
         IProgress<UserMessage>? progress = null, IProgress<double>? percentProgress = null,
         CancellationToken cancellationToken = default);
 
-    Task<List<TranscriptSegment>> TranscribeSegmentsAsync(string wavPath, string modelPath,
-        string language, int threadCount, bool useGpu = true, IProgress<int>? percentProgress = null,
+    Task<TrackTranscription> TranscribeAsync(TranscriptionRequest request, IProgress<int>? percentProgress = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -71,7 +70,8 @@ public sealed class RecordingProcessor
     }
 
     public async Task<string> ProcessAsync(string sourceWavPath, string? micWavPath, TimeSpan micStartOffset,
-        AppSettings settings, RecordingCallbacks callbacks, CancellationToken cancellationToken = default)
+        AppSettings settings, RecordingCallbacks callbacks, CancellationToken cancellationToken = default,
+        string? workFolder = null)
     {
         string? whisperWavPath = null;
         string? micWhisperWavPath = null;
@@ -89,7 +89,7 @@ public sealed class RecordingProcessor
             callbacks.Percent(0);
             callbacks.Status(UserMessage.FromKey("StatusTranscribingWithPercent", 0));
 
-            whisperWavPath = DerivedPath(sourceWavPath);
+            whisperWavPath = DerivedPath(sourceWavPath, workFolder);
 
             var convertedWhisperPath = whisperWavPath;
             await Task.Run(() => _audio.ConvertToWhisperFormat(sourceWavPath, convertedWhisperPath), cancellationToken);
@@ -97,7 +97,7 @@ public sealed class RecordingProcessor
             var hasMicTrack = micWavPath is not null;
             if (hasMicTrack)
             {
-                micWhisperWavPath = DerivedPath(micWavPath!);
+                micWhisperWavPath = DerivedPath(micWavPath!, workFolder);
 
                 var micSource = micWavPath!;
                 var micConverted = micWhisperWavPath;
@@ -116,10 +116,8 @@ public sealed class RecordingProcessor
                 }, cancellationToken);
             }
 
-            var threadCount = WhisperTranscriptionService.GetRecommendedThreadCount(hasMicTrack ? 2 : 1);
-
             var (otherSegments, micSegments) = await TranscribeTracksAsync(
-                whisperWavPath, micWhisperWavPath, hasMicTrack, modelPath, settings.Language, threadCount, callbacks, cancellationToken);
+                whisperWavPath, micWhisperWavPath, modelPath, settings, callbacks, cancellationToken);
 
             callbacks.TranscribingActive(false);
 
@@ -158,13 +156,18 @@ public sealed class RecordingProcessor
         }
     }
 
-    private static string DerivedPath(string wavPath) =>
-        Path.Combine(Path.GetDirectoryName(wavPath)!, Path.GetFileNameWithoutExtension(wavPath) + ".16k.wav");
+    private static string DerivedPath(string wavPath, string? workFolder)
+    {
+        var folder = workFolder ?? Path.GetDirectoryName(wavPath)!;
+        Directory.CreateDirectory(folder);
+        return Path.Combine(folder, Path.GetFileNameWithoutExtension(wavPath) + ".16k.wav");
+    }
 
     private async Task<(List<TranscriptSegment> Other, List<TranscriptSegment> Mic)> TranscribeTracksAsync(
-        string whisperWavPath, string? micWhisperWavPath, bool hasMicTrack, string modelPath, string language,
-        int threadCount, RecordingCallbacks callbacks, CancellationToken cancellationToken)
+        string whisperWavPath, string? micWhisperWavPath, string modelPath, AppSettings settings,
+        RecordingCallbacks callbacks, CancellationToken cancellationToken)
     {
+        var hasMicTrack = micWhisperWavPath is not null;
         var gate = new object();
         var otherPercent = 0;
         var micPercent = 0;
@@ -185,16 +188,51 @@ public sealed class RecordingProcessor
         var otherPercentProgress = new Progress<int>(percent => Report(() => otherPercent = percent));
         var micPercentProgress = new Progress<int>(percent => Report(() => micPercent = percent));
 
-        var otherTask = _whisper.TranscribeSegmentsAsync(whisperWavPath, modelPath, language,
-            threadCount, useGpu: true, percentProgress: otherPercentProgress, cancellationToken: cancellationToken);
-        var micTask = hasMicTrack
-            ? _whisper.TranscribeSegmentsAsync(micWhisperWavPath!, modelPath, language,
-                threadCount, useGpu: true, percentProgress: micPercentProgress, cancellationToken: cancellationToken)
-            : Task.FromResult(new List<TranscriptSegment>());
+        var meetingLanguage = settings.ResolveMeetingLanguage();
+        var fallbackLanguage = settings.UiLanguage;
+        var detectOnAppTrack = hasMicTrack &&
+                               string.Equals(meetingLanguage, AppSettings.MeetingLanguageAuto, StringComparison.OrdinalIgnoreCase);
+
+        TranscriptionRequest OtherRequest(int threads) =>
+            new(whisperWavPath, modelPath, meetingLanguage, fallbackLanguage, threads, StrictNoSpeech: false);
+
+        TranscriptionRequest MicRequest(string language, int threads) =>
+            new(micWhisperWavPath!, modelPath, language, fallbackLanguage, threads, StrictNoSpeech: true);
+
+        if (!hasMicTrack)
+        {
+            var single = await _whisper.TranscribeAsync(OtherRequest(WhisperTranscriptionService.GetRecommendedThreadCount(1)),
+                otherPercentProgress, cancellationToken);
+            LogLanguage(settings, single.Language, null);
+            return (single.Segments, new List<TranscriptSegment>());
+        }
+
+        if (detectOnAppTrack)
+        {
+            var threads = WhisperTranscriptionService.GetRecommendedThreadCount(1);
+            var other = await _whisper.TranscribeAsync(OtherRequest(threads), otherPercentProgress, cancellationToken);
+            var micLanguage = other.Language ?? AppSettings.MeetingLanguageAuto;
+            var mic = await _whisper.TranscribeAsync(MicRequest(micLanguage, threads), micPercentProgress, cancellationToken);
+            LogLanguage(settings, other.Language, mic.Language);
+            return (other.Segments, mic.Segments);
+        }
+
+        var parallelThreads = WhisperTranscriptionService.GetRecommendedThreadCount(2);
+        var otherTask = _whisper.TranscribeAsync(OtherRequest(parallelThreads), otherPercentProgress, cancellationToken);
+        var micTask = _whisper.TranscribeAsync(MicRequest(meetingLanguage, parallelThreads), micPercentProgress, cancellationToken);
 
         await Task.WhenAll(otherTask, micTask);
 
-        return (await otherTask, await micTask);
+        var otherResult = await otherTask;
+        var micResult = await micTask;
+        LogLanguage(settings, otherResult.Language, micResult.Language);
+        return (otherResult.Segments, micResult.Segments);
+    }
+
+    private static void LogLanguage(AppSettings settings, string? otherLanguage, string? micLanguage)
+    {
+        var setting = string.IsNullOrWhiteSpace(settings.MeetingLanguage) ? $"app ({settings.UiLanguage})" : settings.MeetingLanguage;
+        AppLog.Info($"RecordingProcessor: meeting language setting \"{setting}\"; app track \"{otherLanguage ?? "-"}\", microphone \"{micLanguage ?? "-"}\"");
     }
 
     private double[]? ReadLevelMap(string wavPath)

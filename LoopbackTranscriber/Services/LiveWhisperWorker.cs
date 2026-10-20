@@ -43,6 +43,7 @@ internal sealed class LiveWhisperEngine : IDisposable
 
     private readonly WhisperFactory _factory;
     private readonly WhisperProcessor _processor;
+    private readonly string? _filterLanguage;
 
     public LiveWhisperEngine(LiveWhisperConfig config)
     {
@@ -58,6 +59,9 @@ internal sealed class LiveWhisperEngine : IDisposable
         }
 
         _factory = factory;
+        _filterLanguage = string.Equals(config.Language, WhisperTranscriptionService.AutoLanguage, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : config.Language;
 
         var builder = _factory.CreateBuilder()
             .WithLanguage(config.Language)
@@ -91,7 +95,7 @@ internal sealed class LiveWhisperEngine : IDisposable
         var segments = new List<SegmentDto>();
         await foreach (var result in _processor.ProcessAsync(stream).ConfigureAwait(false))
         {
-            var text = WhisperTranscriptionService.FilterSegmentText(result.Text, result.NoSpeechProbability);
+            var text = WhisperTranscriptionService.FilterSegmentText(result.Text, result.NoSpeechProbability, _filterLanguage);
             if (text is null)
             {
                 continue;

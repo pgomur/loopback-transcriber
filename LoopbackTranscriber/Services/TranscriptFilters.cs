@@ -47,6 +47,65 @@ internal static class TranscriptFilters
         return KnownHallucinatedPhrases.Contains(normalized);
     }
 
+    private const double MaxForeignLetterRatio = 0.3;
+
+    private static readonly HashSet<string> LatinScriptLanguages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "es", "en", "pt", "de", "fr", "it", "ca", "gl", "eu", "nl", "pl", "ro", "sv", "da", "no", "nn", "fi",
+        "cs", "sk", "sl", "hr", "hu", "tr", "id", "ms", "vi", "lt", "lv", "et", "is", "ga", "cy", "af", "sq", "tl"
+    };
+
+    private static readonly HashSet<string> CyrillicScriptLanguages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ru", "uk", "be", "bg", "mk", "sr", "kk"
+    };
+
+    internal static bool HasNoWords(string text) => !text.Any(char.IsLetterOrDigit);
+
+    internal static bool IsForeignScript(string text, string? language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            return false;
+        }
+
+        Func<char, bool> isExpected;
+        if (LatinScriptLanguages.Contains(language))
+        {
+            isExpected = IsLatinLetter;
+        }
+        else if (CyrillicScriptLanguages.Contains(language))
+        {
+            isExpected = c => IsCyrillicLetter(c) || IsLatinLetter(c);
+        }
+        else
+        {
+            return false;
+        }
+
+        var letters = 0;
+        var foreign = 0;
+        foreach (var c in text)
+        {
+            if (!char.IsLetter(c))
+            {
+                continue;
+            }
+
+            letters++;
+            if (!isExpected(c))
+            {
+                foreign++;
+            }
+        }
+
+        return letters > 0 && (double)foreign / letters >= MaxForeignLetterRatio;
+    }
+
+    private static bool IsLatinLetter(char c) => c <= '\u024F' || c is >= '\u1E00' and <= '\u1EFF';
+
+    private static bool IsCyrillicLetter(char c) => c is >= '\u0400' and <= '\u052F';
+
     private static readonly TimeSpan MaxMergeGap = TimeSpan.FromSeconds(2);
     private const int MaxMergedSegmentLength = 400;
 

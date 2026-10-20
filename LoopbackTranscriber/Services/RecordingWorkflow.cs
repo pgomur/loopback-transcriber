@@ -122,7 +122,7 @@ public sealed class RecordingWorkflow
         var settings = _settings.Load();
 
         var text = await _processor.ProcessAsync(sourceWavPath, micWavPath, micStartOffset, settings, callbacks, cancellationToken);
-        var markdownPath = _saver.Save(text, settings, sourceWavPath, micWavPath, appName, recordedAt);
+        var markdownPath = _saver.Save(text, settings, sourceWavPath, micWavPath, micStartOffset, appName, recordedAt);
 
         return new SavedTranscript(text, markdownPath);
     }

@@ -20,12 +20,18 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
 
     public sealed record TranscriptSegment(TimeSpan Start, TimeSpan End, string Text);
 
+    public const string AutoLanguage = "auto";
+
     private static readonly Regex NonSpeechTagRegex =
         new(@"^[\[\(][A-Za-z_ ]+[\]\)]$", RegexOptions.Compiled);
 
     private const float NoSpeechProbThreshold = 0.6f;
 
     private const float HallucinationNoSpeechSoftThreshold = 0.3f;
+
+    private const float StrictNoSpeechProbThreshold = 0.45f;
+
+    private const float StrictHallucinationNoSpeechSoftThreshold = 0.2f;
 
     public static int GetRecommendedThreadCount(int concurrentTranscriptions = 1)
     {
@@ -72,23 +78,24 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
         }
     }
 
-    public async Task<List<TranscriptSegment>> TranscribeSegmentsAsync(string wavPath, string modelPath,
-        string language, int threadCount, bool useGpu = true, IProgress<int>? percentProgress = null,
-        CancellationToken cancellationToken = default)
+    public async Task<TrackTranscription> TranscribeAsync(TranscriptionRequest request,
+        IProgress<int>? percentProgress = null, CancellationToken cancellationToken = default)
     {
-        if (IsEffectivelySilent(wavPath))
+        if (IsEffectivelySilent(request.WavPath))
         {
             percentProgress?.Report(100);
-            return new List<TranscriptSegment>();
+            return new TrackTranscription(new List<TranscriptSegment>(), null);
         }
 
         var job = new WhisperJob
         {
-            WavPath = wavPath,
-            ModelPath = modelPath,
-            Language = language,
-            ThreadCount = threadCount,
-            UseGpu = useGpu
+            WavPath = request.WavPath,
+            ModelPath = request.ModelPath,
+            Language = request.Language,
+            FallbackLanguage = request.FallbackLanguage,
+            ThreadCount = request.ThreadCount,
+            StrictNoSpeech = request.StrictNoSpeech,
+            UseGpu = request.UseGpu
         };
 
         var resultJson = await WorkerProcess.RunAsync("whisper", JsonSerializer.Serialize(job),
@@ -105,25 +112,35 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
 
         MemoryTrimmer.ReleaseInBackground();
 
-        return result.Segments
+        var segments = result.Segments
             .Select(s => new TranscriptSegment(TimeSpan.FromTicks(s.StartTicks), TimeSpan.FromTicks(s.EndTicks), s.Text))
             .ToList();
+
+        return new TrackTranscription(segments, string.IsNullOrWhiteSpace(result.Language) ? null : result.Language);
     }
 
-    internal static string? FilterSegmentText(string? rawText, float noSpeechProbability)
+    internal static string? FilterSegmentText(string? rawText, float noSpeechProbability, string? language = null,
+        bool strictNoSpeech = false)
     {
         var text = rawText?.Trim();
-        if (string.IsNullOrEmpty(text) || NonSpeechTagRegex.IsMatch(text))
+        if (string.IsNullOrEmpty(text) || NonSpeechTagRegex.IsMatch(text) || TranscriptFilters.HasNoWords(text))
         {
             return null;
         }
 
-        if (noSpeechProbability >= NoSpeechProbThreshold)
+        var hardThreshold = strictNoSpeech ? StrictNoSpeechProbThreshold : NoSpeechProbThreshold;
+        if (noSpeechProbability >= hardThreshold)
         {
             return null;
         }
 
-        if (noSpeechProbability >= HallucinationNoSpeechSoftThreshold && TranscriptFilters.IsKnownHallucinatedPhrase(text))
+        var softThreshold = strictNoSpeech ? StrictHallucinationNoSpeechSoftThreshold : HallucinationNoSpeechSoftThreshold;
+        if (noSpeechProbability >= softThreshold && TranscriptFilters.IsKnownHallucinatedPhrase(text))
+        {
+            return null;
+        }
+
+        if (TranscriptFilters.IsForeignScript(text, language))
         {
             return null;
         }
@@ -137,19 +154,19 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
         return text;
     }
 
-    internal async Task<List<TranscriptSegment>> TranscribeSegmentsInProcessAsync(string wavPath, string modelPath,
-        string language, int threadCount, bool useGpu = true, IProgress<int>? percentProgress = null,
+    internal async Task<TrackTranscription> TranscribeInProcessAsync(WhisperJob job, IProgress<int>? percentProgress = null,
         CancellationToken cancellationToken = default)
     {
-        using var whisperFactory = WhisperFactory.FromPath(modelPath, new WhisperFactoryOptions { UseGpu = useGpu });
+        using var whisperFactory = WhisperFactory.FromPath(job.ModelPath, new WhisperFactoryOptions { UseGpu = job.UseGpu });
 
         var lastReportedPercent = -1;
+        var requestedLanguage = string.IsNullOrWhiteSpace(job.Language) ? AutoLanguage : job.Language;
 
         using var processor = whisperFactory.CreateBuilder()
-            .WithLanguage(language)
-            .WithThreads(threadCount)
+            .WithLanguage(requestedLanguage)
+            .WithThreads(job.ThreadCount)
             .WithNoContext()
-            .WithNoSpeechThreshold(NoSpeechProbThreshold)
+            .WithNoSpeechThreshold(job.StrictNoSpeech ? StrictNoSpeechProbThreshold : NoSpeechProbThreshold)
             .WithProbabilities()
             .WithProgressHandler(percent =>
             {
@@ -163,12 +180,23 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
             })
             .Build();
 
-        await using var fileStream = File.OpenRead(wavPath);
+        string? effectiveLanguage = requestedLanguage;
+        if (string.Equals(requestedLanguage, AutoLanguage, StringComparison.OrdinalIgnoreCase))
+        {
+            effectiveLanguage = ResolveAutoLanguage(processor, job.WavPath, job.FallbackLanguage);
+            processor.ChangeLanguage(effectiveLanguage ?? AutoLanguage);
+        }
+
+        var filterLanguage = string.Equals(effectiveLanguage, AutoLanguage, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : effectiveLanguage;
+
+        await using var fileStream = File.OpenRead(job.WavPath);
 
         var segments = new List<TranscriptSegment>();
         await foreach (var result in processor.ProcessAsync(fileStream, cancellationToken).ConfigureAwait(false))
         {
-            var text = FilterSegmentText(result.Text, result.NoSpeechProbability);
+            var text = FilterSegmentText(result.Text, result.NoSpeechProbability, filterLanguage, job.StrictNoSpeech);
             if (text is null)
             {
                 continue;
@@ -177,6 +205,31 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
             segments.Add(new TranscriptSegment(result.Start, result.End, text));
         }
 
-        return TranscriptFilters.MergeCloseSegments(TranscriptFilters.RemoveRepeatedSegments(segments));
+        return new TrackTranscription(
+            TranscriptFilters.MergeCloseSegments(TranscriptFilters.RemoveRepeatedSegments(segments)),
+            filterLanguage);
+    }
+
+    private static string? ResolveAutoLanguage(WhisperProcessor processor, string wavPath, string? fallbackLanguage)
+    {
+        var fallback = string.IsNullOrWhiteSpace(fallbackLanguage) ? null : fallbackLanguage;
+
+        try
+        {
+            var (language, confidence, windows) = LanguageDetector.Detect(processor, wavPath);
+            if (language is not null && confidence >= LanguageDetector.MinConfidence)
+            {
+                AppLog.Info($"WhisperTranscriptionService: detected language \"{language}\" (confidence {confidence:0.00} over {windows} window(s)) in \"{Path.GetFileName(wavPath)}\"");
+                return language;
+            }
+
+            AppLog.Info($"WhisperTranscriptionService: language detection inconclusive (\"{language ?? "-"}\", confidence {confidence:0.00} over {windows} window(s)) in \"{Path.GetFileName(wavPath)}\"; using \"{fallback ?? AutoLanguage}\"");
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn($"WhisperTranscriptionService: language detection failed in \"{Path.GetFileName(wavPath)}\"; using \"{fallback ?? AutoLanguage}\"", ex);
+        }
+
+        return fallback;
     }
 }
