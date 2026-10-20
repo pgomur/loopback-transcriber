@@ -1,6 +1,6 @@
 namespace LoopbackTranscriber.Services;
 
-internal sealed class LiveTranscriberStage
+internal sealed class LiveTranscriberStage : IDisposable
 {
     private const int MaxQueuedChunks = 8;
 
@@ -250,7 +250,7 @@ internal sealed class LiveTranscriberStage
         }
     }
 
-    public void DisposeWorker() => _worker.Dispose();
+    public void Dispose() => _worker.Dispose();
 
     public LiveChunkMetrics[] SnapshotMetrics()
     {

@@ -178,8 +178,8 @@ internal sealed class LiveTranscriptionSession : IDisposable
         _transcriber.CompleteInput();
         _translator?.CompleteInput();
 
-        _transcriber.DisposeWorker();
-        _translator?.DisposeWorker();
+        _transcriber.Dispose();
+        _translator?.Dispose();
 
         LiveSessionSummary.Write(_config, _startedAtUtc,
             _transcriber.SnapshotMetrics(), _transcriber.Dropped,

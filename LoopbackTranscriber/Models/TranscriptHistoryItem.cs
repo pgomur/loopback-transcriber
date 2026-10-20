@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace LoopbackTranscriber.Models;
@@ -16,10 +17,10 @@ public sealed partial class TranscriptHistoryItem : ObservableObject
 
     public string TimestampText => Duration is { } duration
         ? $"{Timestamp:dd/MM HH:mm} \u00b7 {FormatDuration(duration)}"
-        : Timestamp.ToString("dd/MM HH:mm");
+        : Timestamp.ToString("dd/MM HH:mm", CultureInfo.CurrentCulture);
 
     private static string FormatDuration(TimeSpan duration) =>
-        duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"m\:ss");
+        duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss", CultureInfo.CurrentCulture) : duration.ToString(@"m\:ss", CultureInfo.CurrentCulture);
 
     [ObservableProperty]
     private bool _isSelected;

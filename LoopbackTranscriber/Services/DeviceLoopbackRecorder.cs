@@ -7,14 +7,14 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
 {
     public sealed class DeviceTrack
     {
-        public required string Label;
-        public required string WavPath;
-        public double PeakAbs;
-        public long BytesCaptured;
-        public long? FirstSampleTimestamp;
+        public required string Label { get; init; }
+        public required string WavPath { get; init; }
+        public double PeakAbs { get; init; }
+        public long BytesCaptured { get; init; }
+        public long? FirstSampleTimestamp { get; init; }
     }
 
-    private sealed class Channel
+    private sealed class Channel : IDisposable
     {
         public required string Label;
         public required WasapiLoopbackCapture Capture;
@@ -25,6 +25,8 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
         public readonly ManualResetEventSlim StoppedEvent = new(false);
         public double PeakAbs;
         public long BytesCaptured;
+
+        public void Dispose() => StoppedEvent.Dispose();
     }
 
     private readonly List<Channel> _channels = new();
@@ -201,7 +203,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
             }
 
             channel.Capture.Dispose();
-            channel.StoppedEvent.Dispose();
+            channel.Dispose();
 
             if (channel.Timeline.PaddedFrames > 0)
             {
@@ -259,7 +261,7 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
                 AppLog.Warn($"DeviceLoopbackRecorder.Dispose: failed to release capture for \"{channel.Label}\"", ex);
             }
 
-            channel.StoppedEvent.Dispose();
+            channel.Dispose();
         }
 
         _channels.Clear();

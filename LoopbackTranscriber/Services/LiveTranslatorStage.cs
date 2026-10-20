@@ -2,7 +2,7 @@ namespace LoopbackTranscriber.Services;
 
 internal sealed record TranslatedDraft(string Original, string Translation);
 
-internal sealed class LiveTranslatorStage
+internal sealed class LiveTranslatorStage : IDisposable
 {
     private const int MaxQueuedTranslations = 6;
 
@@ -179,7 +179,7 @@ internal sealed class LiveTranslatorStage
 
     public void CompleteInput() => _mailbox.Complete();
 
-    public void DisposeWorker() => _worker.Dispose();
+    public void Dispose() => _worker.Dispose();
 
     public LiveTranslationMetrics[] SnapshotMetrics()
     {

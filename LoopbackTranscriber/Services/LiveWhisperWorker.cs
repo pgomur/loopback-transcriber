@@ -236,7 +236,7 @@ internal sealed class LiveWorkerClient : IDisposable
             try
             {
                 await _stdin!.WriteLineAsync(buildRequestLine(id)).ConfigureAwait(false);
-                await _stdin.FlushAsync().ConfigureAwait(false);
+                await _stdin.FlushAsync(CancellationToken.None).ConfigureAwait(false);
             }
             finally
             {

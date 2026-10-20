@@ -251,7 +251,7 @@ public sealed class CaptureCoordinator : IDisposable
             return new PreserveOutcome(saved, KeepOriginals: false, TempFolder: null);
         }
 
-        return new PreserveOutcome(null, KeepOriginals: true, TempFolder: Path.GetDirectoryName(stopped.AllWavPaths.FirstOrDefault()));
+        return new PreserveOutcome(null, KeepOriginals: true, TempFolder: stopped.AllWavPaths.Count > 0 ? Path.GetDirectoryName(stopped.AllWavPaths[0]) : null);
     }
 
     public void DeleteOriginals(StoppedRecording? stopped)

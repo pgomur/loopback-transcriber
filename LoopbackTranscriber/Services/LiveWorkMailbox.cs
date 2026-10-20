@@ -6,7 +6,8 @@ namespace LoopbackTranscriber.Services;
 internal sealed class LiveWorkMailbox<TItem, TDraft> where TDraft : class
 {
     private readonly Channel<TItem> _items;
-    private readonly SemaphoreSlim _signal = new(0, 1);
+    private readonly Channel<bool> _signal = Channel.CreateBounded<bool>(
+        new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite, SingleReader = true });
     private TDraft? _draft;
     private int _dropped;
 
@@ -54,18 +55,10 @@ internal sealed class LiveWorkMailbox<TItem, TDraft> where TDraft : class
 
     public void ClearDraft() => Interlocked.Exchange(ref _draft, null);
 
-    public Task WaitAsync(CancellationToken cancellationToken) => _signal.WaitAsync(cancellationToken);
+    public async Task WaitAsync(CancellationToken cancellationToken) =>
+        await _signal.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
 
-    public void Signal()
-    {
-        try
-        {
-            _signal.Release();
-        }
-        catch (SemaphoreFullException)
-        {
-        }
-    }
+    public void Signal() => _signal.Writer.TryWrite(true);
 
     public void Complete()
     {

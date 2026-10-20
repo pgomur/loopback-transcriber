@@ -19,7 +19,7 @@ using TextBlock = System.Windows.Controls.TextBlock;
 namespace LoopbackTranscriber
 {
 
-    public partial class MainWindow
+    public sealed partial class MainWindow : IDisposable
     {
         private static readonly Brush FirstRunTitleBarBrush = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D));
 
@@ -32,6 +32,7 @@ namespace LoopbackTranscriber
         private TrayIconService? _trayIcon;
         private Views.TrayMenuWindow? _trayMenu;
         private bool _allowClose;
+        private bool _disposed;
         private bool _closingAfterCrash;
         private bool _hiddenToTray;
         private WindowState _stateBeforeMinimize = WindowState.Normal;
@@ -106,9 +107,7 @@ namespace LoopbackTranscriber
                 Strings.Instance.LanguageChanged -= OnTrayLanguageChanged;
                 Application.Current.SessionEnding -= OnSessionEnding;
                 _trayMenu?.CloseMenu();
-                _trayIcon?.Dispose();
-                _trayIcon = null;
-                _backgroundTrimmer.Dispose();
+                Dispose();
                 _viewModel.Targets.Items.CollectionChanged -= OnTargetsCollectionChanged;
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
                 _viewModel.Recording.PropertyChanged -= OnViewModelPropertyChanged;
@@ -118,6 +117,19 @@ namespace LoopbackTranscriber
                 CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Unregister<TranslucentUiChangedMessage>(messenger, this);
                 Strings.Instance.LanguageChanged -= OnAppLanguageChangedForCalendar;
             };
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _trayIcon?.Dispose();
+            _trayIcon = null;
+            _backgroundTrimmer.Dispose();
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

@@ -36,7 +36,7 @@ public sealed class AppSettings
 
     public string UiLanguage { get; set; } = DetectSystemLanguage();
 
-    public bool TranslucentUi { get; set; } = false;
+    public bool TranslucentUi { get; set; }
 
     public string UserName { get; set; } = string.Empty;
 

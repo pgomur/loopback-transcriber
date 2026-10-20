@@ -97,7 +97,7 @@ namespace LoopbackTranscriber
             Activate();
         }
 
-        private void ExitFromTray() => TrayMenuViewModel.RunAction(ExitFromTrayAsync);
+        private void ExitFromTray() => _trayMenuViewModel.TryRunExit(ExitFromTrayAsync);
 
         private async Task ExitFromTrayAsync()
         {
