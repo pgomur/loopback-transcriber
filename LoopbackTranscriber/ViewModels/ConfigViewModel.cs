@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.ViewModels;
 
-public partial class ConfigViewModel : ObservableObject
+public sealed partial class ConfigViewModel : ObservableObject, IDisposable
 {
     private readonly ISettingsStore _settingsService;
     private readonly IWhisperTranscriber _whisper;
@@ -106,6 +107,7 @@ public partial class ConfigViewModel : ObservableObject
 
     private readonly IMessenger _messenger;
     private readonly IUiDispatcher _dispatcher;
+    private readonly DispatcherTimer _userNameSaveTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
 
     public ConfigViewModel(ISettingsStore settingsService, IWhisperTranscriber whisper, ISummarizer summarizer,
         IMessenger messenger, IUiDispatcher dispatcher)
@@ -116,7 +118,7 @@ public partial class ConfigViewModel : ObservableObject
         _whisper = whisper;
         _summarizer = summarizer;
 
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         _modelsFolder = settings.ModelsFolder;
         _transcriptsFolder = settings.TranscriptsFolder;
         _uiLanguage = AvailableUiLanguages.Any(l => string.Equals(l.Code, settings.UiLanguage, StringComparison.OrdinalIgnoreCase))
@@ -130,6 +132,7 @@ public partial class ConfigViewModel : ObservableObject
         _userName = settings.UserName ?? string.Empty;
 
         Strings.Instance.LanguageChanged += OnAppLanguageChanged;
+        _userNameSaveTimer.Tick += (_, _) => SaveSettings();
 
         RefreshModelStatus();
         RefreshSummaryModelStatus();
@@ -186,19 +189,39 @@ public partial class ConfigViewModel : ObservableObject
 
     private void SaveSettings()
     {
-        var settings = _settingsService.Load();
-        settings.ModelSize = FixedModelSize;
-        settings.ModelsFolder = ModelsFolder;
-        settings.TranscriptsFolder = TranscriptsFolder;
-        settings.UiLanguage = UiLanguage;
-        settings.MeetingLanguage = _meetingLanguageFollowsUi ? string.Empty : MeetingLanguage ?? string.Empty;
-        settings.TranslucentUi = TranslucentUi;
-        settings.UserName = (UserName ?? string.Empty).Trim();
-
-        _settingsService.Save(settings);
+        _userNameSaveTimer.Stop();
+        _settingsService.Update(settings =>
+        {
+            settings.ModelSize = FixedModelSize;
+            settings.ModelsFolder = ModelsFolder;
+            settings.TranscriptsFolder = TranscriptsFolder;
+            settings.UiLanguage = UiLanguage;
+            settings.MeetingLanguage = _meetingLanguageFollowsUi ? string.Empty : MeetingLanguage ?? string.Empty;
+            settings.TranslucentUi = TranslucentUi;
+            settings.UserName = (UserName ?? string.Empty).Trim();
+        });
     }
 
-    partial void OnUserNameChanged(string value) => SaveSettings();
+    partial void OnUserNameChanged(string value)
+    {
+        _userNameSaveTimer.Stop();
+        _userNameSaveTimer.Start();
+    }
+
+    public void FlushPendingChanges()
+    {
+        if (_userNameSaveTimer.IsEnabled)
+        {
+            SaveSettings();
+        }
+    }
+
+    public void Dispose()
+    {
+        FlushPendingChanges();
+        StopWatchingModelsFolder();
+        Strings.Instance.LanguageChanged -= OnAppLanguageChanged;
+    }
 
     partial void OnModelsFolderChanged(string value)
     {

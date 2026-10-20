@@ -111,7 +111,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IDisposable
         TranscriptHistory.Clear();
         HasSelectedHistoryItems = false;
 
-        var settings = _settings.Load();
+        var settings = _settings.Snapshot();
         _folderWatcher.Watch(settings.TranscriptsFolder);
 
         foreach (var item in _historyService.LoadFromDisk(settings.TranscriptsFolder))
@@ -240,7 +240,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenTranscriptsFolder()
     {
-        var settings = _settings.Load();
+        var settings = _settings.Snapshot();
         Directory.CreateDirectory(settings.TranscriptsFolder);
         Process.Start(new ProcessStartInfo(settings.TranscriptsFolder) { UseShellExecute = true });
     }

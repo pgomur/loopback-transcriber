@@ -65,7 +65,7 @@ public partial class ApplicationsViewModel : ObservableObject
     private void RefreshAddedApps()
     {
         AddedApps.Clear();
-        var transcriptsFolder = _settingsService.Load().TranscriptsFolder;
+        var transcriptsFolder = _settingsService.Snapshot().TranscriptsFolder;
         foreach (var app in TargetApp.All)
         {
             AddedApps.Add(new AddedAppItem
@@ -146,7 +146,7 @@ public partial class ApplicationsViewModel : ObservableObject
             return;
         }
 
-        if (_transcriptHistoryService.HasTranscripts(_settingsService.Load().TranscriptsFolder, item.DisplayName))
+        if (_transcriptHistoryService.HasTranscripts(_settingsService.Snapshot().TranscriptsFolder, item.DisplayName))
         {
             RefreshFromDisk();
             return;

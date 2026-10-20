@@ -230,7 +230,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
 
     private bool TryBeginPreserve(out string appName, out DateTime recordedAt)
     {
-        appName = _selectedTarget?.DisplayName ?? "reunion";
+        appName = _selectedTarget?.DisplayName ?? RecordingNames.DefaultAppName;
         recordedAt = _recordingStartedAt;
 
         if (!IsRecording)
@@ -271,19 +271,38 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         return preserved.Value;
     }
 
+    private static readonly TimeSpan OrphanRetryDelay = TimeSpan.FromSeconds(30);
+    private const int OrphanRecoveryAttempts = 4;
+
     public async Task RecoverOrphanRecordingsAsync()
     {
         try
         {
-            var result = await Task.Run(_workflow.RecoverOrphans);
-            if (result.Recovered.Count > 0)
+            for (var attempt = 1; ; attempt++)
             {
-                RefreshFailedRecordings();
-            }
+                var result = await Task.Run(_workflow.RecoverOrphans);
+                if (result.Recovered.Count > 0)
+                {
+                    RefreshFailedRecordings();
+                }
 
-            foreach (var failed in result.Failed)
-            {
-                _notices?.Add(UserMessage.FromKey("NoticeOrphanRecoveryFailed", failed));
+                foreach (var failed in result.Failed)
+                {
+                    _notices?.Add(UserMessage.FromKey("NoticeOrphanRecoveryFailed", failed));
+                }
+
+                if (result.Deferred == 0)
+                {
+                    return;
+                }
+
+                if (attempt == OrphanRecoveryAttempts)
+                {
+                    AppLog.Info($"RecordingViewModel.RecoverOrphanRecordingsAsync: {result.Deferred} interrupted recording(s) still in use; they will be recovered on next startup");
+                    return;
+                }
+
+                await Task.Delay(OrphanRetryDelay);
             }
         }
         catch (Exception ex)
@@ -356,7 +375,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         ToggleRecordingCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(RecordButtonText));
 
-        var appName = _selectedTarget?.DisplayName ?? "reunion";
+        var appName = _selectedTarget?.DisplayName ?? RecordingNames.DefaultAppName;
         var recordedAt = _recordingStartedAt;
 
         try
@@ -415,7 +434,9 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         FailedRecordings.Clear();
         if (appName is not null)
         {
-            foreach (var recording in _allFailedRecordings.Where(r => string.Equals(r.AppName, appName, StringComparison.OrdinalIgnoreCase)))
+            foreach (var recording in _allFailedRecordings.Where(r =>
+                         string.Equals(r.AppName, appName, StringComparison.OrdinalIgnoreCase)
+                         || RecordingNames.IsDefaultAppName(r.AppName)))
             {
                 FailedRecordings.Add(new FailedRecordingItem(recording));
             }

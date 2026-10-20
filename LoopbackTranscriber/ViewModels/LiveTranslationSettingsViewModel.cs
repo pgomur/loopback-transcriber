@@ -41,7 +41,7 @@ public partial class LiveTranslationSettingsViewModel : ObservableObject
         _settingsService = settingsService;
         _messenger = messenger ?? WeakReferenceMessenger.Default;
 
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         _liveTranslationLanguage = LiveTranslationPreferences.ResolveLanguage(settings, Strings.Instance.Language);
         _liveShowOriginal = settings.LiveShowOriginal;
         _liveShowMetrics = settings.LiveShowMetrics;
@@ -150,7 +150,7 @@ public partial class LiveTranslationSettingsViewModel : ObservableObject
             return;
         }
 
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         var language = LiveTranslationLanguage ?? string.Empty;
         var textSize = LiveTranslationPreferences.ClampTextSize(LiveTextSize);
         var opacity = LiveTranslationPreferences.ClampOpacity(LiveWindowOpacity);
@@ -164,19 +164,23 @@ public partial class LiveTranslationSettingsViewModel : ObservableObject
             return;
         }
 
-        settings.LiveTranslationLanguage = language;
-        settings.LiveShowOriginal = LiveShowOriginal;
-        settings.LiveShowMetrics = LiveShowMetrics;
-        settings.LiveTextSize = textSize;
-        settings.LiveWindowOpacity = opacity;
-        _settingsService.Save(settings);
+        var showOriginal = LiveShowOriginal;
+        var showMetrics = LiveShowMetrics;
+        _settingsService.Update(updated =>
+        {
+            updated.LiveTranslationLanguage = language;
+            updated.LiveShowOriginal = showOriginal;
+            updated.LiveShowMetrics = showMetrics;
+            updated.LiveTextSize = textSize;
+            updated.LiveWindowOpacity = opacity;
+        });
 
         _messenger.Send(new LiveTranslationPreferencesChangedMessage());
     }
 
     private void ApplyFromSettings()
     {
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
 
         _applying = true;
         try

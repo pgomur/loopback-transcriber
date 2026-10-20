@@ -38,14 +38,12 @@ public sealed class TrayMenuViewModel
 
     public bool TryConsumeTrayHint()
     {
-        var settings = _settings.Load();
-        if (settings.TrayHintShown)
+        if (_settings.Snapshot().TrayHintShown)
         {
             return false;
         }
 
-        settings.TrayHintShown = true;
-        _settings.Save(settings);
+        _settings.Update(settings => settings.TrayHintShown = true);
         return true;
     }
 

@@ -57,7 +57,7 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
         _openMainWindow = openMainWindow;
         _wasBusy = host.IsBusy;
 
-        var initialSettings = settingsService.Load();
+        var initialSettings = settingsService.Snapshot();
         var saved = initialSettings.LiveTranslationLanguage;
         _windowOpacity = Math.Clamp(initialSettings.LiveWindowOpacity, MinWindowOpacity, 1.0);
         _showOriginal = initialSettings.LiveShowOriginal;
@@ -242,11 +242,10 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
 
             if (!_applyingSettings)
             {
-                var settings = _settingsService.Load();
+                var settings = _settingsService.Snapshot();
                 if (!string.Equals(settings.LiveTranslationLanguage, value, StringComparison.Ordinal))
                 {
-                    settings.LiveTranslationLanguage = value;
-                    _settingsService.Save(settings);
+                    _settingsService.Update(updated => updated.LiveTranslationLanguage = value);
                     _messenger.Send(new LiveTranslationPreferencesChangedMessage());
                 }
             }
@@ -272,21 +271,21 @@ public sealed class LiveTranslationViewModel : ObservableObject, IDisposable
 
     public void SaveWindowOpacity()
     {
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         if (Math.Abs(settings.LiveWindowOpacity - WindowOpacity) < 0.0001)
         {
             return;
         }
 
-        settings.LiveWindowOpacity = WindowOpacity;
-        _settingsService.Save(settings);
+        var opacity = WindowOpacity;
+        _settingsService.Update(updated => updated.LiveWindowOpacity = opacity);
         _messenger.Send(new LiveTranslationPreferencesChangedMessage());
     }
 
 
     private void ApplySettings()
     {
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
 
         _applyingSettings = true;
         try

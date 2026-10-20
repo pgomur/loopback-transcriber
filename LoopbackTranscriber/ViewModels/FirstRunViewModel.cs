@@ -90,7 +90,7 @@ public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
 
     private void RefreshModelStatus()
     {
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         var path = new AppSettings { ModelSize = FixedModelSize, ModelsFolder = settings.ModelsFolder }.GetModelFilePath();
 
         if (File.Exists(path))
@@ -110,7 +110,7 @@ public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
 
     private void RefreshSummaryModelStatus()
     {
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         var path = new AppSettings { ModelsFolder = settings.ModelsFolder }.GetSummaryModelFilePath();
 
         if (File.Exists(path))
@@ -174,7 +174,7 @@ public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
         _modelDownloadCts = new CancellationTokenSource();
         try
         {
-            var settings = _settingsService.Load();
+            var settings = _settingsService.Snapshot();
             var modelSettings = new AppSettings { ModelSize = FixedModelSize, ModelsFolder = settings.ModelsFolder };
             var progress = new Progress<UserMessage>(message => DownloadStatus = message.Localize());
             var percentProgress = new Progress<double>(percent =>
@@ -197,7 +197,7 @@ public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
             {
                 _modelDownloadDiscardRequested = false;
 
-                var settings = _settingsService.Load();
+                var settings = _settingsService.Snapshot();
                 var modelPath = new AppSettings { ModelSize = FixedModelSize, ModelsFolder = settings.ModelsFolder }.GetModelFilePath();
                 WhisperTranscriptionService.DiscardPartialDownload(modelPath);
 
@@ -238,7 +238,7 @@ public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
         _summaryModelDownloadCts = new CancellationTokenSource();
         try
         {
-            var settings = _settingsService.Load();
+            var settings = _settingsService.Snapshot();
             var modelSettings = new AppSettings { ModelsFolder = settings.ModelsFolder };
             var progress = new Progress<UserMessage>(message => SummaryDownloadStatus = message.Localize());
             var percentProgress = new Progress<double>(percent =>
@@ -261,7 +261,7 @@ public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
             {
                 _summaryModelDownloadDiscardRequested = false;
 
-                var settings = _settingsService.Load();
+                var settings = _settingsService.Snapshot();
                 var summaryPath = new AppSettings { ModelsFolder = settings.ModelsFolder }.GetSummaryModelFilePath();
                 SummarizationService.DiscardPartialDownload(summaryPath);
 
@@ -333,7 +333,7 @@ public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         var modelPath = new AppSettings { ModelSize = FixedModelSize, ModelsFolder = settings.ModelsFolder }.GetModelFilePath();
         WhisperTranscriptionService.DiscardPartialDownload(modelPath);
 
@@ -352,7 +352,7 @@ public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         var summaryPath = new AppSettings { ModelsFolder = settings.ModelsFolder }.GetSummaryModelFilePath();
         SummarizationService.DiscardPartialDownload(summaryPath);
 

@@ -88,7 +88,7 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
 
     public void RefreshSummaryModelAvailability()
     {
-        IsSummaryModelAvailable = File.Exists(_settings.Load().GetSummaryModelFilePath());
+        IsSummaryModelAvailable = File.Exists(_settings.Snapshot().GetSummaryModelFilePath());
     }
 
     partial void OnIsShowingSummaryTabChanged(bool value)
@@ -198,7 +198,11 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
         }
     }
 
-    public void RefreshLanguage() => ViewedSummarySections = SummaryFormatter.Parse(ViewedSummaryText);
+    public void RefreshLanguage()
+    {
+        ViewedSummarySections = SummaryFormatter.Parse(ViewedSummaryText);
+        TranscriptMessages = TranscriptMessageParser.Parse(TranscriptText);
+    }
 
     private string? _viewedFilePath;
 
@@ -361,7 +365,7 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var settings = _settings.Load();
+        var settings = _settings.Snapshot();
         var modelPath = settings.GetSummaryModelFilePath();
 
         if (!File.Exists(modelPath))

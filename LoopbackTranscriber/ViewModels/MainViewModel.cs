@@ -65,7 +65,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void InitializeFirstRunOrShowApp()
     {
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
 
         var transcriptionModelPath = new AppSettings { ModelSize = "turbo", ModelsFolder = settings.ModelsFolder }.GetModelFilePath();
         var summaryModelPath = new AppSettings { ModelsFolder = settings.ModelsFolder }.GetSummaryModelFilePath();
@@ -74,8 +74,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!settings.FirstRunSetupCompleted)
             {
-                settings.FirstRunSetupCompleted = true;
-                _settingsService.Save(settings);
+                _settingsService.Update(updated => updated.FirstRunSetupCompleted = true);
             }
 
             Targets.SelectFirstIfNone();

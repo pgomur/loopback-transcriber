@@ -45,8 +45,14 @@ public sealed partial class MainViewModel
 
     public bool IsLiveSettingsViewActive => CurrentView == MainViewMode.LiveTranslation;
 
-    partial void OnCurrentViewChanged(MainViewMode value)
+    partial void OnCurrentViewChanged(MainViewMode oldValue, MainViewMode newValue)
     {
+        if (oldValue == MainViewMode.Config)
+        {
+            ConfigViewModel?.FlushPendingChanges();
+        }
+
+        var value = newValue;
         OnPropertyChanged(nameof(IsFirstRunActive));
         OnPropertyChanged(nameof(IsAppViewActive));
         OnPropertyChanged(nameof(IsHistoryViewActive));
@@ -80,9 +86,7 @@ public sealed partial class MainViewModel
 
     private void OnFirstRunSetupCompleted(object? sender, EventArgs e)
     {
-        var settings = _settingsService.Load();
-        settings.FirstRunSetupCompleted = true;
-        _settingsService.Save(settings);
+        _settingsService.Update(settings => settings.FirstRunSetupCompleted = true);
 
         ShowConfig();
     }

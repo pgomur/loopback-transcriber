@@ -48,7 +48,7 @@ internal sealed class LiveSessionController : IDisposable
 
     public bool Start(string targetLanguageName, Func<bool> showOriginal)
     {
-        var settings = _settings.Load();
+        var settings = _settings.Snapshot();
         var modelPath = settings.GetModelFilePath();
 
         _model.Reset();
