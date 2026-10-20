@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.ViewModels;
 
-public partial class MainViewModel : ObservableObject, IDisposable
+public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IPageFactory _pages;
     private readonly ISettingsStore _settingsService;

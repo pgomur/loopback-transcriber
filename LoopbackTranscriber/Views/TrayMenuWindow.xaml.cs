@@ -76,7 +76,7 @@ public partial class TrayMenuWindow : Window
         _handle = handle;
         _openForeground = User32.GetForegroundWindow();
 
-        User32.SetWindowLong(handle, User32.GwlExStyle,
+        _ = User32.SetWindowLong(handle, User32.GwlExStyle,
             User32.GetWindowLong(handle, User32.GwlExStyle) | User32.WsExNoActivate | User32.WsExToolWindow);
 
         Opacity = 0;
@@ -128,7 +128,7 @@ public partial class TrayMenuWindow : Window
     {
         if (nCode >= 0)
         {
-            var message = (int)wParam;
+            var message = (int)wParam.ToInt64();
 
             if (message is User32.WmLButtonDown or User32.WmRButtonDown or User32.WmMButtonDown or User32.WmXButtonDown)
             {
@@ -170,7 +170,7 @@ public partial class TrayMenuWindow : Window
         }
     }
 
-    private UIElement CreateRow(TrayMenuEntry entry)
+    private Border CreateRow(TrayMenuEntry entry)
     {
         if (entry.IsSeparator)
         {
@@ -295,7 +295,7 @@ public partial class TrayMenuWindow : Window
         return null;
     }
 
-    private static UIElement CreateRecordGlyph(bool isStop)
+    private static Grid CreateRecordGlyph(bool isStop)
     {
         var glyph = new Grid
         {
@@ -338,7 +338,7 @@ public partial class TrayMenuWindow : Window
         return glyph;
     }
 
-    private static Brush CreateFrozenBrush(Color color)
+    private static SolidColorBrush CreateFrozenBrush(Color color)
     {
         var brush = new SolidColorBrush(color);
         brush.Freeze();

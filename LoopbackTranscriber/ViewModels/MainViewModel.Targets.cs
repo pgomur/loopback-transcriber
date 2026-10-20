@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.ViewModels;
 
-public partial class MainViewModel
+public sealed partial class MainViewModel
 {
     private void OnTargetStatusesSynced()
     {

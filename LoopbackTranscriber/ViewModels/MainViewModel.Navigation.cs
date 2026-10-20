@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.ViewModels;
 
-public partial class MainViewModel
+public sealed partial class MainViewModel
 {
     [ObservableProperty]
     private MainViewMode _currentView = MainViewMode.AppView;

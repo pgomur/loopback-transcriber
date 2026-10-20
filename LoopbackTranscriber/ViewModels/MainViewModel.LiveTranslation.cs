@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace LoopbackTranscriber.ViewModels;
 
-public partial class MainViewModel
+public sealed partial class MainViewModel
 {
     public event EventHandler<TargetItemViewModel>? LiveTranslationToggleRequested;
 

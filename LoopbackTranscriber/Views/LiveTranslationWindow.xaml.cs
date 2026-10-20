@@ -11,6 +11,7 @@ public partial class LiveTranslationWindow : Window
     public LiveTranslationWindow()
     {
         InitializeComponent();
+        OpacityPopup.CustomPopupPlacementCallback = OnOpacityPopupPlacement;
     }
 
     private void OnHeaderMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -39,7 +40,7 @@ public partial class LiveTranslationWindow : Window
 
     private void OnOpacityClick(object sender, RoutedEventArgs e) => OpacityPopup.IsOpen = true;
 
-    private CustomPopupPlacement[] OnOpacityPopupPlacement(Size popupSize, Size targetSize, Point offset) =>
+    private static CustomPopupPlacement[] OnOpacityPopupPlacement(Size popupSize, Size targetSize, Point offset) =>
         new[]
         {
             new CustomPopupPlacement(new Point(targetSize.Width - popupSize.Width, targetSize.Height), PopupPrimaryAxis.None)
