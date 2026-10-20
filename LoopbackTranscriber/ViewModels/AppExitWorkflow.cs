@@ -6,6 +6,7 @@ namespace LoopbackTranscriber.ViewModels;
 public sealed class AppExitWorkflow
 {
     private static readonly TimeSpan PreserveTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan PendingStartTimeout = TimeSpan.FromSeconds(10);
 
     private readonly RecordingViewModel _recording;
     private readonly IRecordingHost _host;
@@ -24,6 +25,16 @@ public sealed class AppExitWorkflow
         if (_exitPending)
         {
             return false;
+        }
+
+        _exitPending = true;
+        try
+        {
+            await _recording.WaitForPendingStartAsync(PendingStartTimeout);
+        }
+        finally
+        {
+            _exitPending = false;
         }
 
         if (_recording.IsRecording)
@@ -52,7 +63,15 @@ public sealed class AppExitWorkflow
 
             if (_recording.IsRecording)
             {
-                _recording.PreserveInterruptedRecording(PreserveTimeout);
+                _exitPending = true;
+                try
+                {
+                    await _recording.PreserveInterruptedRecordingAsync(PreserveTimeout);
+                }
+                finally
+                {
+                    _exitPending = false;
+                }
             }
         }
         else if (_recording.IsBusy)

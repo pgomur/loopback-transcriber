@@ -35,6 +35,8 @@ public sealed partial class HistorySearchState : ObservableObject
 
     public HashSet<string>? Matches { get; private set; }
 
+    public bool SearchFailed { get; private set; }
+
     partial void OnTextChanged(string value)
     {
         _debounceTimer.Stop();
@@ -65,12 +67,13 @@ public sealed partial class HistorySearchState : ObservableObject
 
     private void ClearMatches()
     {
-        if (Matches is null)
+        if (Matches is null && !SearchFailed)
         {
             return;
         }
 
         Matches = null;
+        SearchFailed = false;
         _onChanged();
     }
 
@@ -86,6 +89,9 @@ public sealed partial class HistorySearchState : ObservableObject
         catch (Exception ex)
         {
             AppLog.Warn("HistorySearchState.RunSearchAsync: history search failed", ex);
+            Matches = [];
+            SearchFailed = true;
+            _onChanged();
         }
     }
 
@@ -120,6 +126,7 @@ public sealed partial class HistorySearchState : ObservableObject
         }
 
         Matches = matches;
+        SearchFailed = false;
         _onChanged();
     }
 
@@ -199,7 +206,7 @@ public sealed partial class HistorySearchState : ObservableObject
         {
             return File.ReadAllText(path);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"HistorySearchState: could not read \"{path}\" for searching", ex);
             return null;

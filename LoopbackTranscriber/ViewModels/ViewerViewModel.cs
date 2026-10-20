@@ -88,14 +88,7 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
 
     public void RefreshSummaryModelAvailability()
     {
-        try
-        {
-            IsSummaryModelAvailable = File.Exists(_settings.Load().GetSummaryModelFilePath());
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("ViewerViewModel.RefreshSummaryModelAvailability: could not check the summary model", ex);
-        }
+        IsSummaryModelAvailable = File.Exists(_settings.Load().GetSummaryModelFilePath());
     }
 
     partial void OnIsShowingSummaryTabChanged(bool value)
@@ -151,10 +144,11 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
                 ? File.ReadAllText(item.FilePath)
                 : item.Preview;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
-            AppLog.Warn($"ViewerViewModel.ViewHistoryTranscript: could not read \"{item.FilePath}\"; showing the summary", ex);
-            TranscriptText = item.Preview;
+            AppLog.Warn($"ViewerViewModel.ViewHistoryTranscript: could not read \"{item.FilePath}\"", ex);
+            TranscriptText = string.Empty;
+            _dialogs.ShowError(Strings.Instance.Format("ErrorTranscriptUnreadable", ex.ToUserMessage()), Strings.Instance.Get("ErrorTitle"));
         }
     }
 
@@ -381,10 +375,11 @@ public sealed partial class ViewerViewModel : ObservableObject, IDisposable
         {
             transcriptText = File.Exists(item.FilePath) ? await File.ReadAllTextAsync(item.FilePath) : item.Preview;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"ViewerViewModel.GenerateSummaryAsync: could not read \"{item.FilePath}\"", ex);
-            transcriptText = item.Preview;
+            _dialogs.ShowError(Strings.Instance.Format("ErrorTranscriptUnreadable", ex.ToUserMessage()), Strings.Instance.Get("ErrorTitle"));
+            return;
         }
 
         item.SummaryProgressPercent = 0;

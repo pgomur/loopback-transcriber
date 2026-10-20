@@ -1,3 +1,4 @@
+using System.Globalization;
 using LoopbackTranscriber.Services;
 
 namespace LoopbackTranscriber.ViewModels;
@@ -8,7 +9,7 @@ public sealed class FailedRecordingItem(FailedRecording recording)
 
     public string DetailText => FailedRecording.Duration is { } duration
         ? $"{FailedRecording.RecordedAt:g} · {FormatDuration(duration)}"
-        : FailedRecording.RecordedAt.ToString("g");
+        : FailedRecording.RecordedAt.ToString("g", CultureInfo.CurrentCulture);
 
     public string ReasonText => FailedRecording.ErrorKey is { } key
         ? Strings.Instance.Format(key, FailedRecording.ErrorArgs ?? Array.Empty<string>())
@@ -17,5 +18,5 @@ public sealed class FailedRecordingItem(FailedRecording recording)
     public bool HasReason => !string.IsNullOrWhiteSpace(FailedRecording.Error);
 
     private static string FormatDuration(TimeSpan duration) =>
-        duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"m\:ss");
+        duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss", CultureInfo.CurrentCulture) : duration.ToString(@"m\:ss", CultureInfo.CurrentCulture);
 }

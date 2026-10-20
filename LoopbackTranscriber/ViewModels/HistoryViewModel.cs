@@ -60,9 +60,13 @@ public sealed partial class HistoryViewModel : ObservableObject, IDisposable
 
     public HistoryFilterState AppFilter { get; }
 
-    public bool ShowHistoryNoResults => HistorySearch.Matches is not null && FilteredTranscriptHistory.Count == 0;
+    public bool ShowHistoryNoResults => HistorySearch.Matches is not null && FilteredTranscriptHistory.Count == 0 && !HistorySearch.SearchFailed;
 
-    public bool ShowAppHistoryNoResults => AppHistorySearch.Matches is not null && AppTranscriptHistory.Count == 0;
+    public bool ShowHistorySearchFailed => HistorySearch.SearchFailed;
+
+    public bool ShowAppHistoryNoResults => AppHistorySearch.Matches is not null && AppTranscriptHistory.Count == 0 && !AppHistorySearch.SearchFailed;
+
+    public bool ShowAppHistorySearchFailed => AppHistorySearch.SearchFailed;
 
     [ObservableProperty]
     private bool _hasSelectedAppHistoryItems;
@@ -162,6 +166,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IDisposable
 
         HasSelectedHistoryItems = FilteredTranscriptHistory.Any(i => i.IsSelected);
         OnPropertyChanged(nameof(ShowHistoryNoResults));
+        OnPropertyChanged(nameof(ShowHistorySearchFailed));
         NotifyDeleteAvailabilityChanged();
     }
 
@@ -174,6 +179,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IDisposable
 
         AppTranscriptHistory.Clear();
         HasSelectedAppHistoryItems = false;
+        OnPropertyChanged(nameof(ShowAppHistorySearchFailed));
 
         if (_selectedAppName is null)
         {

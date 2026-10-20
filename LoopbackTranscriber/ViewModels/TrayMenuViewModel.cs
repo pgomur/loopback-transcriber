@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.Input;
 using LoopbackTranscriber.Services;
 
 namespace LoopbackTranscriber.ViewModels;
@@ -19,7 +20,16 @@ public sealed class TrayMenuViewModel
         _shell = shell;
         _host = host;
         _settings = settings;
+
+        RecordingActionCommand = CreateExclusiveCommand("recording");
+        ExitCommand = CreateExclusiveCommand("exit");
     }
+
+    public IAsyncRelayCommand<Func<Task>> RecordingActionCommand { get; }
+
+    public IAsyncRelayCommand<Func<Task>> ExitCommand { get; }
+
+    public bool TryRunExit(Func<Task> exit) => TryRun(ExitCommand, exit);
 
     public string Tooltip =>
         _shell.Recording.IsRecording && _shell.Targets.SelectedTarget is { } target
@@ -62,12 +72,12 @@ public sealed class TrayMenuViewModel
                     LiveText: () => recording.ElapsedText));
                 entries.Add(new(
                     Strings.Instance.Format("TrayStopRecording", recordingName),
-                    recording.CanToggleRecording,
-                    () =>
+                    recording.CanToggleRecording && !RecordingActionCommand.IsRunning,
+                    () => TryRun(RecordingActionCommand, () =>
                     {
                         actions.RestoreWindow();
-                        RunAction(_host.StopRecordingAsync);
-                    },
+                        return _host.StopRecordingAsync();
+                    }),
                     Icon: TrayMenuEntry.StopGlyph));
             }
             else
@@ -77,8 +87,8 @@ public sealed class TrayMenuViewModel
                     var captured = target;
                     entries.Add(new(
                         Strings.Instance.Format("TrayStartRecording", captured.DisplayName),
-                        _host.CanStartRecordingFor(captured),
-                        () => RunAction(() => _host.StartRecordingForAsync(captured)),
+                        _host.CanStartRecordingFor(captured) && !RecordingActionCommand.IsRunning,
+                        () => TryRun(RecordingActionCommand, () => _host.StartRecordingForAsync(captured)),
                         Icon: TrayMenuEntry.RecordGlyph));
                 }
 
@@ -112,19 +122,33 @@ public sealed class TrayMenuViewModel
             entries.Add(TrayMenuEntry.Separator);
         }
 
-        entries.Add(new(Strings.Instance.Get("TrayExit"), true, actions.Exit, Icon: "ArrowExit20"));
+        entries.Add(new(Strings.Instance.Get("TrayExit"), !ExitCommand.IsRunning, actions.Exit, Icon: "ArrowExit20"));
         return entries;
     }
 
-    public static async void RunAction(Func<Task> action)
+    private static bool TryRun(IAsyncRelayCommand<Func<Task>> command, Func<Task> action)
     {
-        try
+        if (!command.CanExecute(action))
         {
-            await action();
+            AppLog.Info("TrayMenuViewModel: ignored a tray action because the previous one is still running");
+            return false;
         }
-        catch (Exception ex)
-        {
-            AppLog.Warn("TrayMenuViewModel.RunAction: tray action failed", ex);
-        }
+
+        command.Execute(action);
+        return true;
     }
+
+    // Not bound from XAML: used as a "one action at a time" gate, for its CanExecute/IsRunning.
+    private static AsyncRelayCommand<Func<Task>> CreateExclusiveCommand(string name) =>
+        new(async action =>
+        {
+            try
+            {
+                await action!();
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn($"TrayMenuViewModel: the tray {name} action failed", ex);
+            }
+        }, action => action is not null);
 }

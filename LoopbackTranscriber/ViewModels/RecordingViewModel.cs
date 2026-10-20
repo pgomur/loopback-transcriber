@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,6 +13,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
     private readonly RecordingWorkflow _workflow;
     private readonly IDialogService _dialogs;
     private readonly IMessenger _messenger;
+    private readonly UserNotices? _notices;
     private readonly DispatcherTimer _elapsedTimer;
     private DateTime _recordingStartedAt;
     private TargetItemViewModel? _selectedTarget;
@@ -19,11 +21,13 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
     public RecordingViewModel(
         RecordingWorkflow workflow,
         IDialogService dialogs,
-        IMessenger messenger)
+        IMessenger messenger,
+        UserNotices? notices = null)
     {
         _workflow = workflow;
         _dialogs = dialogs;
         _messenger = messenger;
+        _notices = notices;
 
         _workflow.AudioCaptured += OnAudioCaptured;
         _messenger.Register<RecordingViewModel, TargetSelectionChangedMessage>(this, static (recipient, message) => recipient.OnTargetSelected(message.Target));
@@ -33,7 +37,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         _elapsedTimer.Tick += (_, _) =>
         {
             var elapsed = DateTime.Now - _recordingStartedAt;
-            ElapsedText = elapsed.TotalHours >= 1 ? elapsed.ToString(@"h\:mm\:ss") : elapsed.ToString(@"mm\:ss");
+            ElapsedText = elapsed.TotalHours >= 1 ? elapsed.ToString(@"h\:mm\:ss", CultureInfo.CurrentCulture) : elapsed.ToString(@"mm\:ss", CultureInfo.CurrentCulture);
         };
 
         RefreshFailedRecordings();
@@ -109,6 +113,13 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
     }
 
     [ObservableProperty]
+    private string? _recordingWarning;
+
+    public bool HasRecordingWarning => !string.IsNullOrEmpty(RecordingWarning);
+
+    partial void OnRecordingWarningChanged(string? value) => OnPropertyChanged(nameof(HasRecordingWarning));
+
+    [ObservableProperty]
     private bool _isRecording;
 
     [ObservableProperty]
@@ -180,56 +191,119 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
     }
 
+    public async Task<bool> PreserveInterruptedRecordingAsync(TimeSpan timeout)
+    {
+        if (!TryBeginPreserve(out var appName, out var recordedAt))
+        {
+            return false;
+        }
+
+        bool? preserved;
+        try
+        {
+            preserved = await PreserveCoreAsync(appName, recordedAt).WaitAsync(timeout);
+        }
+        catch (TimeoutException)
+        {
+            preserved = null;
+        }
+
+        return EndPreserve(preserved);
+    }
+
+    /// <summary>
+    /// Only for callers that cannot await (unhandled-exception handler, Windows session ending).
+    /// The work runs on the thread pool and never needs the calling thread, so the bounded wait cannot deadlock.
+    /// </summary>
     public bool PreserveInterruptedRecording(TimeSpan timeout)
     {
+        if (!TryBeginPreserve(out var appName, out var recordedAt))
+        {
+            return false;
+        }
+
+        var preserving = Task.Run(() => PreserveCoreAsync(appName, recordedAt));
+        bool? preserved = preserving.Wait(timeout) ? preserving.Result : null;
+
+        return EndPreserve(preserved);
+    }
+
+    private bool TryBeginPreserve(out string appName, out DateTime recordedAt)
+    {
+        appName = _selectedTarget?.DisplayName ?? "reunion";
+        recordedAt = _recordingStartedAt;
+
         if (!IsRecording)
         {
             return false;
         }
 
         _elapsedTimer.Stop();
+        return true;
+    }
 
-        var appName = _selectedTarget?.DisplayName ?? "reunion";
-        var recordedAt = _recordingStartedAt;
-        var reason = UserMessage.FromKey("RecordingInterruptedReason");
-
-        var preserving = Task.Run(() => _workflow.StopAndPreserveAsync(appName, recordedAt, reason));
-
-        var finished = false;
+    private async Task<bool> PreserveCoreAsync(string appName, DateTime recordedAt)
+    {
         try
         {
-            finished = preserving.Wait(timeout);
+            var result = await _workflow.StopAndPreserveAsync(appName, recordedAt,
+                UserMessage.FromKey("RecordingInterruptedReason")).ConfigureAwait(false);
+            return result.Preserved is not null;
         }
-        catch (AggregateException ex)
+        catch (Exception ex)
         {
             AppLog.Warn("RecordingViewModel.PreserveInterruptedRecording: failed to preserve the recording", ex);
+            return false;
         }
+    }
 
+    private bool EndPreserve(bool? preserved)
+    {
         IsRecording = false;
 
-        if (!finished)
+        if (preserved is null)
         {
             AppLog.Error("RecordingViewModel.PreserveInterruptedRecording: could not preserve the recording in time");
             return false;
         }
 
         RefreshFailedRecordings();
-        return preserving.Result.Preserved is not null;
+        return preserved.Value;
     }
 
     public async Task RecoverOrphanRecordingsAsync()
     {
         try
         {
-            var recovered = await Task.Run(_workflow.RecoverOrphans);
-            if (recovered.Count > 0)
+            var result = await Task.Run(_workflow.RecoverOrphans);
+            if (result.Recovered.Count > 0)
             {
                 RefreshFailedRecordings();
+            }
+
+            foreach (var failed in result.Failed)
+            {
+                _notices?.Add(UserMessage.FromKey("NoticeOrphanRecoveryFailed", failed));
             }
         }
         catch (Exception ex)
         {
             AppLog.Warn("RecordingViewModel.RecoverOrphanRecordingsAsync: failed to recover orphan recordings", ex);
+            _notices?.Add(UserMessage.FromKey("NoticeOrphanRecoveryFailed", ex.ToUserMessage()));
+        }
+    }
+
+    private Task _pendingStart = Task.CompletedTask;
+
+    public async Task WaitForPendingStartAsync(TimeSpan timeout)
+    {
+        try
+        {
+            await _pendingStart.WaitAsync(timeout);
+        }
+        catch (TimeoutException)
+        {
+            AppLog.Error($"RecordingViewModel.WaitForPendingStartAsync: the recording did not finish starting within {timeout.TotalSeconds:0}s");
         }
     }
 
@@ -242,9 +316,14 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingStart = started.Task;
+
         try
         {
-            await _workflow.StartAsync(target.ProcessId, target.DisplayName);
+            RecordingWarning = null;
+            var warnings = await _workflow.StartAsync(target.ProcessId, target.DisplayName);
+            RecordingWarning = JoinWarnings(warnings);
 
             IsRecording = true;
             StatusText = Strings.Instance.Format("StatusListening", target.DisplayName);
@@ -254,6 +333,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            AppLog.Warn("RecordingViewModel.StartRecordingAsync: failed to start recording", ex);
             StatusText = Strings.Instance.Format("StatusRecordFailed", ex.ToUserMessage());
         }
         finally
@@ -261,6 +341,7 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(CanToggleRecording));
             ToggleRecordingCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(RecordButtonText));
+            started.TrySetResult();
         }
     }
 
@@ -401,7 +482,16 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _workflow.DiscardFailed(recording);
+        try
+        {
+            _workflow.DiscardFailed(recording);
+        }
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
+        {
+            AppLog.Warn($"RecordingViewModel.DiscardFailedRecording: could not delete \"{recording.Folder}\"", ex);
+            _dialogs.ShowError(Strings.Instance.Format("ErrorDiscardFailedRecording", ex.ToUserMessage()), Strings.Instance.Get("ErrorTitle"));
+        }
+
         RefreshFailedRecordings();
     }
 
@@ -418,8 +508,13 @@ public sealed partial class RecordingViewModel : ObservableObject, IDisposable
         }
     }
 
+    private static string? JoinWarnings(IReadOnlyList<UserMessage>? warnings) =>
+        warnings is { Count: > 0 } ? string.Join(" ", warnings.Select(w => w.Localize())) : null;
+
     private void ApplyRecordingResultCore(RecordingResult result)
     {
+        RecordingWarning = JoinWarnings(result.Warnings);
+
         if (!result.Succeeded)
         {
             StatusText = result.Preserved is not null

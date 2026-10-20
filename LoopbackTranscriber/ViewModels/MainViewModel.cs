@@ -23,6 +23,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly ISettingsStore _settingsService;
     private readonly IMessenger _messenger;
     private readonly IModelVerifier _modelVerifier;
+    private readonly UserNotices? _notices;
 
     public TargetsViewModel Targets { get; }
 
@@ -40,8 +41,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IPageFactory pages,
         ISettingsStore settingsService,
         IMessenger messenger,
-        IModelVerifier modelVerifier)
+        IModelVerifier modelVerifier,
+        UserNotices? notices = null)
     {
+        _notices = notices;
         Targets = targets;
         Recording = recording;
         History = history;
@@ -111,6 +114,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             AppLog.Warn("MainViewModel.VerifyInstalledModelsAsync: failed to verify installed models", ex);
+            _notices?.Add(UserMessage.FromKey("NoticeModelsVerificationFailed", ex.ToUserMessage()));
         }
     }
 

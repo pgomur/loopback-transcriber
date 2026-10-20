@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LoopbackTranscriber.ViewModels;
 
-public partial class FirstRunViewModel : ObservableObject
+public sealed partial class FirstRunViewModel : ObservableObject, IDisposable
 {
     private const string FixedModelSize = "turbo";
 
@@ -213,6 +213,7 @@ public partial class FirstRunViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            AppLog.Warn("FirstRunViewModel.DownloadModelNowAsync: the download failed", ex);
             DownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.ToUserMessage());
         }
         finally
@@ -276,6 +277,7 @@ public partial class FirstRunViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            AppLog.Warn("FirstRunViewModel.DownloadSummaryModelNowAsync: the download failed", ex);
             SummaryDownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.ToUserMessage());
         }
         finally
@@ -363,5 +365,31 @@ public partial class FirstRunViewModel : ObservableObject
     private void Continue()
     {
         SetupCompleted?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Dispose()
+    {
+        CancelAndDispose(ref _modelDownloadCts);
+        CancelAndDispose(ref _summaryModelDownloadCts);
+    }
+
+    private static void CancelAndDispose(ref CancellationTokenSource? source)
+    {
+        if (source is null)
+        {
+            return;
+        }
+
+        try
+        {
+            source.Cancel();
+        }
+        catch (AggregateException ex)
+        {
+            AppLog.Warn("FirstRunViewModel.Dispose: a cancellation callback failed", ex);
+        }
+
+        source.Dispose();
+        source = null;
     }
 }

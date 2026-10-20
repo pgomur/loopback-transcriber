@@ -229,8 +229,9 @@ public partial class ConfigViewModel : ObservableObject
 
             _modelsFolderWatcher = watcher;
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException || ExpectedFailures.IsFile(ex))
         {
+            AppLog.Warn($"ConfigViewModel: could not watch \"{ModelsFolder}\"; the model status will refresh when the page is reopened", ex);
             _modelsFolderWatcher = null;
         }
     }
@@ -323,6 +324,7 @@ public partial class ConfigViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            AppLog.Warn("ConfigViewModel.DownloadModelNowAsync: the download failed", ex);
             DownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.ToUserMessage());
         }
         finally
@@ -424,6 +426,7 @@ public partial class ConfigViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            AppLog.Warn("ConfigViewModel.DownloadSummaryModelNowAsync: the download failed", ex);
             SummaryDownloadStatus = Strings.Instance.Format("DownloadStatusError", ex.ToUserMessage());
         }
         finally
