@@ -111,7 +111,7 @@
                             <ui:SymbolIcon Symbol="Drop24" FontSize="14" />
                         </ui:Button>
                         <Popup x:Name="OpacityPopup" PlacementTarget="{Binding ElementName=OpacityButton}"
-                               Placement="Custom" CustomPopupPlacementCallback="OnOpacityPopupPlacement" StaysOpen="False" AllowsTransparency="True"
+                               Placement="Custom" StaysOpen="False" AllowsTransparency="True"
                                PopupAnimation="Fade" Closed="OnOpacityPopupClosed">
                             <Border Margin="10" Padding="14,10" CornerRadius="8" BorderThickness="1"
                                     Background="{DynamicResource FlyoutBackground}"

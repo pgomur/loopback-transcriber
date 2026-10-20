@@ -102,14 +102,11 @@ public partial class TrayMenuWindow : Window
 
     private void InstallMouseHook()
     {
-        try
+        _mouseProc = MouseHookProc;
+        _mouseHook = User32.SetWindowsHookEx(User32.WhMouseLl, _mouseProc, User32.GetModuleHandle(null), 0);
+        if (_mouseHook == IntPtr.Zero)
         {
-            _mouseProc = MouseHookProc;
-            _mouseHook = User32.SetWindowsHookEx(User32.WhMouseLl, _mouseProc, User32.GetModuleHandle(null), 0);
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("TrayMenuWindow.InstallMouseHook: could not watch for clicks outside the menu", ex);
+            AppLog.Info($"TrayMenuWindow.InstallMouseHook: could not watch for clicks outside the menu (Win32 error {Marshal.GetLastWin32Error()})");
         }
     }
 

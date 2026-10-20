@@ -24,7 +24,7 @@ public partial class ConfigView : UserControl
         {
             Process.Start(new ProcessStartInfo(ThirdPartyNoticesPath) { UseShellExecute = true });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
             AppLog.Warn("ConfigView.OnThirdPartyLicensesClick: could not open the licenses file", ex);
         }
@@ -36,7 +36,7 @@ public partial class ConfigView : UserControl
         {
             Process.Start(new ProcessStartInfo("https://github.com/pgomur") { UseShellExecute = true });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
             AppLog.Warn("ConfigView.OnGitHubCardClick: could not open GitHub", ex);
         }

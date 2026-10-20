@@ -260,6 +260,9 @@
                         <TextBlock Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,24,0,0" Opacity="0.55"
                                    Text="{Binding Path=[SearchNoResults], Source={x:Static services:Strings.Instance}}"
                                    Visibility="{Binding History.ShowHistoryNoResults, Converter={StaticResource BoolToVis}}" />
+                        <TextBlock Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,24,0,0" Opacity="0.55"
+                                   Text="{Binding Path=[SearchFailed], Source={x:Static services:Strings.Instance}}"
+                                   Visibility="{Binding History.ShowHistorySearchFailed, Converter={StaticResource BoolToVis}}" />
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding History.FilteredTranscriptHistory}" HorizontalContentAlignment="Stretch">
                                 <ItemsControl.ItemTemplate>
