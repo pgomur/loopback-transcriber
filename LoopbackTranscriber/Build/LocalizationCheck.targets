@@ -1,0 +1,209 @@
+<Project>
+
+  <UsingTask TaskName="CheckLocalizationKeys" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <StringsFile ParameterType="System.String" Required="true" />
+      <SourceFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <XamlFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Languages ParameterType="System.String" Required="true" />
+      <KeyLiteralPrefixes ParameterType="System.String" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.Collections.Generic" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+var languages = Languages.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim()).ToArray();
+var prefixes = (KeyLiteralPrefixes ?? string.Empty).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToArray();
+var stringsPath = Path.GetFullPath(StringsFile);
+var stringsSource = File.ReadAllText(stringsPath);
+
+Func<string, int, int> lineOf = (text, index) =>
+{
+    var line = 1;
+    for (var i = 0; i < index && i < text.Length; i++)
+    {
+        if (text[i] == '\n')
+        {
+            line++;
+        }
+    }
+
+    return line;
+};
+
+var definitionStart = new Regex(@"\[""(?<key>[A-Za-z][A-Za-z0-9]*)""\]\s*=\s*new\(\)\s*\{");
+var translation = new Regex(@"\[""(?<lang>[a-z]{2})""\]\s*=\s*""(?<text>(?:[^""\\]|\\.)*)""");
+var definitions = new Dictionary<string, int>(StringComparer.Ordinal);
+
+var position = 0;
+while (true)
+{
+    var match = definitionStart.Match(stringsSource, position);
+    if (!match.Success)
+    {
+        break;
+    }
+
+    var index = match.Index + match.Length;
+    var depth = 1;
+    var inString = false;
+    while (index < stringsSource.Length && depth > 0)
+    {
+        var c = stringsSource[index];
+        if (inString)
+        {
+            if (c == '\\')
+            {
+                index++;
+            }
+            else if (c == '"')
+            {
+                inString = false;
+            }
+        }
+        else if (c == '"')
+        {
+            inString = true;
+        }
+        else if (c == '{')
+        {
+            depth++;
+        }
+        else if (c == '}')
+        {
+            depth--;
+        }
+
+        index++;
+    }
+
+    var key = match.Groups["key"].Value;
+    var line = lineOf(stringsSource, match.Index);
+    var body = stringsSource.Substring(match.Index + match.Length, Math.Max(0, index - 1 - (match.Index + match.Length)));
+
+    if (definitions.ContainsKey(key))
+    {
+        Log.LogError(null, "LT0004", null, stringsPath, line, 0, 0, 0, "Duplicate translation key '" + key + "'.");
+    }
+    else
+    {
+        definitions[key] = line;
+    }
+
+    var present = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (Match entry in translation.Matches(body))
+    {
+        present[entry.Groups["lang"].Value] = entry.Groups["text"].Value;
+    }
+
+    foreach (var language in languages)
+    {
+        string text;
+        if (!present.TryGetValue(language, out text) || text.Length == 0)
+        {
+            Log.LogError(null, "LT0002", null, stringsPath, line, 0, 0, 0,
+                "Translation key '" + key + "' is missing the '" + language + "' translation.");
+        }
+    }
+
+    position = index;
+}
+
+if (definitions.Count == 0)
+{
+    Log.LogError(null, "LT0000", null, stringsPath, 0, 0, 0, 0, "No translation keys were found; the localization check could not read the file.");
+    return false;
+}
+
+const string KeyPattern = @"""(?<key>[A-Za-z][A-Za-z0-9]*)""";
+var codeReferences = new List<Regex>
+{
+    new Regex(@"Strings\.Instance\.(?:Get|Format)\(\s*" + KeyPattern),
+    new Regex(@"Strings\.Instance\.(?:GetIn|FormatIn)\(\s*[^,()]+,\s*" + KeyPattern),
+    new Regex(@"Strings\.Instance\[\s*" + KeyPattern + @"\s*\]"),
+    new Regex(@"UserMessage\.FromKey\(\s*" + KeyPattern),
+    new Regex(@"UserError\.\w+\(\s*(?:[^,()""]+,\s*)?" + KeyPattern),
+};
+foreach (var prefix in prefixes)
+{
+    codeReferences.Add(new Regex(@"""(?<key>" + Regex.Escape(prefix) + @"[A-Za-z0-9]*)"""));
+}
+
+var xamlReference = new Regex(@"Binding\s+(?:Path=)?\[(?<key>[A-Za-z][A-Za-z0-9]*)\][^}]*?Source=\{x:Static\s+\w+:Strings\.Instance\}");
+var anyLiteral = new Regex(@"""(?<key>[A-Za-z][A-Za-z0-9]*)""");
+var used = new HashSet<string>(StringComparer.Ordinal);
+
+Action<string, string, Regex> check = (path, text, regex) =>
+{
+    foreach (Match reference in regex.Matches(text))
+    {
+        var key = reference.Groups["key"].Value;
+        used.Add(key);
+        if (!definitions.ContainsKey(key))
+        {
+            Log.LogError(null, "LT0001", null, path, lineOf(text, reference.Index), 0, 0, 0,
+                "Unknown translation key '" + key + "'.");
+        }
+    }
+};
+
+foreach (var item in SourceFiles)
+{
+    var path = item.GetMetadata("FullPath");
+    if (string.Equals(path, stringsPath, StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
+    {
+        continue;
+    }
+
+    var text = File.ReadAllText(path);
+    foreach (var regex in codeReferences)
+    {
+        check(path, text, regex);
+    }
+
+    foreach (Match literal in anyLiteral.Matches(text))
+    {
+        if (definitions.ContainsKey(literal.Groups["key"].Value))
+        {
+            used.Add(literal.Groups["key"].Value);
+        }
+    }
+}
+
+foreach (var item in XamlFiles)
+{
+    var path = item.GetMetadata("FullPath");
+    if (!File.Exists(path))
+    {
+        continue;
+    }
+
+    check(path, File.ReadAllText(path), xamlReference);
+}
+
+foreach (var definition in definitions)
+{
+    if (!used.Contains(definition.Key))
+    {
+        Log.LogWarning(null, "LT0003", null, stringsPath, definition.Value, 0, 0, 0,
+            "Translation key '" + definition.Key + "' is never used.");
+    }
+}
+]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="CheckLocalizationKeys" BeforeTargets="CoreCompile"
+          Condition="'$(SkipLocalizationCheck)' != 'true' And '$(MSBuildProjectName.EndsWith(`_wpftmp`))' != 'true'">
+    <CheckLocalizationKeys StringsFile="$(MSBuildProjectDirectory)\Services\Strings.cs"
+                           SourceFiles="@(Compile)"
+                           XamlFiles="@(Page);@(ApplicationDefinition)"
+                           Languages="es;en;pt;de;ru"
+                           KeyLiteralPrefixes="SummaryLabel" />
+  </Target>
+
+</Project>
