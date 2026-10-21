@@ -1,3 +1,4 @@
+using System.Globalization;
 using LoopbackTranscriber.Models;
 
 namespace LoopbackTranscriber.Services;
@@ -78,7 +79,7 @@ Si no hay ningun proximo paso claro, responde exactamente: NINGUNO
 
     public static string Chunk(string chunkText, int partNumber, int totalParts) =>
         "<|im_start|>system\n" +
-        SpeakerLabels.ApplyToPrompt(ChunkSystem).Replace("{{PART}}", partNumber.ToString()).Replace("{{TOTAL}}", totalParts.ToString()) +
+        SpeakerLabels.ApplyToPrompt(ChunkSystem).Replace("{{PART}}", partNumber.ToString(CultureInfo.InvariantCulture)).Replace("{{TOTAL}}", totalParts.ToString(CultureInfo.InvariantCulture)) +
         " /no_think<|im_end|>\n" +
         "<|im_start|>user\n" +
         "Fragmento:\n" + chunkText + "\n\n/no_think<|im_end|>\n" +

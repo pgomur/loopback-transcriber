@@ -4,7 +4,8 @@ namespace LoopbackTranscriber.Services;
 
 public sealed record SavedTranscript(string Text, string? MarkdownPath);
 
-public sealed record RecordingResult(SavedTranscript? Transcript, UserMessage? ErrorMessage, FailedRecording? Preserved, string? TempFolder)
+public sealed record RecordingResult(SavedTranscript? Transcript, UserMessage? ErrorMessage, FailedRecording? Preserved, string? TempFolder,
+    IReadOnlyList<UserMessage>? Warnings = null)
 {
     public string? Error => ErrorMessage?.Localize();
 
@@ -33,9 +34,9 @@ public sealed class RecordingWorkflow
 
     public event Action<byte[], int>? AudioCaptured;
 
-    public Task StartAsync(uint processId, string? appName = null) => _capture.StartAsync(processId, appName);
+    public Task<IReadOnlyList<UserMessage>> StartAsync(uint processId, string? appName = null) => _capture.StartAsync(processId, appName);
 
-    public IReadOnlyList<FailedRecording> RecoverOrphans() =>
+    public OrphanRecoveryResult RecoverOrphans() =>
         _capture.RecoverOrphans(UserMessage.FromKey("RecordingRecoveredReason"));
 
     public async Task<RecordingResult> StopAndProcessAsync(string appName, DateTime recordedAt,
@@ -56,7 +57,7 @@ public sealed class RecordingWorkflow
                 appName, recordedAt, callbacks, cancellationToken);
 
             _capture.DeleteOriginals(stopped);
-            return new RecordingResult(saved, null, null, null);
+            return new RecordingResult(saved, null, null, null, stopped.Warnings);
         }
         catch (Exception ex)
         {
@@ -91,7 +92,7 @@ public sealed class RecordingWorkflow
             _capture.DeleteOriginals(stopped);
         }
 
-        return new RecordingResult(null, error, outcome.Saved, outcome.TempFolder);
+        return new RecordingResult(null, error, outcome.Saved, outcome.TempFolder, stopped?.Warnings);
     }
 
     public async Task<RecordingResult> RetryAsync(FailedRecording recording, RecordingCallbacks callbacks,
@@ -102,7 +103,7 @@ public sealed class RecordingWorkflow
             var saved = await ProcessAndSaveAsync(recording.SourceWavPath, recording.MicWavPath, recording.MicStartOffset,
                 recording.AppName, recording.RecordedAt, callbacks, cancellationToken);
 
-            _failedStore.Delete(recording);
+            _failedStore.TryDelete(recording);
             return new RecordingResult(saved, null, null, null);
         }
         catch (Exception ex)
@@ -119,9 +120,10 @@ public sealed class RecordingWorkflow
     private async Task<SavedTranscript> ProcessAndSaveAsync(string sourceWavPath, string? micWavPath, TimeSpan micStartOffset,
         string appName, DateTime recordedAt, RecordingCallbacks callbacks, CancellationToken cancellationToken)
     {
-        var settings = _settings.Load();
+        var settings = _settings.Snapshot();
 
-        var text = await _processor.ProcessAsync(sourceWavPath, micWavPath, micStartOffset, settings, callbacks, cancellationToken);
+        var text = await _processor.ProcessAsync(sourceWavPath, micWavPath, micStartOffset, settings, callbacks,
+            cancellationToken: cancellationToken);
         var markdownPath = _saver.Save(text, settings, sourceWavPath, micWavPath, micStartOffset, appName, recordedAt);
 
         return new SavedTranscript(text, markdownPath);

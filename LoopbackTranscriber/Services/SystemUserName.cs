@@ -1,6 +1,5 @@
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace LoopbackTranscriber.Services;
 
@@ -10,9 +9,13 @@ public static class SystemUserName
 
     private const int NameDisplay = 3;
 
+    private const int DisplayNameBufferLength = 256;
+
+    private static readonly char[] NameSeparators = [' ', '.', '_'];
+
     [DllImport("secur32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    private static extern bool GetUserNameEx(int nameFormat, StringBuilder userName, ref uint userNameSize);
+    private static extern bool GetUserNameEx(int nameFormat, [Out] char[] userName, ref uint userNameSize);
 
     public static string Detect()
     {
@@ -30,7 +33,7 @@ public static class SystemUserName
                 return char.ToUpperInvariant(fromLogin[0]) + fromLogin[1..];
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {
             AppLog.Warn("SystemUserName.Detect: could not get the computer's user name", ex);
         }
@@ -40,10 +43,12 @@ public static class SystemUserName
 
     private static string GetDisplayName()
     {
-        var buffer = new StringBuilder(256);
-        var size = (uint)buffer.Capacity;
+        var buffer = new char[DisplayNameBufferLength];
+        var size = (uint)buffer.Length;
 
-        return GetUserNameEx(NameDisplay, buffer, ref size) ? buffer.ToString() : string.Empty;
+        return GetUserNameEx(NameDisplay, buffer, ref size)
+            ? new string(buffer, 0, (int)Math.Min(size, (uint)buffer.Length))
+            : string.Empty;
     }
 
     private static string Normalize(string? rawName)
@@ -62,7 +67,7 @@ public static class SystemUserName
             name = name[(commaIndex + 1)..];
         }
 
-        var firstName = name.Split(new[] { ' ', '.', '_' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+        var firstName = name.Split(NameSeparators, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
 
         return firstName.Length > MaxLength ? firstName[..MaxLength] : firstName;
     }

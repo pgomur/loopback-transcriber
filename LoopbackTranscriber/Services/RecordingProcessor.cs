@@ -46,7 +46,7 @@ public sealed class NaudioAudioPreparer : IAudioPreparer
             using var reader = new WaveFileReader(wavPath);
             return reader.TotalTime.TotalSeconds;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"NaudioAudioPreparer.GetDurationSeconds: could not read the duration of \"{wavPath}\"", ex);
             return 0;
@@ -70,8 +70,8 @@ public sealed class RecordingProcessor
     }
 
     public async Task<string> ProcessAsync(string sourceWavPath, string? micWavPath, TimeSpan micStartOffset,
-        AppSettings settings, RecordingCallbacks callbacks, CancellationToken cancellationToken = default,
-        string? workFolder = null)
+        AppSettings settings, RecordingCallbacks callbacks, string? workFolder = null,
+        CancellationToken cancellationToken = default)
     {
         string? whisperWavPath = null;
         string? micWhisperWavPath = null;
@@ -109,7 +109,7 @@ public sealed class RecordingProcessor
                     {
                         _audio.ApplyNoiseGate(micConverted);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
                     {
                         AppLog.Warn("RecordingProcessor: failed to apply the noise gate to the microphone; transcribing unfiltered", ex);
                     }
@@ -241,7 +241,7 @@ public sealed class RecordingProcessor
         {
             return _audio.GetLevelMap(wavPath);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn("RecordingProcessor: could not measure microphone levels; the echo filter will rely on timing only", ex);
             return null;
@@ -262,7 +262,7 @@ public sealed class RecordingProcessor
                 }).ToList();
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn("RecordingProcessor: could not analyze microphone activity; keeping all segments", ex);
         }

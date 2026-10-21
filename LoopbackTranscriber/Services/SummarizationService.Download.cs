@@ -162,7 +162,7 @@ public sealed partial class SummarizationService
                 File.Delete(path);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"SummarizationService: could not delete temp file \"{path}\"", ex);
         }

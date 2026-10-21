@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -34,7 +35,7 @@ public sealed partial class SummarizationService
                     ChunkExpectedTokens, tracker, cancellationToken)
                 .ConfigureAwait(false);
 
-            keyPointsBuilder.AppendLine($"Puntos clave (parte {i + 1} de {chunks.Count}):");
+            keyPointsBuilder.AppendLine(CultureInfo.InvariantCulture, $"Puntos clave (parte {i + 1} de {chunks.Count}):");
             keyPointsBuilder.AppendLine(FitPointsToLimit(RemoveRepeatedLines(StripThinkBlock(chunkOutput).Trim()), perPartLimit));
             keyPointsBuilder.AppendLine();
         }

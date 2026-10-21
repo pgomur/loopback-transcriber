@@ -115,6 +115,8 @@ public sealed partial class SummarizationService
         return new RecordingSummary { Title = titleFirstLine, Summary = summary };
     }
 
+    private static readonly JsonSerializerOptions CaseInsensitiveJsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private static RecordingSummary? TryParseJsonFormat(string rawOutput)
     {
         var jsonCandidate = ExtractFirstJsonObject(rawOutput);
@@ -125,14 +127,13 @@ public sealed partial class SummarizationService
 
         try
         {
-            var parsed = JsonSerializer.Deserialize<RawSummaryResult>(jsonCandidate,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var parsed = JsonSerializer.Deserialize<RawSummaryResult>(jsonCandidate, CaseInsensitiveJsonOptions);
 
             return parsed is { Title.Length: > 0, Summary.Length: > 0 }
                 ? new RecordingSummary { Title = parsed.Title.Trim(), Summary = parsed.Summary.Trim() }
                 : null;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is JsonException)
         {
             AppLog.Warn("SummarizationService.ParseResult: the response was not valid JSON either; using the raw text", ex);
             return null;

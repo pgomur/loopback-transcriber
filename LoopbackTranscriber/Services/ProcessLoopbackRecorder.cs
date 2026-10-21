@@ -228,7 +228,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
                 session.Writer.Dispose();
                 session.FileStream.Dispose();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ExpectedFailures.IsFile(ex))
             {
                 AppLog.Warn("ProcessLoopbackRecorder: could not close the WAV of the abandoned session", ex);
             }
@@ -249,7 +249,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
                 using var headerWriter = new BinaryWriter(headerStream);
                 FixWavHeader(headerWriter, dataBytes, session.Format);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ExpectedFailures.IsFile(ex))
             {
                 AppLog.Warn("ProcessLoopbackRecorder: could not repair the header of the abandoned WAV", ex);
             }
@@ -436,7 +436,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         {
             client.Stop();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is COMException or InvalidComObjectException)
         {
             AppLog.Warn("ProcessLoopbackRecorder: failed to stop the audio client", ex);
         }
@@ -448,7 +448,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         {
             disposable?.Dispose();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn("ProcessLoopbackRecorder: failed to release a resource", ex);
         }
@@ -465,7 +465,7 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
         {
             Marshal.ReleaseComObject(comObject);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidComObjectException)
         {
             AppLog.Warn("ProcessLoopbackRecorder: failed to release a COM object", ex);
         }
@@ -475,9 +475,11 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
     {
         if (hr < 0)
         {
-            throw Marshal.GetExceptionForHR(hr) ?? new InvalidOperationException($"{context} fallo con HRESULT 0x{hr:X8}");
+            throw Marshal.GetExceptionForHR(hr) ?? new InvalidOperationException($"{context} failed with HRESULT 0x{hr:X8}");
         }
     }
+
+    private static readonly TimeSpan DisposeStopTimeout = TimeSpan.FromSeconds(15);
 
     public void Dispose()
     {
@@ -488,12 +490,20 @@ public sealed class ProcessLoopbackRecorder : IProcessCapture
             {
                 IsRecording = false;
                 session.StopEvent.Set();
-                var keptPath = Task.Run(() => FinishStop(session)).GetAwaiter().GetResult();
-                AppLog.Error($"ProcessLoopbackRecorder.Dispose: disposed with a recording in progress; the audio is kept unprocessed at \"{keptPath}\"");
+
+                var wavPath = session.FileStream.Name;
+                var finishing = Task.Run(() => FinishStop(session));
+                if (!finishing.Wait(DisposeStopTimeout))
+                {
+                    AppLog.Error($"ProcessLoopbackRecorder.Dispose: stopping the capture did not finish within {DisposeStopTimeout.TotalSeconds:0}s; \"{wavPath}\" is left for orphan recovery");
+                    return;
+                }
+
+                AppLog.Error($"ProcessLoopbackRecorder.Dispose: disposed with a recording in progress; the audio is kept unprocessed at \"{finishing.Result}\"");
             }
-            catch (Exception ex)
+            catch (AggregateException ex)
             {
-                AppLog.Warn("ProcessLoopbackRecorder.Dispose: failed to stop the recording in progress", ex);
+                AppLog.Warn("ProcessLoopbackRecorder.Dispose: failed to stop the recording in progress", ex.InnerException ?? ex);
             }
         }
     }

@@ -56,7 +56,7 @@ public sealed partial class SummarizationService
         {
             (executor.GetType().GetProperty("Context")?.GetValue(executor) as IDisposable)?.Dispose();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ObjectDisposedException)
         {
             AppLog.Warn("SummarizationService.DisposeExecutorContext: could not release the model context", ex);
         }
@@ -85,7 +85,15 @@ public sealed partial class SummarizationService
                 Threads = threadCount
             };
 
-            _weights = LLamaWeights.LoadFromFile(parameters);
+            try
+            {
+                _weights = LLamaWeights.LoadFromFile(parameters);
+            }
+            catch (LLama.Exceptions.LoadWeightsFailedException ex)
+            {
+                throw ModelIntegrity.LoadFailed(ex, modelPath);
+            }
+
             _executor = new StatelessExecutor(_weights, parameters);
             _loadedModelPath = modelPath;
 
