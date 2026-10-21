@@ -26,6 +26,8 @@ public sealed class FailedRecording
 public sealed class FailedRecordingStore
 {
     private const string ManifestName = "manifest.json";
+    private const string SourceFileName = "meeting.wav";
+    private const string MicFileName = "microphone.wav";
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -33,9 +35,12 @@ public sealed class FailedRecordingStore
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LoopbackTranscriber", "failed");
 
-    public FailedRecordingStore(string rootFolder)
+    private readonly UserNotices? _notices;
+
+    public FailedRecordingStore(string rootFolder, UserNotices? notices = null)
     {
         RootFolder = rootFolder;
+        _notices = notices;
     }
 
     public string RootFolder { get; }
@@ -58,8 +63,8 @@ public sealed class FailedRecordingStore
             {
                 AppName = appName,
                 RecordedAt = recordedAt,
-                SourceWav = "reunion.wav",
-                MicWav = !string.IsNullOrEmpty(micWavPath) && File.Exists(micWavPath) ? "microfono.wav" : null,
+                SourceWav = SourceFileName,
+                MicWav = !string.IsNullOrEmpty(micWavPath) && File.Exists(micWavPath) ? MicFileName : null,
                 MicStartOffsetTicks = micStartOffset.Ticks,
                 Error = error.Text,
                 ErrorKey = error.Key,
@@ -77,17 +82,18 @@ public sealed class FailedRecordingStore
                 {
                     File.Move(micWavPath!, recording.MicWavPath, overwrite: true);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ExpectedFailures.IsFile(ex))
                 {
                     AppLog.Warn("FailedRecordingStore.TryPreserve: could not move the microphone WAV; keeping only the meeting audio", ex);
                     recording.MicWav = null;
                     WriteManifest(recording);
+                    _notices?.Add(UserMessage.FromKey("WarningMicNotRecorded"));
                 }
             }
 
             return recording;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn("FailedRecordingStore.TryPreserve: could not save the failed recording", ex);
 
@@ -95,7 +101,7 @@ public sealed class FailedRecordingStore
             {
                 if (folder is not null)
                 {
-                    var movedSource = Path.Combine(folder, "reunion.wav");
+                    var movedSource = Path.Combine(folder, SourceFileName);
                     if (File.Exists(movedSource) && !File.Exists(sourceWavPath))
                     {
                         File.Move(movedSource, sourceWavPath);
@@ -107,7 +113,7 @@ public sealed class FailedRecordingStore
                     }
                 }
             }
-            catch (Exception rollbackEx)
+            catch (Exception rollbackEx) when (ExpectedFailures.IsFile(rollbackEx))
             {
                 AppLog.Warn("FailedRecordingStore.TryPreserve: could not roll back the partial save", rollbackEx);
             }
@@ -159,15 +165,17 @@ public sealed class FailedRecordingStore
                         result.Add(recording);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is JsonException || ExpectedFailures.IsFile(ex))
                 {
                     AppLog.Warn($"FailedRecordingStore.List: unreadable manifest in \"{folder}\"", ex);
+                    _notices?.AddOnce(folder, UserMessage.FromKey("NoticeUnreadableFailedRecording", folder));
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn("FailedRecordingStore.List: could not read the failed recordings folder", ex);
+            _notices?.AddOnce(RootFolder, UserMessage.FromKey("NoticeUnreadableFailedRecording", RootFolder));
         }
 
         return result.OrderByDescending(r => r.RecordedAt).ToList();
@@ -180,7 +188,7 @@ public sealed class FailedRecordingStore
             using var reader = new WaveFileReader(wavPath);
             return reader.TotalTime;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"FailedRecordingStore: could not read the duration of \"{wavPath}\"", ex);
             return null;
@@ -189,16 +197,11 @@ public sealed class FailedRecordingStore
 
     public void Delete(FailedRecording recording)
     {
-        try
+        if (!string.IsNullOrEmpty(recording.Folder) && Directory.Exists(recording.Folder))
         {
-            if (!string.IsNullOrEmpty(recording.Folder) && Directory.Exists(recording.Folder))
-            {
-                Directory.Delete(recording.Folder, recursive: true);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn($"FailedRecordingStore.Delete: could not delete \"{recording.Folder}\"", ex);
+            Directory.Delete(recording.Folder, recursive: true);
         }
     }
+
+    public void TryDelete(FailedRecording recording) => FileCleanup.TryDeleteFolder(recording.Folder, "FailedRecordingStore");
 }

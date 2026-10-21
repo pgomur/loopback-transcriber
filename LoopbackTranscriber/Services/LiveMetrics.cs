@@ -133,7 +133,7 @@ internal static class LiveMetricsLog
                 File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}{Environment.NewLine}");
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn("LiveMetricsLog: could not write the log", ex);
         }

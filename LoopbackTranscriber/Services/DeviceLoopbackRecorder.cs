@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
@@ -36,89 +37,54 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
         _channels.Clear();
         Directory.CreateDirectory(outputDirectory);
 
-        MMDeviceEnumerator enumerator;
-        try
-        {
-            enumerator = new MMDeviceEnumerator();
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("DeviceLoopbackRecorder.Start: could not create MMDeviceEnumerator; skipping device capture", ex);
-            return;
-        }
-
+        using var enumerator = new MMDeviceEnumerator();
         var seenDeviceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var (roleLabel, role) in new (string, Role)[]
                  {
-                     ("consola", Role.Console),
-                     ("comunicaciones", Role.Communications)
+                     ("console", Role.Console),
+                     ("communications", Role.Communications)
                  })
         {
-            MMDevice? device;
-            try
-            {
-                device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, role);
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not get the default output device ({roleLabel})", ex);
-                continue;
-            }
-
-            if (device is null || !seenDeviceIds.Add(device.ID))
-            {
-                continue;
-            }
-
-            WasapiLoopbackCapture capture;
-            try
-            {
-                capture = new WasapiLoopbackCapture(device);
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not open WASAPI capture for \"{device.FriendlyName}\" ({roleLabel})", ex);
-                continue;
-            }
-
+            WasapiLoopbackCapture? capture = null;
+            WaveFileWriter? writer = null;
             var wavPath = Path.Combine(outputDirectory, $"{baseFileName}_{roleLabel}.wav");
 
-            WaveFileWriter writer;
             try
             {
+                var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, role);
+                if (device is null || !seenDeviceIds.Add(device.ID))
+                {
+                    continue;
+                }
+
+                capture = new WasapiLoopbackCapture(device);
                 writer = new WaveFileWriter(wavPath, capture.WaveFormat);
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not create WAV file \"{wavPath}\"", ex);
-                capture.Dispose();
-                continue;
-            }
 
-            var channel = new Channel
-            {
-                Label = $"{roleLabel} ({device.FriendlyName})",
-                Capture = capture,
-                Writer = writer,
-                WavPath = wavPath,
-                Timeline = new CaptureTimeline(capture.WaveFormat.SampleRate)
-            };
+                var channel = new Channel
+                {
+                    Label = $"{roleLabel} ({device.FriendlyName})",
+                    Capture = capture,
+                    Writer = writer,
+                    WavPath = wavPath,
+                    Timeline = new CaptureTimeline(capture.WaveFormat.SampleRate)
+                };
 
-            capture.DataAvailable += (_, e) => OnDataAvailable(channel, e);
-            capture.RecordingStopped += (_, _) => channel.StoppedEvent.Set();
+                capture.DataAvailable += (_, e) => OnDataAvailable(channel, e);
+                capture.RecordingStopped += (_, _) => channel.StoppedEvent.Set();
 
-            try
-            {
                 capture.StartRecording();
                 _channels.Add(channel);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ExpectedFailures.IsDeviceOrFile(ex))
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not start capture for \"{channel.Label}\"", ex);
-                writer.Dispose();
-                capture.Dispose();
-                TryDeleteFile(wavPath);
+                AppLog.Warn($"DeviceLoopbackRecorder.Start: could not capture the default output device ({roleLabel}); skipping it", ex);
+                writer?.Dispose();
+                capture?.Dispose();
+                if (writer is not null)
+                {
+                    FileCleanup.TryDelete(wavPath, "DeviceLoopbackRecorder.Start");
+                }
             }
         }
     }
@@ -175,90 +141,79 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
     {
         var results = new List<DeviceTrack>();
 
+        try
+        {
+            foreach (var channel in _channels)
+            {
+                try
+                {
+                    channel.Capture.StopRecording();
+                }
+                catch (COMException ex)
+                {
+                    AppLog.Warn($"DeviceLoopbackRecorder.Stop: failed to stop capture for \"{channel.Label}\"", ex);
+                }
+
+                channel.StoppedEvent.Wait(TimeSpan.FromSeconds(3));
+
+                lock (channel.WriteLock)
+                {
+                    try
+                    {
+                        channel.Writer.Flush();
+                    }
+                    catch (IOException ex)
+                    {
+                        AppLog.Warn($"DeviceLoopbackRecorder.Stop: failed to flush the WAV for \"{channel.Label}\"", ex);
+                    }
+                }
+
+                if (channel.Timeline.PaddedFrames > 0)
+                {
+                    AppLog.Info($"DeviceLoopbackRecorder: gaps filled with silence in \"{channel.Label}\" = {channel.Timeline.PaddedDuration.TotalSeconds:0.0}s");
+                }
+
+                results.Add(new DeviceTrack
+                {
+                    Label = channel.Label,
+                    WavPath = channel.WavPath,
+                    PeakAbs = channel.PeakAbs,
+                    BytesCaptured = channel.BytesCaptured,
+                    FirstSampleTimestamp = channel.Timeline.FirstSampleTimestamp
+                });
+            }
+        }
+        finally
+        {
+            ReleaseChannels();
+        }
+
+        return results;
+    }
+
+    private void ReleaseChannels()
+    {
         foreach (var channel in _channels)
         {
-            try
-            {
-                channel.Capture.StopRecording();
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn($"DeviceLoopbackRecorder.Stop: failed to stop capture for \"{channel.Label}\"", ex);
-            }
-
-            channel.StoppedEvent.Wait(TimeSpan.FromSeconds(3));
-
             lock (channel.WriteLock)
             {
                 try
                 {
-                    channel.Writer.Flush();
+                    channel.Writer.Dispose();
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ExpectedFailures.IsFile(ex))
                 {
-                    AppLog.Warn($"DeviceLoopbackRecorder.Stop: failed to flush WAV for \"{channel.Label}\"", ex);
+                    AppLog.Warn($"DeviceLoopbackRecorder: failed to close the WAV for \"{channel.Label}\"", ex);
                 }
-
-                channel.Writer.Dispose();
-            }
-
-            channel.Capture.Dispose();
-            channel.Dispose();
-
-            if (channel.Timeline.PaddedFrames > 0)
-            {
-                AppLog.Info($"DeviceLoopbackRecorder: gaps filled with silence in \"{channel.Label}\" = {channel.Timeline.PaddedDuration.TotalSeconds:0.0}s");
-            }
-
-            results.Add(new DeviceTrack
-            {
-                Label = channel.Label,
-                WavPath = channel.WavPath,
-                PeakAbs = channel.PeakAbs,
-                BytesCaptured = channel.BytesCaptured,
-                FirstSampleTimestamp = channel.Timeline.FirstSampleTimestamp
-            });
-        }
-
-        _channels.Clear();
-        return results;
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn($"DeviceLoopbackRecorder: could not delete \"{path}\"", ex);
-        }
-    }
-
-    public void Dispose()
-    {
-        foreach (var channel in _channels)
-        {
-            try
-            {
-                channel.Writer.Dispose();
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn($"DeviceLoopbackRecorder.Dispose: failed to close WAV for \"{channel.Label}\"", ex);
             }
 
             try
             {
                 channel.Capture.Dispose();
             }
-            catch (Exception ex)
+            catch (COMException ex)
             {
-                AppLog.Warn($"DeviceLoopbackRecorder.Dispose: failed to release capture for \"{channel.Label}\"", ex);
+                AppLog.Warn($"DeviceLoopbackRecorder: failed to release the capture for \"{channel.Label}\"", ex);
             }
 
             channel.Dispose();
@@ -266,4 +221,6 @@ public sealed class DeviceLoopbackRecorder : IDeviceCapture
 
         _channels.Clear();
     }
+
+    public void Dispose() => ReleaseChannels();
 }

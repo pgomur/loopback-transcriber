@@ -38,8 +38,9 @@ internal static class AppLog
                 stream.Write(bytes, 0, bytes.Length);
             }
         }
-        catch
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
+            System.Diagnostics.Debug.WriteLine($"AppLog: could not write the log: {ex.Message}");
         }
     }
 
@@ -55,8 +56,9 @@ internal static class AppLog
         {
             File.Move(LogPath, LogPath + ".1", overwrite: true);
         }
-        catch
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
+            System.Diagnostics.Debug.WriteLine($"AppLog: could not rotate the log: {ex.Message}");
         }
     }
 }

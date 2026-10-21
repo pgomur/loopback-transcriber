@@ -169,7 +169,7 @@ internal sealed class LiveTranscriptionSession : IDisposable
         {
             _cts.Cancel();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is AggregateException or ObjectDisposedException)
         {
             AppLog.Warn("LiveTranscriptionSession: could not cancel the session", ex);
         }

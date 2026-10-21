@@ -41,7 +41,15 @@ internal sealed class LiveTranslatorEngine : IDisposable
             Threads = Math.Clamp(config.ThreadCount, 2, 8)
         };
 
-        _weights = LLamaWeights.LoadFromFile(parameters);
+        try
+        {
+            _weights = LLamaWeights.LoadFromFile(parameters);
+        }
+        catch (LLama.Exceptions.LoadWeightsFailedException ex)
+        {
+            throw ModelIntegrity.LoadFailed(ex, config.ModelPath);
+        }
+
         _executor = new StatelessExecutor(_weights, parameters);
     }
 
@@ -107,7 +115,7 @@ internal sealed class LiveTranslatorEngine : IDisposable
         {
             (_executor.GetType().GetProperty("Context")?.GetValue(_executor) as IDisposable)?.Dispose();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is System.Reflection.TargetInvocationException or ObjectDisposedException)
         {
             AppLog.Warn("LiveTranslatorEngine.Dispose: could not release the model context", ex);
         }

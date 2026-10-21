@@ -1,5 +1,6 @@
 using System.IO;
 using NAudio.CoreAudioApi;
+using System.Runtime.InteropServices;
 using NAudio.Wave;
 
 namespace LoopbackTranscriber.Services;
@@ -17,94 +18,71 @@ public sealed class MicrophoneRecorder : IMicCapture
 
     private const double SignalThreshold = 0.01;
 
-    public bool IsAvailable { get; private set; } = true;
-
-    public string? LastUsedDeviceName { get; private set; }
-
     public long? FirstSampleTimestamp { get; private set; }
 
-    public void Start(string wavPath)
+    public bool Start(string wavPath)
     {
         if (_isRecording)
         {
             throw UserError.InvalidOperation("ErrorRecordingAlreadyRunning");
         }
 
-        MMDevice micDevice;
+        WasapiCapture? capture = null;
+        WaveFileWriter? writer = null;
+
         try
         {
             using var enumerator = new MMDeviceEnumerator();
-            micDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
-        }
-        catch (Exception ex)
-        {
-            IsAvailable = false;
-            AppLog.Warn("MicrophoneRecorder.Start: could not get the default microphone; skipping the microphone track", ex);
-            return;
-        }
+            var micDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
 
-        try
-        {
-            LastUsedDeviceName = micDevice.FriendlyName;
-        }
-        catch (Exception ex)
-        {
-            LastUsedDeviceName = null;
-            AppLog.Warn("MicrophoneRecorder.Start: could not read the microphone device name", ex);
-        }
-
-        WasapiCapture capture;
-        try
-        {
             capture = new WasapiCapture(micDevice);
-        }
-        catch (Exception ex)
-        {
-            IsAvailable = false;
-            AppLog.Warn($"MicrophoneRecorder.Start: could not open WASAPI capture for \"{micDevice.FriendlyName}\"", ex);
-            return;
-        }
-
-        WaveFileWriter writer;
-        try
-        {
             writer = new WaveFileWriter(wavPath, capture.WaveFormat);
-        }
-        catch (Exception ex)
-        {
-            IsAvailable = false;
-            AppLog.Warn($"MicrophoneRecorder.Start: could not create WAV file \"{wavPath}\"", ex);
-            capture.Dispose();
-            return;
-        }
 
-        _capture = capture;
-        _writer = writer;
-        _wavPath = wavPath;
-        _peakAbs = 0;
-        _timeline = new CaptureTimeline(capture.WaveFormat.SampleRate);
-        FirstSampleTimestamp = null;
-        _stoppedEvent = new ManualResetEventSlim(false);
+            var stoppedEvent = new ManualResetEventSlim(false);
+            _capture = capture;
+            _writer = writer;
+            _wavPath = wavPath;
+            _peakAbs = 0;
+            _timeline = new CaptureTimeline(capture.WaveFormat.SampleRate);
+            FirstSampleTimestamp = null;
+            _stoppedEvent = stoppedEvent;
 
-        capture.DataAvailable += OnDataAvailable;
-        capture.RecordingStopped += (_, _) => _stoppedEvent.Set();
+            capture.DataAvailable += OnDataAvailable;
+            capture.RecordingStopped += (_, _) => stoppedEvent.Set();
 
-        try
-        {
             capture.StartRecording();
             _isRecording = true;
+            return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsDeviceOrFile(ex))
         {
-            IsAvailable = false;
-            AppLog.Warn("MicrophoneRecorder.Start: could not start microphone recording", ex);
-            writer.Dispose();
-            capture.Dispose();
-            TryDeleteFile(wavPath);
-            _capture = null;
-            _writer = null;
-            _wavPath = null;
+            AppLog.Warn("MicrophoneRecorder.Start: could not start the microphone; recording without it", ex);
+            ReleaseFailedStart(capture, writer, wavPath);
+            return false;
         }
+        catch
+        {
+            ReleaseFailedStart(capture, writer, wavPath);
+            throw;
+        }
+    }
+
+    private void ReleaseFailedStart(WasapiCapture? capture, WaveFileWriter? writer, string wavPath)
+    {
+        writer?.Dispose();
+        capture?.Dispose();
+        _stoppedEvent?.Dispose();
+
+        if (writer is not null)
+        {
+            FileCleanup.TryDelete(wavPath, "MicrophoneRecorder.Start");
+        }
+
+        _capture = null;
+        _writer = null;
+        _wavPath = null;
+        _timeline = null;
+        _stoppedEvent = null;
     }
 
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
@@ -164,36 +142,29 @@ public sealed class MicrophoneRecorder : IMicCapture
             return null;
         }
 
+        var wavPath = _wavPath;
         try
-        {
-            _capture.StopRecording();
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("MicrophoneRecorder.Stop: failed to stop microphone capture", ex);
-        }
-
-        _stoppedEvent.Wait(TimeSpan.FromSeconds(3));
-
-        lock (_writeLock)
         {
             try
             {
+                _capture.StopRecording();
+            }
+            catch (COMException ex)
+            {
+                AppLog.Warn("MicrophoneRecorder.Stop: failed to stop microphone capture", ex);
+            }
+
+            _stoppedEvent.Wait(TimeSpan.FromSeconds(3));
+
+            lock (_writeLock)
+            {
                 _writer.Flush();
             }
-            catch (Exception ex)
-            {
-                AppLog.Warn("MicrophoneRecorder.Stop: failed to flush the microphone WAV", ex);
-            }
-
-            _writer.Dispose();
         }
-
-        _capture.Dispose();
-        _stoppedEvent.Dispose();
-
-        var wavPath = _wavPath;
-        var hasSignal = _peakAbs > SignalThreshold;
+        finally
+        {
+            Release();
+        }
 
         if (_timeline is not null)
         {
@@ -206,60 +177,36 @@ public sealed class MicrophoneRecorder : IMicCapture
 
         _timeline = null;
 
-        _capture = null;
-        _writer = null;
-        _wavPath = null;
-        _stoppedEvent = null;
-        _isRecording = false;
-
-        if (!hasSignal)
+        if (_peakAbs <= SignalThreshold)
         {
-            TryDeleteFile(wavPath);
+            FileCleanup.TryDelete(wavPath, "MicrophoneRecorder.Stop");
             return null;
         }
 
         return wavPath;
     }
 
-    private static void TryDeleteFile(string path)
+    private void Release()
     {
+        lock (_writeLock)
+        {
+            try
+            {
+                _writer?.Dispose();
+            }
+            catch (Exception ex) when (ExpectedFailures.IsFile(ex))
+            {
+                AppLog.Warn("MicrophoneRecorder: failed to close the microphone WAV", ex);
+            }
+        }
+
         try
         {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+            _capture?.Dispose();
         }
-        catch (Exception ex)
+        catch (COMException ex)
         {
-            AppLog.Warn($"MicrophoneRecorder: could not delete \"{path}\"", ex);
-        }
-    }
-
-    public void Dispose()
-    {
-        if (_writer is not null)
-        {
-            try
-            {
-                _writer.Dispose();
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn("MicrophoneRecorder.Dispose: failed to close the microphone WAV", ex);
-            }
-        }
-
-        if (_capture is not null)
-        {
-            try
-            {
-                _capture.Dispose();
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn("MicrophoneRecorder.Dispose: failed to release microphone capture", ex);
-            }
+            AppLog.Warn("MicrophoneRecorder: failed to release the microphone capture", ex);
         }
 
         _stoppedEvent?.Dispose();
@@ -269,5 +216,11 @@ public sealed class MicrophoneRecorder : IMicCapture
         _wavPath = null;
         _stoppedEvent = null;
         _isRecording = false;
+    }
+
+    public void Dispose()
+    {
+        Release();
+        _timeline = null;
     }
 }

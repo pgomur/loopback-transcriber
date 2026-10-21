@@ -50,12 +50,15 @@ internal sealed class LiveWhisperEngine : IDisposable
         WhisperFactory factory;
         try
         {
-            factory = WhisperFactory.FromPath(config.ModelPath,
-                new WhisperFactoryOptions { UseGpu = config.UseGpu, UseFlashAttention = config.FlashAttention });
+            var options = new WhisperFactoryOptions { UseGpu = config.UseGpu, UseFlashAttention = config.FlashAttention };
+            factory = config.FlashAttention
+                ? WhisperFactory.FromPath(config.ModelPath, options)
+                : WhisperTranscriptionService.LoadFactory(config.ModelPath, options);
         }
-        catch (Exception) when (config.FlashAttention)
+        catch (WhisperModelLoadException ex) when (config.FlashAttention)
         {
-            factory = WhisperFactory.FromPath(config.ModelPath, new WhisperFactoryOptions { UseGpu = config.UseGpu });
+            AppLog.Warn("LiveWhisperEngine: could not load the model with flash attention; retrying without it", ex);
+            factory = WhisperTranscriptionService.LoadFactory(config.ModelPath, new WhisperFactoryOptions { UseGpu = config.UseGpu });
         }
 
         _factory = factory;
@@ -371,7 +374,7 @@ internal sealed class LiveWorkerClient : IDisposable
         {
             _stdin?.Close();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
             AppLog.Warn("LiveWorkerClient: could not close the worker's stdin", ex);
         }
@@ -383,31 +386,13 @@ internal sealed class LiveWorkerClient : IDisposable
                 _process.Kill(entireProcessTree: true);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
             AppLog.Warn("LiveWorkerClient: could not kill the worker", ex);
         }
 
-        try
-        {
-            _process.Dispose();
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("LiveWorkerClient: could not dispose the worker process", ex);
-        }
-
-        try
-        {
-            if (File.Exists(_configPath))
-            {
-                File.Delete(_configPath);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn($"LiveWorkerClient: could not delete \"{_configPath}\"", ex);
-        }
+        _process.Dispose();
+        FileCleanup.TryDelete(_configPath, "LiveWorkerClient");
     }
 }
 

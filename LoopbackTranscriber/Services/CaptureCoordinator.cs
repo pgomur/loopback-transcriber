@@ -27,7 +27,7 @@ public interface IDeviceCapture : IDisposable
 
 public interface IMicCapture : IDisposable
 {
-    void Start(string wavPath);
+    bool Start(string wavPath);
 
     string? Stop();
 
@@ -35,7 +35,8 @@ public interface IMicCapture : IDisposable
 }
 
 public sealed record StoppedRecording(string? SourceWavPath, string? MicWavPath, TimeSpan MicStartOffset,
-    IReadOnlyList<string> AllWavPaths, Exception? ProcessStopError, string? BaseName = null);
+    IReadOnlyList<string> AllWavPaths, Exception? ProcessStopError, string? BaseName = null,
+    IReadOnlyList<UserMessage>? Warnings = null);
 
 public sealed record PreserveOutcome(FailedRecording? Saved, bool KeepOriginals, string? TempFolder);
 
@@ -50,6 +51,7 @@ public sealed class CaptureCoordinator : IDisposable
     private readonly string _tempFolder;
     private readonly FailedRecordingStore _failedStore;
     private readonly ConcurrentDictionary<string, byte> _ownedBaseNames = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<UserMessage> _warnings = new();
 
     private string? _currentBaseName;
     private DateTime? _processStartedAt;
@@ -71,15 +73,16 @@ public sealed class CaptureCoordinator : IDisposable
 
     public event Action<byte[], int>? AudioCaptured;
 
-    public async Task StartAsync(uint processId, string? appName = null)
+    public async Task<IReadOnlyList<UserMessage>> StartAsync(uint processId, string? appName = null)
     {
+        _warnings.Clear();
         _processStartedAt = null;
         _deviceStartedAt = null;
         _micStartedAt = null;
 
         Directory.CreateDirectory(_tempFolder);
         var recordedAt = DateTime.Now;
-        var baseName = $"grabacion_{recordedAt:yyyyMMdd_HHmmss}";
+        var baseName = $"{RecordingNames.FilePrefix}{recordedAt:yyyyMMdd_HHmmss}";
         var wavPath = Path.Combine(_tempFolder, baseName + ".wav");
 
         _ownedBaseNames[baseName] = 0;
@@ -98,11 +101,14 @@ public sealed class CaptureCoordinator : IDisposable
 
         var session = new CaptureSessionInfo
         {
-            AppName = appName ?? "reunion",
+            AppName = appName ?? RecordingNames.DefaultAppName,
             RecordedAt = recordedAt,
             ProcessStartedUtc = _processStartedAt
         };
-        WriteSessionInfo(baseName, session);
+        if (!WriteSessionInfo(baseName, session))
+        {
+            AddWarning("WarningRecoveryFileNotWritten");
+        }
 
         try
         {
@@ -116,35 +122,56 @@ public sealed class CaptureCoordinator : IDisposable
 
         try
         {
-            _mic.Start(Path.Combine(_tempFolder, baseName + "_mic.wav"));
-            _micStartedAt = _utcNow();
+            if (_mic.Start(Path.Combine(_tempFolder, baseName + "_mic.wav")))
+            {
+                _micStartedAt = _utcNow();
+            }
+            else
+            {
+                AddWarning(MicNotRecordedKey);
+            }
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator.StartAsync: failed to start microphone capture; the summary will only identify the remote speaker", ex);
+            AppLog.Warn("CaptureCoordinator.StartAsync: failed to start microphone capture; recording without it", ex);
+            AddWarning(MicNotRecordedKey);
         }
 
         session.DeviceStartedUtc = _deviceStartedAt;
         session.MicStartedUtc = _micStartedAt;
         WriteSessionInfo(baseName, session);
+
+        return _warnings.ToList();
     }
 
-    public IReadOnlyList<FailedRecording> RecoverOrphans(UserMessage reason) =>
+    private const string MicNotRecordedKey = "WarningMicNotRecorded";
+
+    private void AddWarning(string key)
+    {
+        if (!_warnings.Any(w => w.Key == key))
+        {
+            _warnings.Add(UserMessage.FromKey(key));
+        }
+    }
+
+    public OrphanRecoveryResult RecoverOrphans(UserMessage reason) =>
         OrphanRecordingRecovery.Run(_tempFolder, _failedStore, reason,
             baseName => _ownedBaseNames.ContainsKey(baseName), DeviceSignalThreshold);
 
     private string SessionFilePath(string baseName) =>
         Path.Combine(_tempFolder, baseName + OrphanRecordingRecovery.SessionFileSuffix);
 
-    private void WriteSessionInfo(string baseName, CaptureSessionInfo session)
+    private bool WriteSessionInfo(string baseName, CaptureSessionInfo session)
     {
         try
         {
             File.WriteAllText(SessionFilePath(baseName), JsonSerializer.Serialize(session));
+            return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn("CaptureCoordinator: could not write the session file; the recording cannot be recovered if the app crashes", ex);
+            return false;
         }
     }
 
@@ -181,8 +208,9 @@ public sealed class CaptureCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            AppLog.Warn("CaptureCoordinator.StopAsync: failed to stop microphone capture; the summary will only have the remote speaker's audio", ex);
+            AppLog.Warn("CaptureCoordinator.StopAsync: failed to stop microphone capture; the transcript will only have the participants' audio", ex);
             micWavPath = null;
+            AddWarning(MicNotRecordedKey);
         }
 
         var processHasSignal = rawWavPath is not null && _process.LastPeakAbs >= DeviceSignalThreshold;
@@ -231,7 +259,7 @@ public sealed class CaptureCoordinator : IDisposable
         _currentBaseName = null;
 
         return new StoppedRecording(sourceWavPath, micWavPath, micStartOffset,
-            allPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), processStopError, baseName);
+            allPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), processStopError, baseName, _warnings.ToList());
     }
 
     public PreserveOutcome PreserveFailed(StoppedRecording? stopped, string appName, DateTime recordedAt, UserMessage error)
@@ -285,8 +313,8 @@ public sealed class CaptureCoordinator : IDisposable
             }
 
             var limit = DateTime.UtcNow.AddDays(-7);
-            var staleFiles = Directory.EnumerateFiles(_tempFolder, "grabacion_*.wav")
-                .Concat(Directory.EnumerateFiles(_tempFolder, "grabacion_*" + OrphanRecordingRecovery.SessionFileSuffix));
+            var staleFiles = RecordingNames.FilePrefixes
+                .SelectMany(prefix => Directory.EnumerateFiles(_tempFolder, prefix + "*" + OrphanRecordingRecovery.DerivedSuffix));
             foreach (var file in staleFiles)
             {
                 if (File.GetLastWriteTimeUtc(file) < limit)
@@ -295,7 +323,7 @@ public sealed class CaptureCoordinator : IDisposable
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn("CaptureCoordinator.DeleteStaleRecordings: could not clean the temp folder", ex);
         }

@@ -27,7 +27,7 @@ public sealed class CustomAppsService : ICustomAppsService
     {
         _settingsService = settingsService;
 
-        var settings = _settingsService.Load();
+        var settings = _settingsService.Snapshot();
         _customApps = settings.CustomApps
             .Select(saved => new TargetApp
             {
@@ -77,8 +77,7 @@ public sealed class CustomAppsService : ICustomAppsService
 
     private void Persist()
     {
-        var settings = _settingsService.Load();
-        settings.CustomApps = _customApps
+        var customApps = _customApps
             .Select(app => new CustomTargetAppSettings
             {
                 Id = app.Id,
@@ -87,6 +86,6 @@ public sealed class CustomAppsService : ICustomAppsService
             })
             .ToList();
 
-        _settingsService.Save(settings);
+        _settingsService.Update(settings => settings.CustomApps = customApps);
     }
 }

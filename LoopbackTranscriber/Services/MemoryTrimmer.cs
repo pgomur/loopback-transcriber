@@ -11,14 +11,7 @@ public static class MemoryTrimmer
 
     public static void TrimWorkingSet()
     {
-        try
-        {
-            SetProcessWorkingSetSize(GetCurrentProcess(), new IntPtr(-1), new IntPtr(-1));
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("MemoryTrimmer.TrimWorkingSet: could not trim the working set", ex);
-        }
+        _ = SetProcessWorkingSetSize(GetCurrentProcess(), new IntPtr(-1), new IntPtr(-1));
     }
 
     public static void Release()
@@ -35,12 +28,8 @@ public static class MemoryTrimmer
             GC.WaitForPendingFinalizers();
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
 
-            HeapCompact(GetProcessHeap(), 0);
-            SetProcessWorkingSetSize(GetCurrentProcess(), new IntPtr(-1), new IntPtr(-1));
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("MemoryTrimmer.Release: could not release memory to the OS", ex);
+            _ = HeapCompact(GetProcessHeap(), 0);
+            _ = SetProcessWorkingSetSize(GetCurrentProcess(), new IntPtr(-1), new IntPtr(-1));
         }
         finally
         {
