@@ -1,0 +1,9 @@
+root = true
+
+[*.cs]
+dotnet_code_quality.CA1822.api_surface = private, internal
+dotnet_diagnostic.CA1716.severity = none
+
+[LoopbackTranscriber.Tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1861.severity = none
