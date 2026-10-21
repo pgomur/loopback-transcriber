@@ -18,7 +18,7 @@ internal static partial class AudioSessionFinder
         }
 
         return lines.Count == 0
-            ? "no se encontraron sesiones de audio para este proceso"
+            ? "no audio sessions found for this process"
             : string.Join(" | ", lines);
     }
 
@@ -75,7 +75,7 @@ internal static partial class AudioSessionFinder
                 }
             }
         }
-        catch
+        catch (Exception ex) when (ex is COMException or InvalidComObjectException or InvalidCastException)
         {
         }
         finally
@@ -128,7 +128,7 @@ internal static partial class AudioSessionFinder
                 using var proc = Process.GetProcessById((int)sessionPid);
                 processName = proc.ProcessName;
             }
-            catch
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
             {
                 return null;
             }
@@ -167,14 +167,14 @@ internal static partial class AudioSessionFinder
 
                 if (volume.GetMute(out var muted) >= 0)
                 {
-                    mutedText = muted ? "si" : "no";
+                    mutedText = muted ? "yes" : "no";
                 }
             }
-            catch
+            catch (Exception ex) when (ex is COMException or InvalidComObjectException or InvalidCastException)
             {
             }
 
-            return $"[{role}] PID={sessionPid} proc={processName} estado={state} volumen={volumePercent} muteado={mutedText}";
+            return $"[{role}] PID={sessionPid} proc={processName} state={state} volume={volumePercent} muted={mutedText}";
         }
         finally
         {

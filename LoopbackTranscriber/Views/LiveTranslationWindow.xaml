@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:services="clr-namespace:LoopbackTranscriber.Services"
-        Title="Loopback Transcriber - Live translation"
+        Title="{Binding Path=[LiveWindowTitle], Source={x:Static services:Strings.Instance}}"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"

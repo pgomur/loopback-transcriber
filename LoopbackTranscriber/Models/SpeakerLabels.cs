@@ -10,8 +10,6 @@ public static class SpeakerLabels
 
     public const string SelfNamedSuffix = " (Tú)";
 
-    public const string SelfDisplayName = "Tú";
-
     public static readonly string PrefixPattern =
         Regex.Escape(SelfAnonymous) + "|" + Regex.Escape(Others) + @"|[^\r\n:]+?" + Regex.Escape(SelfNamedSuffix);
 
@@ -26,8 +24,10 @@ public static class SpeakerLabels
     public static bool IsSelf(string? speaker) =>
         speaker == SelfAnonymous || (speaker?.EndsWith(SelfNamedSuffix, StringComparison.Ordinal) ?? false);
 
-    public static string DisplayName(string? speaker) =>
-        !IsSelf(speaker) ? Others : (speaker == SelfAnonymous ? SelfDisplayName : speaker!);
+    public static string? SelfName(string? speaker) =>
+        speaker is not null && speaker != SelfAnonymous && speaker.EndsWith(SelfNamedSuffix, StringComparison.Ordinal)
+            ? speaker[..^SelfNamedSuffix.Length]
+            : null;
 
     public static string ApplyToPrompt(string template) => template
         .Replace("{{SELF_NAMED}}", "Nombre" + SelfNamedSuffix)

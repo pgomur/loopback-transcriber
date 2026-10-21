@@ -44,7 +44,9 @@ public sealed partial class TranscriptHistoryItem : ObservableObject
 
     public bool ShowRegenerate => !IsGeneratingSummary && HasSummary;
 
-    public string DisplayTitle => HasSummary && !string.IsNullOrWhiteSpace(SummaryTitle) ? SummaryTitle! : AppName;
+    public string DisplayAppName => LoopbackTranscriber.Services.RecordingNames.Display(AppName);
+
+    public string DisplayTitle => HasSummary && !string.IsNullOrWhiteSpace(SummaryTitle) ? SummaryTitle! : DisplayAppName;
 
     public bool ShowAppName => HasSummary && !string.IsNullOrWhiteSpace(SummaryTitle);
 

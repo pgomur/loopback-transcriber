@@ -27,6 +27,7 @@ namespace LoopbackTranscriber
         private bool _translucentUiEnabled;
         private readonly TrayMenuViewModel _trayMenuViewModel;
         private readonly AppExitWorkflow _exitWorkflow;
+        private readonly UserNoticePresenter _noticePresenter;
         private readonly BackgroundMemoryTrimmer _backgroundTrimmer = new();
         private readonly ILiveTranslationFactory _liveFactory;
         private TrayIconService? _trayIcon;
@@ -39,8 +40,9 @@ namespace LoopbackTranscriber
 
         public MainWindow(MainViewModel viewModel, ISettingsStore settingsService,
             ILiveTranslationFactory liveFactory, CommunityToolkit.Mvvm.Messaging.IMessenger messenger,
-            TrayMenuViewModel trayMenuViewModel, AppExitWorkflow exitWorkflow)
+            TrayMenuViewModel trayMenuViewModel, AppExitWorkflow exitWorkflow, UserNoticePresenter noticePresenter)
         {
+            _noticePresenter = noticePresenter;
             _trayMenuViewModel = trayMenuViewModel;
             _exitWorkflow = exitWorkflow;
             _liveFactory = liveFactory;
@@ -51,7 +53,7 @@ namespace LoopbackTranscriber
 
             DataContext = _viewModel;
 
-            _translucentUiEnabled = settingsService.Load().TranslucentUi;
+            _translucentUiEnabled = settingsService.Snapshot().TranslucentUi;
             ApplyTranslucency(_translucentUiEnabled);
             CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Register<MainWindow, TranslucentUiChangedMessage>(messenger, this,
                 static (window, message) => window.OnTranslucentUiChanged(null, message.Enabled));
@@ -148,6 +150,7 @@ namespace LoopbackTranscriber
         private void OnFirstContentRendered(object? sender, EventArgs e)
         {
             ContentRendered -= OnFirstContentRendered;
+            _noticePresenter.Activate();
 
             _ = Task.Run(async () =>
             {

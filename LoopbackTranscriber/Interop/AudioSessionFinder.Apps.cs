@@ -72,7 +72,7 @@ internal static partial class AudioSessionFinder
                 CollectSession(sessionEnumerator, i, currentProcessName, byProcessName);
             }
         }
-        catch
+        catch (Exception ex) when (ex is COMException or InvalidComObjectException or InvalidCastException)
         {
         }
         finally
@@ -146,7 +146,7 @@ internal static partial class AudioSessionFinder
                     DisplayName = GetFriendlyName(proc) ?? processName
                 };
             }
-            catch
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
             {
             }
         }
@@ -170,7 +170,7 @@ internal static partial class AudioSessionFinder
             var name = info.FileDescription;
             return string.IsNullOrWhiteSpace(name) ? null : name;
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             return null;
         }

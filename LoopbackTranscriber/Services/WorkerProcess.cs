@@ -62,14 +62,14 @@ internal static class WorkerProcess
                         process.Kill(entireProcessTree: true);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
                 {
                     AppLog.Warn("WorkerProcess: could not cancel the worker", ex);
                 }
             });
 
             await exited.Task.ConfigureAwait(false);
-            process.WaitForExit();
+            await DrainOutputAsync(process, kind).ConfigureAwait(false);
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -86,6 +86,21 @@ internal static class WorkerProcess
         {
             TryDelete(jobPath);
             TryDelete(resultPath);
+        }
+    }
+
+    private static readonly TimeSpan OutputDrainTimeout = TimeSpan.FromSeconds(5);
+
+    private static async Task DrainOutputAsync(Process process, string kind)
+    {
+        using var timeout = new CancellationTokenSource(OutputDrainTimeout);
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            AppLog.Info($"WorkerProcess[{kind}]: the worker's output did not close within {OutputDrainTimeout.TotalSeconds:0}s; continuing without it");
         }
     }
 
@@ -127,20 +142,7 @@ internal static class WorkerProcess
         return startInfo;
     }
 
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn($"WorkerProcess: could not delete \"{path}\"", ex);
-        }
-    }
+    private static void TryDelete(string path) => FileCleanup.TryDelete(path, "WorkerProcess");
 }
 
 internal static class WorkerHost
@@ -201,7 +203,7 @@ internal static class WorkerHost
 
                 File.WriteAllText(resultPath, JsonSerializer.Serialize(error));
             }
-            catch (Exception writeEx)
+            catch (Exception writeEx) when (ExpectedFailures.IsFile(writeEx))
             {
                 AppLog.Warn("WorkerHost: could not write the job error", writeEx);
             }
@@ -269,14 +271,7 @@ internal static class WorkerHost
 
             using var engine = new LiveTranslatorEngine(config);
 
-            try
-            {
-                Task.Run(() => engine.TranslateAsync("Hello, how are you?", null, "Spanish")).GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                AppLog.Warn("WorkerHost: translator warm-up failed", ex);
-            }
+            Task.Run(() => engine.TranslateAsync("Hello, how are you?", null, "Spanish")).GetAwaiter().GetResult();
 
             WriteLiveMessage(new LiveWorkerMessage { Ready = true });
 
@@ -327,7 +322,7 @@ internal static class WorkerHost
             Console.Out.WriteLine("@@L " + JsonSerializer.Serialize(message));
             Console.Out.Flush();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
             AppLog.Warn("WorkerHost: could not send a live transcription message", ex);
         }
@@ -354,8 +349,9 @@ internal static class WorkerHost
                 using var parent = Process.GetProcessById(parentPid);
                 parent.WaitForExit();
             }
-            catch
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
             {
+                AppLog.Info($"WorkerHost: the parent process {parentPid} is already gone ({ex.GetType().Name}); exiting");
             }
 
             Environment.Exit(2);
@@ -374,7 +370,7 @@ internal static class WorkerHost
             Console.Out.WriteLine("@@P " + value.ToString("0.###", CultureInfo.InvariantCulture));
             Console.Out.Flush();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
             AppLog.Warn("WorkerHost: could not report progress", ex);
         }
@@ -390,8 +386,7 @@ internal static class WorkerHost
         var job = JsonSerializer.Deserialize<WhisperJob>(jobJson)
                   ?? throw new InvalidOperationException("Invalid transcription job.");
 
-        var service = new WhisperTranscriptionService();
-        var transcription = await service.TranscribeInProcessAsync(job, new ConsoleProgress<int>(p => p));
+        var transcription = await WhisperTranscriptionService.TranscribeInProcessAsync(job, new ConsoleProgress<int>(p => p));
 
         var result = new WhisperJobResult
         {

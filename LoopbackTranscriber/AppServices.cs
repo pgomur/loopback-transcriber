@@ -7,11 +7,12 @@ namespace LoopbackTranscriber;
 
 internal static class AppServices
 {
-    public static ServiceProvider Build(ISettingsStore settings)
+    public static ServiceProvider Build(ISettingsStore settings, UserNotices notices)
     {
         var services = new ServiceCollection();
 
         services.AddSingleton(settings);
+        services.AddSingleton(notices);
 
         services.AddSingleton<ITargetWatcher, TargetProcessWatcher>();
         services.AddSingleton<ICustomAppsService, CustomAppsService>();
@@ -26,7 +27,7 @@ internal static class AppServices
         services.AddSingleton<RecordingProcessor>();
         services.AddSingleton<TranscriptSaver>();
         services.AddSingleton<TranscriptRetranscriber>();
-        services.AddSingleton(new FailedRecordingStore(FailedRecordingStore.DefaultRootFolder));
+        services.AddSingleton(new FailedRecordingStore(FailedRecordingStore.DefaultRootFolder, notices));
 
         services.AddSingleton(sp => new CaptureCoordinator(
             new ProcessLoopbackRecorder(), new DeviceLoopbackRecorder(), new MicrophoneRecorder(),
@@ -45,6 +46,7 @@ internal static class AppServices
         services.AddSingleton<ILiveTranslationFactory, LiveTranslationFactory>();
         services.AddSingleton<TrayMenuViewModel>();
         services.AddSingleton<AppExitWorkflow>();
+        services.AddSingleton<UserNoticePresenter>();
 
         services.AddTransient<FirstRunViewModel>();
         services.AddTransient<ConfigViewModel>();

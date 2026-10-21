@@ -8,5 +8,5 @@ public sealed class TranscriptMessage
 
     public bool IsSelf => SpeakerLabels.IsSelf(Speaker);
 
-    public string DisplaySpeaker => SpeakerLabels.DisplayName(Speaker);
+    public string DisplaySpeaker => LoopbackTranscriber.Services.SpeakerDisplay.Localize(Speaker);
 }

@@ -12,6 +12,7 @@ namespace LoopbackTranscriber
         private static readonly Color AppAccentColor = Color.FromRgb(0x6A, 0x2B, 0xD9);
 
         private ServiceProvider? _services;
+        private SettingsService? _settings;
         private SingleInstance? _singleInstance;
 
         protected override void OnStartup(StartupEventArgs e)
@@ -28,14 +29,16 @@ namespace LoopbackTranscriber
                 return;
             }
 
-            var settingsService = new SettingsService();
+            var notices = new UserNotices();
+            var settingsService = new SettingsService(notices);
+            _settings = settingsService;
             settingsService.EnsureDefaultUserName();
-            Strings.Instance.SetLanguage(settingsService.Load().UiLanguage);
+            Strings.Instance.SetLanguage(settingsService.Snapshot().UiLanguage);
 
             ApplicationThemeManager.Apply(ApplicationTheme.Dark);
             ApplicationAccentColorManager.Apply(AppAccentColor, ApplicationTheme.Dark);
 
-            _services = AppServices.Build(settingsService);
+            _services = AppServices.Build(settingsService, notices);
 
             var window = _services.GetRequiredService<global::LoopbackTranscriber.MainWindow>();
             MainWindow = window;
@@ -55,6 +58,7 @@ namespace LoopbackTranscriber
                 AppLog.Warn("App.OnExit: failed to dispose services", ex);
             }
 
+            _settings?.FlushPendingWrite();
             _singleInstance?.Dispose();
 
             base.OnExit(e);

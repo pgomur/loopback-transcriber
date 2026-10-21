@@ -68,7 +68,7 @@ internal static partial class AudioSessionFinder
 
             return 0;
         }
-        catch
+        catch (Exception ex) when (ex is COMException or InvalidComObjectException or InvalidCastException)
         {
             return 0;
         }
@@ -129,7 +129,7 @@ internal static partial class AudioSessionFinder
                 using var proc = Process.GetProcessById((int)sessionPid);
                 processName = proc.ProcessName;
             }
-            catch
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
             {
                 return false;
             }
