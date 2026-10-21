@@ -13,11 +13,11 @@ public interface IModelVerifier
     Task<ModelVerificationResult> VerifyInstalledModelsAsync(CancellationToken cancellationToken = default);
 }
 
-internal sealed class ModelVerifier(ISettingsStore settings) : IModelVerifier
+internal sealed class ModelVerifier(ISettingsStore settings, UserNotices? notices = null) : IModelVerifier
 {
     public async Task<ModelVerificationResult> VerifyInstalledModelsAsync(CancellationToken cancellationToken = default)
     {
-        var current = settings.Load();
+        var current = settings.Snapshot();
 
         var transcriptionRemoved = false;
         var transcriptionSettings = new AppSettings
@@ -37,7 +37,7 @@ internal sealed class ModelVerifier(ISettingsStore settings) : IModelVerifier
         return new ModelVerificationResult(transcriptionRemoved, summaryRemoved);
     }
 
-    private static async Task<bool> VerifyAsync(string path, string sha256, string modelName, CancellationToken cancellationToken)
+    private async Task<bool> VerifyAsync(string path, string sha256, string modelName, CancellationToken cancellationToken)
     {
         if (!File.Exists(path))
         {
@@ -52,9 +52,10 @@ internal sealed class ModelVerifier(ISettingsStore settings) : IModelVerifier
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"ModelVerifier: could not verify {modelName}", ex);
+            notices?.AddOnce(path, UserMessage.FromKey("NoticeModelVerificationFailed", modelName, ex.ToUserMessage()));
             return false;
         }
     }

@@ -78,6 +78,15 @@ internal static class ModelIntegrity
         }
     }
 
+    public static void InvalidateMarker(string path) => FileCleanup.TryDelete(path + MarkerSuffix, "ModelIntegrity");
+
+    public static Exception LoadFailed(Exception loadError, string path)
+    {
+        InvalidateMarker(path);
+        AppLog.Warn($"ModelIntegrity: could not load \"{path}\"; its SHA256 will be checked again on next use", loadError);
+        return UserError.InvalidData(loadError, "ErrorModelLoadFailed", Path.GetFileName(path));
+    }
+
     public static void WriteMarker(string path, string expectedHex)
     {
         try
@@ -92,7 +101,7 @@ internal static class ModelIntegrity
 
             File.WriteAllText(path + MarkerSuffix, JsonSerializer.Serialize(marker));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"ModelIntegrity: could not save the verification marker for \"{path}\"; it will be verified again on next use", ex);
         }
@@ -117,7 +126,7 @@ internal static class ModelIntegrity
                    && marker.Length == info.Length
                    && marker.LastWriteTimeUtcTicks == info.LastWriteTimeUtc.Ticks;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is JsonException || ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"ModelIntegrity: unreadable verification marker \"{markerPath}\"", ex);
             return false;
@@ -132,7 +141,7 @@ internal static class ModelIntegrity
             FileCleanup.TryDelete(path + MarkerSuffix, "ModelIntegrity");
             AppLog.Error($"ModelIntegrity: {modelName} was corrupt and has been deleted so it can be downloaded again (\"{path}\")");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"ModelIntegrity: could not delete the corrupt model \"{path}\"", ex);
             throw UserError.InvalidData(ex, "ErrorModelHashMismatch", modelName);
