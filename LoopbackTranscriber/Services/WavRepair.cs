@@ -15,7 +15,7 @@ internal static class WavRepair
         {
             return new FileInfo(path).Length > MinimumWavBytes;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"WavRepair.HasAudioData: could not read \"{path}\"", ex);
             return false;
@@ -99,7 +99,7 @@ internal static class WavRepair
 
             return false;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"WavRepair.TryRepairHeader: could not repair \"{path}\"", ex);
             return false;
@@ -133,7 +133,7 @@ internal static class WavRepair
 
             return peak;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"WavRepair.MeasurePeak: could not read \"{path}\"", ex);
             return 0;

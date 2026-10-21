@@ -46,12 +46,11 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
         try
         {
             using var reader = new AudioFileReader(wavPath);
-            ISampleProvider sampleProvider = reader;
 
             var buffer = new float[4096];
             var peak = 0f;
             int read;
-            while ((read = sampleProvider.Read(buffer, 0, buffer.Length)) > 0)
+            while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
             {
                 for (var i = 0; i < read; i++)
                 {
@@ -71,7 +70,7 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
             var peakDbfs = 20.0 * Math.Log10(peak);
             return peakDbfs <= SilentAudioPeakDbfsThreshold;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"WhisperTranscriptionService.IsEffectivelySilent: could not analyze the audio in {wavPath}", ex);
             return false;
@@ -154,10 +153,22 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
         return text;
     }
 
-    internal async Task<TrackTranscription> TranscribeInProcessAsync(WhisperJob job, IProgress<int>? percentProgress = null,
+    internal static WhisperFactory LoadFactory(string modelPath, WhisperFactoryOptions options)
+    {
+        try
+        {
+            return WhisperFactory.FromPath(modelPath, options);
+        }
+        catch (WhisperModelLoadException ex)
+        {
+            throw ModelIntegrity.LoadFailed(ex, modelPath);
+        }
+    }
+
+    internal static async Task<TrackTranscription> TranscribeInProcessAsync(WhisperJob job, IProgress<int>? percentProgress = null,
         CancellationToken cancellationToken = default)
     {
-        using var whisperFactory = WhisperFactory.FromPath(job.ModelPath, new WhisperFactoryOptions { UseGpu = job.UseGpu });
+        using var whisperFactory = LoadFactory(job.ModelPath, new WhisperFactoryOptions { UseGpu = job.UseGpu });
 
         var lastReportedPercent = -1;
         var requestedLanguage = string.IsNullOrWhiteSpace(job.Language) ? AutoLanguage : job.Language;
@@ -225,7 +236,7 @@ public sealed partial class WhisperTranscriptionService : IWhisperTranscriber
 
             AppLog.Info($"WhisperTranscriptionService: language detection inconclusive (\"{language ?? "-"}\", confidence {confidence:0.00} over {windows} window(s)) in \"{Path.GetFileName(wavPath)}\"; using \"{fallback ?? AutoLanguage}\"");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"WhisperTranscriptionService: language detection failed in \"{Path.GetFileName(wavPath)}\"; using \"{fallback ?? AutoLanguage}\"", ex);
         }

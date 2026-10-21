@@ -30,7 +30,7 @@ internal static class TranscriptMessageParser
             return messages;
         }
 
-        var paragraphs = text.Split(new[] { "\n\n" }, StringSplitOptions.None);
+        var paragraphs = text.Split("\n\n", StringSplitOptions.None);
 
         foreach (var rawParagraph in paragraphs)
         {

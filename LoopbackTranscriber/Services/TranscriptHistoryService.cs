@@ -13,6 +13,13 @@ public sealed class TranscriptHistoryService
     private static readonly Regex TranscriptFileNamePattern =
         new(@"^(?<app>.+)_(?<date>\d{8})_(?<time>\d{6})$", RegexOptions.Compiled);
 
+    private readonly UserNotices? _notices;
+
+    public TranscriptHistoryService(UserNotices? notices = null)
+    {
+        _notices = notices;
+    }
+
     public List<TranscriptHistoryItem> LoadFromDisk(string transcriptsFolder)
     {
         if (!Directory.Exists(transcriptsFolder))
@@ -76,7 +83,7 @@ public sealed class TranscriptHistoryService
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"TranscriptHistoryService.HasTranscripts: could not check \"{appName}\"", ex);
         }
@@ -84,20 +91,21 @@ public sealed class TranscriptHistoryService
         return false;
     }
 
-    private static string[] SafeGetDirectories(string directory)
+    private string[] SafeGetDirectories(string directory)
     {
         try
         {
             return Directory.GetDirectories(directory);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"TranscriptHistoryService: could not list \"{directory}\"", ex);
+            _notices?.AddOnce(directory, UserMessage.FromKey("NoticeUnreadableTranscript", directory));
             return [];
         }
     }
 
-    private static TranscriptHistoryItem? TryReadRecordingFolder(string directory)
+    private TranscriptHistoryItem? TryReadRecordingFolder(string directory)
     {
         try
         {
@@ -179,9 +187,10 @@ public sealed class TranscriptHistoryService
                 Duration = duration
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"TranscriptHistoryService: could not read \"{directory}\"; skipping it in the history", ex);
+            _notices?.AddOnce(directory, UserMessage.FromKey("NoticeUnreadableTranscript", directory));
             return null;
         }
     }
@@ -193,7 +202,7 @@ public sealed class TranscriptHistoryService
             using var reader = new WaveFileReader(wavPath);
             return reader.TotalTime;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"TranscriptHistoryService: could not read the duration of \"{wavPath}\"", ex);
             return null;
@@ -214,7 +223,7 @@ public sealed class TranscriptHistoryService
             var json = File.ReadAllText(summaryPath);
             return JsonSerializer.Deserialize<RecordingSummary>(json);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is JsonException || ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"TranscriptHistoryService: could not read the summary \"{summaryPath}\"", ex);
             return null;
@@ -236,7 +245,7 @@ public sealed class TranscriptHistoryService
     {
         var singleLine = WhitespaceRegex.Replace(content, " ").Trim();
         var preview = singleLine.Length > 100 ? singleLine[..100].TrimEnd() + "..." : singleLine;
-        return string.IsNullOrWhiteSpace(preview) ? "(Transcripcion vacia)" : preview;
+        return string.IsNullOrWhiteSpace(preview) ? Strings.Instance.Get("HistoryEmptyTranscript") : preview;
     }
 
     private static string StripMarkdownHeader(string content)
@@ -281,7 +290,7 @@ public sealed class TranscriptHistoryService
                 TryDeleteFile(Path.ChangeExtension(item.FilePath, ".wav"));
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             error = ex;
             return false;
@@ -300,7 +309,7 @@ public sealed class TranscriptHistoryService
                 File.Delete(path);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"TranscriptHistoryService: could not delete \"{path}\"", ex);
         }

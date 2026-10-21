@@ -55,12 +55,12 @@ public sealed class TranscriptRetranscriber
         string text;
         try
         {
-            text = await _processor.ProcessAsync(sourceWavPath, micWavPath, micStartOffset, _settings.Load(), callbacks,
-                cancellationToken, workFolder);
+            text = await _processor.ProcessAsync(sourceWavPath, micWavPath, micStartOffset, _settings.Snapshot(), callbacks,
+                workFolder, cancellationToken);
         }
         finally
         {
-            TryDeleteFolder(workFolder);
+            FileCleanup.TryDeleteFolder(workFolder, "TranscriptRetranscriber");
         }
 
         if (string.IsNullOrWhiteSpace(text))
@@ -94,7 +94,7 @@ public sealed class TranscriptRetranscriber
             var firstLine = File.ReadLines(markdownPath).FirstOrDefault()?.Trim();
             return firstLine is not null && firstLine.StartsWith("# ", StringComparison.Ordinal) ? firstLine : null;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"TranscriptRetranscriber: could not read the header of \"{markdownPath}\"", ex);
             return null;
@@ -108,25 +108,10 @@ public sealed class TranscriptRetranscriber
             using var reader = new WaveFileReader(wavPath);
             return reader.TotalTime.TotalSeconds;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
             AppLog.Warn($"TranscriptRetranscriber: could not read the duration of \"{wavPath}\"", ex);
             return 0;
-        }
-    }
-
-    private static void TryDeleteFolder(string folder)
-    {
-        try
-        {
-            if (Directory.Exists(folder))
-            {
-                Directory.Delete(folder, recursive: true);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn($"TranscriptRetranscriber: could not delete \"{folder}\"", ex);
         }
     }
 }

@@ -57,7 +57,7 @@ public sealed class RecordingMetadata
         {
             File.WriteAllText(path, JsonSerializer.Serialize(metadata, JsonOptions));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"RecordingMetadata: could not write \"{path}\"", ex);
         }
@@ -74,7 +74,7 @@ public sealed class RecordingMetadata
         {
             return JsonSerializer.Deserialize<RecordingMetadata>(File.ReadAllText(path));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is JsonException || ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"RecordingMetadata: could not read \"{path}\"", ex);
             return null;

@@ -139,7 +139,7 @@ public sealed partial class WhisperTranscriptionService
             {
                 File.Delete(tempPath);
             }
-            catch (Exception deleteEx)
+            catch (Exception deleteEx) when (ExpectedFailures.IsFile(deleteEx))
             {
                 AppLog.Warn($"WhisperTranscriptionService: could not delete \"{tempPath}\"", deleteEx);
             }
@@ -232,7 +232,7 @@ public sealed partial class WhisperTranscriptionService
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException || ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"WhisperTranscriptionService: the progress download of model \"{modelSize}\" failed; using the fallback downloader", ex);
 
@@ -243,7 +243,7 @@ public sealed partial class WhisperTranscriptionService
                     File.Delete(tempPath);
                 }
             }
-            catch (Exception cleanupEx)
+            catch (Exception cleanupEx) when (ExpectedFailures.IsFile(cleanupEx))
             {
                 AppLog.Warn($"WhisperTranscriptionService: could not delete temp file \"{tempPath}\"", cleanupEx);
             }
@@ -262,7 +262,7 @@ public sealed partial class WhisperTranscriptionService
                 File.Delete(tempPath);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"WhisperTranscriptionService: could not delete temp file \"{tempPath}\"", ex);
         }

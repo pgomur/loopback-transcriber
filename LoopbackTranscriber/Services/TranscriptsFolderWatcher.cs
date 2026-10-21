@@ -52,7 +52,7 @@ public sealed class TranscriptsFolderWatcher : IDisposable
 
             _watcher = watcher;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException || ExpectedFailures.IsFile(ex))
         {
             AppLog.Warn($"TranscriptsFolderWatcher.Watch: could not watch \"{folder}\"", ex);
         }

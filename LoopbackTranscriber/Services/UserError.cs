@@ -12,7 +12,7 @@ public sealed record UserMessage(string? Key, object?[] Args, string Text)
     public static UserMessage From(Exception exception) =>
         UserError.TryGetKey(exception, out var key, out var args)
             ? new UserMessage(key, args, exception.Message)
-            : new UserMessage(null, Array.Empty<object?>(), exception.Message);
+            : FromKey(UserError.UnexpectedKey, exception.Message);
 
     public string Localize() => Key is null ? Text : Strings.Instance.Format(Key, Args);
 
@@ -58,8 +58,12 @@ internal static class UserError
         return false;
     }
 
+    public const string UnexpectedKey = "ErrorUnexpected";
+
     public static string ToUserMessage(this Exception exception) =>
-        TryGetKey(exception, out var key, out var args) ? Strings.Instance.Format(key, args) : exception.Message;
+        TryGetKey(exception, out var key, out var args)
+            ? Strings.Instance.Format(key, args)
+            : Strings.Instance.Format(UnexpectedKey, exception.Message);
 
     internal static string[] ToTextArgs(object?[] args) =>
         args.Select(a => a as string ?? Convert.ToString(a, CultureInfo.InvariantCulture) ?? string.Empty).ToArray();

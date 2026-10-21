@@ -180,7 +180,7 @@ public sealed class TrayIconService : IDisposable
 
             _recordingIcon = CreateRecordingIcon(size);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is System.IO.IOException or NotSupportedException or FormatException)
         {
             AppLog.Warn("TrayIconService.EnsureRecordingIcon: could not create the recording icon", ex);
         }
@@ -278,7 +278,7 @@ public sealed class TrayIconService : IDisposable
 
         var screenDc = GetDC(IntPtr.Zero);
         var colorBitmap = CreateDIBSection(screenDc, ref header, 0, out var bits, IntPtr.Zero, 0);
-        ReleaseDC(IntPtr.Zero, screenDc);
+        _ = ReleaseDC(IntPtr.Zero, screenDc);
 
         if (colorBitmap == IntPtr.Zero || bits == IntPtr.Zero)
         {
@@ -339,22 +339,17 @@ public sealed class TrayIconService : IDisposable
 
     private static (IntPtr Handle, bool Owned) LoadTrayIcon()
     {
-        try
+        var path = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(path))
         {
-            var path = Environment.ProcessPath;
-            if (!string.IsNullOrEmpty(path))
+            var small = new IntPtr[1];
+            if (ExtractIconEx(path, 0, null, small, 1) > 0 && small[0] != IntPtr.Zero)
             {
-                var small = new IntPtr[1];
-                if (ExtractIconEx(path, 0, null, small, 1) > 0 && small[0] != IntPtr.Zero)
-                {
-                    return (small[0], true);
-                }
+                return (small[0], true);
             }
         }
-        catch (Exception ex)
-        {
-            AppLog.Warn("TrayIconService.LoadTrayIcon: could not extract the application icon", ex);
-        }
+
+        AppLog.Info("TrayIconService.LoadTrayIcon: could not extract the application icon; using the default one");
 
         return (LoadIcon(IntPtr.Zero, new IntPtr(IdiApplication)), false);
     }
