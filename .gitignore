@@ -1,6 +1,6 @@
-## .gitignore para proyecto .NET / Visual Studio (LoopbackTranscriber)
+## .gitignore for the LoopbackTranscriber .NET / Visual Studio project
 
-# Carpetas de compilación
+# Build folders
 [Bb]in/
 [Oo]bj/
 [Dd]ebug/
@@ -10,16 +10,16 @@ x86/
 [Ll]og/
 [Ll]ogs/
 
-# Carpeta de Visual Studio
+# Visual Studio folder
 .vs/
 
-# Archivos de usuario (configuración local, no se comparten)
+# User files (local settings, not shared)
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 
-# Archivos de compilación de MSBuild
+# MSBuild output files
 *.pdb
 *.ilk
 *.meta
@@ -45,7 +45,7 @@ x86/
 *.svclog
 *.scc
 
-# Paquetes NuGet
+# NuGet packages
 *.nupkg
 *.snupkg
 **/packages/*
@@ -53,32 +53,35 @@ x86/
 *.nuget.props
 *.nuget.targets
 
-# Resultados de pruebas
+# Test results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 *.VisualState.xml
 TestResult.xml
 
-# Archivos de ReSharper / Rider
+# ReSharper / Rider files
 _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
 .idea/
 
-# Archivos de sistema
+# System files
 [Dd]esktop.ini
 Thumbs.db
 .DS_Store
 
-# Publicación / despliegue
+# Publishing / deployment
 [Pp]ublish/
 *.publishsettings
-PublishProfiles/
+**/PublishProfiles/*
+
+# The publish profile used by the installer is versioned
+!**/Properties/PublishProfiles/FolderProfile.pubxml
 *.azurePubxml
 
-# Otros
+# Other
 *.cache
 *.env
 
-# Instalador (Inno Setup): el .iss se versiona, pero el Setup.exe compilado no
 installer/Output/
+installer/redist/
