@@ -7,3 +7,4 @@ dotnet_diagnostic.CA1716.severity = none
 [LoopbackTranscriber.Tests/**.cs]
 dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA2255.severity = none
