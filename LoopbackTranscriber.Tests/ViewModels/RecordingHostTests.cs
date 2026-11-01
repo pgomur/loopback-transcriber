@@ -23,7 +23,7 @@ public sealed class RecordingHostTests : IDisposable
         {
             TranscriptsFolder = Path.Combine(_root, "transcripts"),
             ModelsFolder = Path.Combine(_root, "models"),
-            UserName = "Pedro"
+            UserName = "pgomur"
         });
         var capture = new CaptureCoordinator(_process, new FakeDevice(), new FakeMic(),
             tempFolder: Path.Combine(_root, "tmp"), failedStore: failed);

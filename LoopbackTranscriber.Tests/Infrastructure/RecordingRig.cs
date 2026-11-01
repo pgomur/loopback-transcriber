@@ -5,7 +5,7 @@ namespace LoopbackTranscriber.Tests.Infrastructure;
 
 internal sealed class RecordingRig : IDisposable
 {
-    public RecordingRig(string userName = "Pedro")
+    public RecordingRig(string userName = "pgomur")
     {
         Settings = TestSettings.In(Temp.Path, userName);
         SettingsStore = new FakeSettingsStore(Settings);
