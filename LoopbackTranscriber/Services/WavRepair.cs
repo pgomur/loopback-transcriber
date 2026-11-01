@@ -13,7 +13,13 @@ internal static class WavRepair
     {
         try
         {
-            return new FileInfo(path).Length > MinimumWavBytes;
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
+
+            var dataStart = FindDataStart(stream, reader);
+            return dataStart is null
+                ? stream.Length > MinimumWavBytes
+                : stream.Length > dataStart.Value;
         }
         catch (Exception ex) when (ExpectedFailures.IsAudioFile(ex))
         {
@@ -138,6 +144,36 @@ internal static class WavRepair
             AppLog.Warn($"WavRepair.MeasurePeak: could not read \"{path}\"", ex);
             return 0;
         }
+    }
+
+    private static long? FindDataStart(FileStream stream, BinaryReader reader)
+    {
+        var length = stream.Length;
+        if (length < 12 || ReadChunkId(reader) != "RIFF")
+        {
+            return null;
+        }
+
+        reader.ReadUInt32();
+        if (ReadChunkId(reader) != "WAVE")
+        {
+            return null;
+        }
+
+        var scanLimit = Math.Min(length, MaxHeaderBytes);
+        while (stream.Position + 8 <= scanLimit)
+        {
+            var id = ReadChunkId(reader);
+            var size = reader.ReadUInt32();
+            if (id == "data")
+            {
+                return stream.Position;
+            }
+
+            stream.Position += size + (size & 1);
+        }
+
+        return null;
     }
 
     private static string ReadChunkId(BinaryReader reader) => Encoding.ASCII.GetString(reader.ReadBytes(4));

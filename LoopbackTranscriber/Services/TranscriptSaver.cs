@@ -17,8 +17,8 @@ public sealed class TranscriptSaver
             return null;
         }
 
-        var baseName = $"{appName}_{recordedAt:yyyyMMdd_HHmmss}";
         var appFolderName = TranscriptHistoryService.GetAppFolderName(appName);
+        var baseName = $"{appFolderName}_{recordedAt:yyyyMMdd_HHmmss}";
         var recordingFolder = Path.Combine(settings.TranscriptsFolder, appFolderName, baseName);
         Directory.CreateDirectory(recordingFolder);
 

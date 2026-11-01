@@ -15,7 +15,7 @@ namespace LoopbackTranscriber.Services;
 
 public sealed partial class SummarizationService
 {
-    private static string StripThinkBlock(string rawOutput)
+    internal static string StripThinkBlock(string rawOutput)
     {
         var thinkEnd = rawOutput.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
         return thinkEnd >= 0 ? rawOutput[(thinkEnd + "</think>".Length)..] : rawOutput;
@@ -25,7 +25,7 @@ public sealed partial class SummarizationService
         @"^(?<lead>[ \t]*(?:[-*][ \t]+)?(?:\*\*|__)?)(?<label>Prop[oó]sito|Puntos clave|Temas|Objetivos?|Pr[oó]ximos? pasos?|Siguientes? pasos?|Tareas)(?:\*\*|__)?[ \t]*:",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled);
 
-    private static RecordingSummary LocalizeSectionLabels(RecordingSummary summary, string languageCode)
+    internal static RecordingSummary LocalizeSectionLabels(RecordingSummary summary, string languageCode)
     {
         if (languageCode == "es")
         {
@@ -57,7 +57,7 @@ public sealed partial class SummarizationService
     private static readonly Regex ResumenLabelRegex =
         new(@"\**\s*RES[UÚ]MEN\s*\**\s*:\s*", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private static RecordingSummary ParseResult(string rawOutput)
+    internal static RecordingSummary ParseResult(string rawOutput)
     {
         rawOutput = StripThinkBlock(rawOutput).Trim();
 

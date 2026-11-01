@@ -8,8 +8,6 @@ namespace LoopbackTranscriber.Services;
 
 internal static class WorkerProcess
 {
-    private const string ProgressPrefix = "@@P ";
-
     public static async Task<string> RunAsync(string kind, string jobJson, Action<double>? onProgress,
         CancellationToken cancellationToken)
     {
@@ -33,14 +31,7 @@ internal static class WorkerProcess
 
             process.OutputDataReceived += (_, e) =>
             {
-                var line = e.Data;
-                if (line is null || !line.StartsWith(ProgressPrefix, StringComparison.Ordinal))
-                {
-                    return;
-                }
-
-                if (double.TryParse(line.AsSpan(ProgressPrefix.Length), NumberStyles.Float,
-                        CultureInfo.InvariantCulture, out var value))
+                if (WorkerProtocol.TryParseProgress(e.Data, out var value))
                 {
                     onProgress?.Invoke(value);
                 }
@@ -319,7 +310,7 @@ internal static class WorkerHost
     {
         try
         {
-            Console.Out.WriteLine("@@L " + JsonSerializer.Serialize(message));
+            Console.Out.WriteLine(WorkerProtocol.FormatLiveMessage(message));
             Console.Out.Flush();
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)
@@ -367,7 +358,7 @@ internal static class WorkerHost
     {
         try
         {
-            Console.Out.WriteLine("@@P " + value.ToString("0.###", CultureInfo.InvariantCulture));
+            Console.Out.WriteLine(WorkerProtocol.FormatProgress(value));
             Console.Out.Flush();
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)

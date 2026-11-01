@@ -179,7 +179,7 @@ public sealed partial class SummarizationService
         return shared / (double)union >= NearDuplicateSimilarity;
     }
 
-    private static string RemoveRepeatedLines(string text)
+    internal static string RemoveRepeatedLines(string text)
     {
         var kept = new List<string>();
         var seen = new List<HashSet<string>>();

@@ -142,8 +142,6 @@ internal sealed class LiveWhisperEngine : IDisposable
 
 internal sealed class LiveWorkerClient : IDisposable
 {
-    private const string MessagePrefix = "@@L ";
-
     private readonly Process _process;
     private readonly string _configPath;
     private readonly TaskCompletionSource<bool> _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -266,7 +264,7 @@ internal sealed class LiveWorkerClient : IDisposable
     private void OnOutputLine(object sender, DataReceivedEventArgs e)
     {
         var line = e.Data;
-        if (line is null || !line.StartsWith(MessagePrefix, StringComparison.Ordinal))
+        if (!WorkerProtocol.IsLiveMessage(line))
         {
             return;
         }
@@ -274,7 +272,7 @@ internal sealed class LiveWorkerClient : IDisposable
         LiveWorkerMessage? message;
         try
         {
-            message = JsonSerializer.Deserialize<LiveWorkerMessage>(line.AsSpan(MessagePrefix.Length));
+            message = WorkerProtocol.ParseLiveMessage(line);
         }
         catch (JsonException ex)
         {

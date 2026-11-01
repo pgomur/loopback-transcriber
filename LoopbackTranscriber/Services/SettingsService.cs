@@ -13,7 +13,7 @@ public interface ISettingsStore
 
 public sealed class SettingsService : ISettingsStore
 {
-    private static readonly string SettingsPath = Path.Combine(
+    public static string DefaultPath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LoopbackTranscriber", "settings.json");
 
@@ -24,12 +24,14 @@ public sealed class SettingsService : ISettingsStore
 
     private readonly object _gate = new();
     private readonly UserNotices? _notices;
+    private readonly string _settingsPath;
     private string _currentJson;
     private bool _pendingWrite;
 
-    public SettingsService(UserNotices? notices = null)
+    public SettingsService(UserNotices? notices = null, string? settingsPath = null)
     {
         _notices = notices;
+        _settingsPath = settingsPath ?? DefaultPath;
         _currentJson = JsonSerializer.Serialize(ReadFromDisk(), JsonOptions);
     }
 
@@ -97,7 +99,7 @@ public sealed class SettingsService : ISettingsStore
                 }
 
                 _pendingWrite = true;
-                AppLog.Warn($"SettingsService: could not save \"{SettingsPath}\" after {WriteAttempts} attempts; keeping the changes in memory and retrying on the next change", ex);
+                AppLog.Warn($"SettingsService: could not save \"{_settingsPath}\" after {WriteAttempts} attempts; keeping the changes in memory and retrying on the next change", ex);
                 _notices?.AddOnce("settings-write", UserMessage.FromKey("NoticeSettingsNotSaved"));
                 return;
             }
@@ -124,34 +126,34 @@ public sealed class SettingsService : ISettingsStore
 
     private AppSettings ReadFromDisk()
     {
-        if (!File.Exists(SettingsPath))
+        if (!File.Exists(_settingsPath))
         {
             return new AppSettings();
         }
 
         try
         {
-            return Deserialize(File.ReadAllText(SettingsPath));
+            return Deserialize(File.ReadAllText(_settingsPath));
         }
         catch (JsonException ex)
         {
-            AppLog.Warn($"SettingsService: \"{SettingsPath}\" is corrupt; quarantining it and using defaults", ex);
+            AppLog.Warn($"SettingsService: \"{_settingsPath}\" is corrupt; quarantining it and using defaults", ex);
             QuarantineCorruptFile();
         }
         catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
-            AppLog.Warn($"SettingsService: could not read \"{SettingsPath}\"; using defaults", ex);
+            AppLog.Warn($"SettingsService: could not read \"{_settingsPath}\"; using defaults", ex);
         }
 
         _notices?.AddOnce("settings", UserMessage.FromKey("NoticeSettingsReset"));
         return new AppSettings();
     }
 
-    private static void QuarantineCorruptFile()
+    private void QuarantineCorruptFile()
     {
         try
         {
-            File.Move(SettingsPath, SettingsPath + $".corrupt-{DateTime.Now:yyyyMMdd-HHmmss}", overwrite: true);
+            File.Move(_settingsPath, _settingsPath + $".corrupt-{DateTime.Now:yyyyMMdd-HHmmss}", overwrite: true);
         }
         catch (Exception ex) when (ExpectedFailures.IsFile(ex))
         {
@@ -159,24 +161,24 @@ public sealed class SettingsService : ISettingsStore
         }
     }
 
-    private static void WriteToDisk(string json)
+    private void WriteToDisk(string json)
     {
-        var directory = Path.GetDirectoryName(SettingsPath);
+        var directory = Path.GetDirectoryName(_settingsPath);
         if (!string.IsNullOrEmpty(directory))
         {
             Directory.CreateDirectory(directory);
         }
 
-        var tempPath = SettingsPath + ".tmp";
+        var tempPath = _settingsPath + ".tmp";
         File.WriteAllText(tempPath, json);
 
-        if (File.Exists(SettingsPath))
+        if (File.Exists(_settingsPath))
         {
-            File.Replace(tempPath, SettingsPath, destinationBackupFileName: null);
+            File.Replace(tempPath, _settingsPath, destinationBackupFileName: null);
         }
         else
         {
-            File.Move(tempPath, SettingsPath);
+            File.Move(tempPath, _settingsPath);
         }
     }
 }

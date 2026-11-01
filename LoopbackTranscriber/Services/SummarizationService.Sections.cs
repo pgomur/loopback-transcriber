@@ -114,7 +114,7 @@ public sealed partial class SummarizationService
         line.Contains("[OBJETIVO]", StringComparison.OrdinalIgnoreCase) ||
         line.Contains("[PROXIMO_PASO]", StringComparison.OrdinalIgnoreCase);
 
-    private static string FitPointsToLimit(string points, int maxChars)
+    internal static string FitPointsToLimit(string points, int maxChars)
     {
         if (points.Length <= maxChars)
         {
@@ -143,7 +143,7 @@ public sealed partial class SummarizationService
         return string.Join('\n', kept);
     }
 
-    private static List<string> SplitIntoChunks(string text, int maxChunkCharacters)
+    internal static List<string> SplitIntoChunks(string text, int maxChunkCharacters)
     {
         var chunks = new List<string>();
         var start = 0;

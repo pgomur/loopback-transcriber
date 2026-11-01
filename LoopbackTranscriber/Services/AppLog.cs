@@ -10,7 +10,7 @@ internal static class AppLog
 
     private static readonly object Gate = new();
 
-    public static string LogPath { get; } = Path.Combine(
+    public static string LogPath { get; internal set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LoopbackTranscriber", "logs", "app.log");
 
