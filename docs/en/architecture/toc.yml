@@ -1,0 +1,24 @@
+- name: Overview
+  href: overview.md
+- name: Startup and shutdown
+  href: startup.md
+- name: ViewModels and messaging
+  href: viewmodels.md
+- name: Audio capture
+  href: audio-capture.md
+- name: Processing a recording
+  href: processing.md
+- name: Summary
+  href: summary.md
+- name: Live translation
+  href: live-translation.md
+- name: Worker processes
+  href: workers.md
+- name: Models and integrity
+  href: models.md
+- name: Reliability
+  href: reliability.md
+- name: Localization
+  href: localization.md
+- name: Data on disk
+  href: data-on-disk.md
