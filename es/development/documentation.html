@@ -183,6 +183,7 @@
 <ol>
 <li>restaura DocFX en la versión fijada en <code>.config\dotnet-tools.json</code> (<code>dotnet tool restore</code>);</li>
 <li><strong><code>docfx build</code></strong> de <code>es\</code> y de <code>en\</code>: cada uno genera <code>docs\_site\es\</code> y <code>docs\_site\en\</code> con la plantilla <code>modern</code>, búsqueda y su idioma (<code>_lang</code>);</li>
+<li>borra los mapas de depuración de JavaScript (<code>*.map</code>) que copia la plantilla: ocupan unos 37 MB, la web no los usa y hacían que la publicación en GitHub Pages superara el tiempo máximo;</li>
 <li>copia <code>index.html</code> a <code>docs\_site\</code>;</li>
 <li>con <code>-Serve</code>, sirve <code>docs\_site\</code>.</li>
 </ol>

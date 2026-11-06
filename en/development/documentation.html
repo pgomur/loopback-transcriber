@@ -183,6 +183,7 @@
 <ol>
 <li>restores DocFX at the version pinned in <code>.config\dotnet-tools.json</code> (<code>dotnet tool restore</code>);</li>
 <li><strong><code>docfx build</code></strong> of <code>es\</code> and <code>en\</code>: each one generates <code>docs\_site\es\</code> and <code>docs\_site\en\</code> with the <code>modern</code> template, search and its language (<code>_lang</code>);</li>
+<li>deletes the JavaScript debugging maps (<code>*.map</code>) the template copies: they take about 37 MB, the site does not use them, and they made the GitHub Pages deployment exceed its time limit;</li>
 <li>copies <code>index.html</code> into <code>docs\_site\</code>;</li>
 <li>with <code>-Serve</code>, serves <code>docs\_site\</code>.</li>
 </ol>
