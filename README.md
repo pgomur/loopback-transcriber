@@ -22,21 +22,7 @@
 
 <a href="https://pgomur.github.io/loopback-transcriber/"><b>Documentation · English & Español</b></a>
 
-<a href="#features">Features</a>
-&nbsp;•&nbsp;
-<a href="#how-it-works">How it works</a>
-&nbsp;•&nbsp;
-<a href="#getting-started">Getting started</a>
-&nbsp;•&nbsp;
-<a href="#privacy-and-data">Privacy and data</a>
-&nbsp;•&nbsp;
-<a href="#architecture">Architecture</a>
-&nbsp;•&nbsp;
-<a href="#building-from-source">Building from source</a>
-&nbsp;•&nbsp;
-<a href="#project-structure">Project structure</a>
-&nbsp;•&nbsp;
-<a href="#credits">Credits</a>
+<a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#getting-started">Getting started</a> · <a href="#privacy-and-data">Privacy</a> · <a href="#architecture">Architecture</a> · <a href="#building-from-source">Building</a> · <a href="#project-structure">Structure</a> · <a href="#credits">Credits</a>
 
 </div>
 
