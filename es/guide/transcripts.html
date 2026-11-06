@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Transcripciones y res&#250;menes | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Transcripciones y res&#250;menes | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/guide/transcripts.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="transcripciones-y-resúmenes">Transcripciones y resúmenes</h1>
+
+<h2 id="dónde-están">Dónde están</h2>
+<ul>
+<li><strong>Transcripciones</strong> (barra lateral): todas las transcripciones guardadas, de cualquier aplicación.</li>
+<li><strong>Historial</strong>, en la vista de cada aplicación: solo las de esa aplicación.</li>
+</ul>
+<p>Cada elemento muestra el título (el del resumen, si lo hay, o el nombre de la aplicación), la fecha y la duración del audio (<code>dd/MM HH:mm · m:ss</code>, o <code>h:mm:ss</code> a partir de una hora) y un extracto de 100 caracteres. El extracto sale del resumen si existe y, si no, del principio de la transcripción. Si no hay ninguno de los dos, muestra «<em>(Transcripción vacía)</em>». La lista se actualiza sola cuando cambia la carpeta de transcripciones, también si copias o borras ficheros a mano.</p>
+<p><strong>Ver carpeta</strong> abre la carpeta de transcripciones en el Explorador.</p>
+<div class="NOTE">
+<h5>Nota</h5>
+<p>El <strong>Historial</strong> de una aplicación muestra las grabaciones cuya carpeta lleva exactamente su nombre. Si el nombre de la aplicación contiene caracteres que no se admiten en un nombre de fichero (<code>\ / : * ? &quot; &lt; &gt; |</code>), sus grabaciones se guardan con esos caracteres cambiados por <code>_</code> y solo aparecen en <strong>Transcripciones</strong>.</p>
+</div>
+<h2 id="buscar">Buscar</h2>
+<p>Las dos listas tienen un cuadro <strong>Buscar en transcripciones y resúmenes</strong>. Busca en el título, el nombre de la aplicación, la fecha (<code>dd/MM/yyyy HH:mm</code> y <code>yyyy-MM-dd</code>), el resumen y el texto completo de la transcripción.</p>
+<ul>
+<li>Sin distinguir mayúsculas ni tildes: <code>reunion</code> encuentra «Reunión».</li>
+<li>Varias palabras: deben aparecer <strong>todas</strong>, en cualquier parte.</li>
+<li>Entre comillas, una frase exacta: <code>&quot;próxima semana&quot;</code>.</li>
+<li>La búsqueda empieza 300 ms después de que dejes de escribir. Si nada coincide, la lista indica «<em>Sin resultados</em>».</li>
+</ul>
+<h2 id="filtrar">Filtrar</h2>
+<p>El botón <strong>Filtrar</strong> abre un panel para acotar la lista:</p>
+<ul>
+<li><strong>Desde</strong> / <strong>Hasta</strong>: fechas incluidas.</li>
+<li><strong>Duración mínima (minutos)</strong>: deja fuera las grabaciones más cortas. Las que no tienen audio guardado tampoco aparecen con este filtro.</li>
+</ul>
+<p>Los filtros se aplican al momento. <strong>Aplicar</strong> cierra el panel y <strong>Limpiar filtros</strong> los quita todos. Mientras hay un filtro activo, el botón <strong>Filtrar</strong> aparece resaltado. Cada lista (<strong>Transcripciones</strong> y el <strong>Historial</strong> de cada aplicación) tiene sus propios filtros y su propia búsqueda.</p>
+<h2 id="el-visor">El visor</h2>
+<p>Al abrir una transcripción, el visor tiene dos pestañas:</p>
+<ul>
+<li><strong>Transcripción</strong>: el texto en forma de conversación. Cada párrafo indica quién habla (<strong>Participantes</strong>, <strong>Tú</strong> o <em>tu nombre (Tú)</em>). Como en un chat, tus intervenciones van a la derecha y las de los participantes a la izquierda.</li>
+<li><strong>Resumen IA</strong>: el resumen, si existe.</li>
+</ul>
+<p><strong>Limpiar visor</strong> lo cierra. Si la grabación solo tiene audio, el visor lo indica en lugar del texto.</p>
+<h3 id="generar-un-resumen">Generar un resumen</h3>
+<p>En la pestaña <strong>Resumen IA</strong>, pulsa <strong>Resumir</strong>. El progreso se muestra en porcentaje. El resumen se escribe en el <strong>idioma de la aplicación</strong>, aunque la reunión sea en otro, y contiene:</p>
+<ul>
+<li><strong>Título</strong>: ocho palabras como máximo.</li>
+<li><strong>Propósito</strong>: de qué trata la conversación y para qué se tuvo.</li>
+<li><strong>Puntos clave</strong>: entre 5 y 12, con datos concretos.</li>
+<li><strong>Temas</strong>: solo si se trataron varios asuntos o uno con mucho detalle.</li>
+<li><strong>Objetivos</strong>: lo que alguien quiere conseguir o se compromete a hacer.</li>
+<li><strong>Próximos pasos</strong>: reuniones, fechas y seguimientos acordados.</li>
+</ul>
+<p>Las secciones sin contenido se omiten. Una vez generado, el título del resumen sustituye al nombre de la aplicación en la lista. <strong>Regenerar</strong> sustituye el resumen por uno nuevo.</p>
+<p>Los títulos de las secciones se muestran siempre en el idioma actual de la aplicación, cada uno con su icono. El contenido se queda en el idioma en que se generó.</p>
+<div class="NOTE">
+<h5>Nota</h5>
+<p>No se pueden generar resúmenes mientras se graba o se procesa una grabación. Si cierras la aplicación mientras se genera uno, se pide confirmación porque ese resumen se perdería.</p>
+</div>
+<p>Si falta el modelo de resumen, el visor indica «<em>Falta el modelo de resumen. Descárgalo en Configuración para poder generar resúmenes.</em>». Una grabación que solo tiene audio no se puede resumir.</p>
+<p>Los resúmenes con IA pueden contener errores: revísalos antes de usarlos.</p>
+<h3 id="volver-a-transcribir">Volver a transcribir</h3>
+<p><strong>Volver a transcribir</strong> procesa de nuevo el audio guardado con los ajustes actuales (idioma, tu nombre) y reemplaza el texto. Antes pide confirmación. Úsalo, por ejemplo, después de cambiar el idioma de las reuniones.</p>
+<ul>
+<li>Solo está en el visor del <strong>Historial</strong> de cada aplicación, no en el de <strong>Transcripciones</strong>.</li>
+<li>Solo está disponible si la grabación tiene su audio (<code>.wav</code>), y no mientras se graba o se procesa otra grabación.</li>
+<li>El resumen <strong>no</strong> se modifica. Puedes regenerarlo después.</li>
+<li>La cabecera del fichero se conserva.</li>
+</ul>
+<h2 id="eliminar">Eliminar</h2>
+<p>Marca las casillas de las transcripciones que quieras borrar y pulsa <strong>Eliminar</strong>. Se pide confirmación. Se borra la carpeta de cada grabación entera: texto, audio y resumen. Si era la última de esa aplicación, se borra también la carpeta de la aplicación. No se puede deshacer.</p>
+<p>No se puede eliminar una transcripción mientras se está generando su resumen.</p>
+<h2 id="ficheros-de-cada-grabación">Ficheros de cada grabación</h2>
+<p>Cada grabación guardada es una carpeta dentro de la carpeta de transcripciones:</p>
+<pre><code>transcripts\
+  Teams\
+    Teams_20261018_093000\
+      Teams_20261018_093000.md               texto (Markdown)
+      Teams_20261018_093000.wav              audio de la reunión
+      Teams_20261018_093000_mic.wav          tu micrófono, si se grabó
+      Teams_20261018_093000.recording.json   desfase del micrófono
+      Teams_20261018_093000.summary.json     resumen, si se generó
+</code></pre>
+<p>El formato de cada fichero se describe en <a href="../architecture/data-on-disk.html">Datos en disco</a>.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

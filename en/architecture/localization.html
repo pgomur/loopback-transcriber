@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Localization | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Localization | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/architecture/localization.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="localization">Localization</h1>
+
+<p>The interface is available in <strong>Spanish, English, Portuguese, German and Russian</strong>. All texts live in a single class, <code>Services/Strings.cs</code>. A build-time check guarantees that no key is missing and none is left over.</p>
+<h2 id="strings"><code>Strings</code></h2>
+<p>Each key holds one text per language. For example, <code>RecordStart</code> is &quot;Iniciar grabación&quot; in Spanish and &quot;Start recording&quot; in English, and it also has its Portuguese, German and Russian versions.</p>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Strings.Instance</code></td>
+<td>Single instance. Implements <code>INotifyPropertyChanged</code>.</td>
+</tr>
+<tr>
+<td><code>Get(key)</code> / <code>Format(key, args)</code></td>
+<td>Text in the current language.</td>
+</tr>
+<tr>
+<td><code>GetIn(lang, key)</code> / <code>FormatIn(lang, key, args)</code></td>
+<td>Text in a given language. Used by log messages (in English) and by the summary labels.</td>
+</tr>
+<tr>
+<td><code>this[key]</code></td>
+<td>For XAML: <code>{Binding Path=[RecordStart], Source={x:Static services:Strings.Instance}}</code>.</td>
+</tr>
+<tr>
+<td><code>SetLanguage(lang)</code></td>
+<td>Changes the language, raises <code>Item[]</code> (WPF refreshes every binding) and fires <code>LanguageChanged</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>If a language lacks a key, English is used. If the key does not exist, the key itself is returned. The build check stops either case from reaching a published version.</p>
+<p>Changing the language in <strong>Settings</strong> takes effect immediately. <code>MainViewModel</code> forwards <code>LanguageChanged</code> to the viewer and the recording so they rebuild the texts that do not come from a binding, such as the status and the speaker labels.</p>
+<h2 id="what-is-not-translated-when-saving">What is not translated when saving</h2>
+<p>So that files do not depend on the language of whoever recorded them:</p>
+<ul>
+<li><strong>Speaker labels</strong> in the <code>.md</code>: always <code>Participantes</code>, <code>Tu</code> and <code>&lt;name&gt; (Tú)</code> (<code>SpeakerLabels</code>). The viewer translates them when displaying them.</li>
+<li><strong>Default application name</strong>: <code>Meeting</code> is stored and shown through <code>DefaultAppName</code> (&quot;Meeting&quot;, &quot;Reunión&quot;…). The old <code>reunion</code> is accepted too.</li>
+<li><strong>Errors</strong>: stored with their key, not their text. See <a href="reliability.html#errors-that-mean-something-to-the-user">Reliability</a>.</li>
+</ul>
+<p>The <strong>summary</strong>, on the other hand, is written in the interface language at the time it is generated, with the section labels already translated. When displaying it, the viewer replaces the section titles with those of the current language (<code>SummaryFormatter</code>).</p>
+<h2 id="build-time-check-buildlocalizationchecktargets">Build-time check (<code>Build/LocalizationCheck.targets</code>)</h2>
+<p>An inline MSBuild task (<code>RoslynCodeTaskFactory</code>) runs before <code>CoreCompile</code>. It reads <code>Strings.cs</code>, every <code>.cs</code> in the project and every XAML file (<code>Page</code> and <code>ApplicationDefinition</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Level</th>
+<th>What it detects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LT0000</code></td>
+<td>error</td>
+<td>No key was found: the format of <code>Strings.cs</code> has changed and the task cannot read it.</td>
+</tr>
+<tr>
+<td><code>LT0001</code></td>
+<td>error</td>
+<td>A key is used that does not exist.</td>
+</tr>
+<tr>
+<td><code>LT0002</code></td>
+<td>error</td>
+<td>A key is missing a language, or has it empty.</td>
+</tr>
+<tr>
+<td><code>LT0003</code></td>
+<td>warning</td>
+<td>A key is not used anywhere.</td>
+</tr>
+<tr>
+<td><code>LT0004</code></td>
+<td>error</td>
+<td>Duplicate key.</td>
+</tr>
+</tbody>
+</table>
+<p>These count as uses of a key:</p>
+<ul>
+<li><code>Strings.Instance.Get(&quot;X&quot;)</code>, <code>Format(&quot;X&quot;, …)</code>, <code>GetIn(lang, &quot;X&quot;)</code>, <code>FormatIn(lang, &quot;X&quot;, …)</code> and <code>Strings.Instance[&quot;X&quot;]</code>;</li>
+<li><code>UserMessage.FromKey(&quot;X&quot;, …)</code> and <code>UserError.&lt;method&gt;(&quot;X&quot;, …)</code> or <code>UserError.&lt;method&gt;(inner, &quot;X&quot;, …)</code>;</li>
+<li>in XAML, <code>Binding [X] … Source={x:Static …:Strings.Instance}</code>;</li>
+<li>any literal starting with a prefix from <code>KeyLiteralPrefixes</code>: currently <code>SummaryLabel</code>, because those keys are built in a <code>switch</code>.</li>
+</ul>
+<p>So that a key passed through a variable is not flagged as unused, any C# literal identical to a key counts as a use.</p>
+<p>The task is skipped in the temporary <code>_wpftmp</code> project that WPF generates when compiling XAML. It can also be turned off with <code>-p:SkipLocalizationCheck=true</code>.</p>
+<h2 id="adding-a-language">Adding a language</h2>
+<ol>
+<li>Add the <code>[&quot;xx&quot;] = &quot;…&quot;</code> translation to <strong>every</strong> key in <code>Strings.cs</code>. The check reports each one that is missing.</li>
+<li>Add <code>xx</code> to <code>Languages=&quot;es;en;pt;de;ru&quot;</code> in <code>LocalizationCheck.targets</code>.</li>
+<li>Add it to <code>AvailableUiLanguages</code> (<code>ConfigViewModel</code>), to <code>AppSettings.DetectSystemLanguage</code>, to <code>LiveTranslationPreferences.SupportedLanguages</code>, to the language list and <code>LanguageNameFor</code> (English name for the translator) in <code>LiveTranslationViewModel</code>, and to the language list and sample texts (<code>PreviewSamples</code>) in <code>LiveTranslationSettingsViewModel</code>.</li>
+<li>Add its name to <code>SummarizationService.GetSummaryLanguageName</code>, which gives the language name for the prompt.</li>
+<li>Add the language to the installer's <code>[Languages]</code> if Inno Setup has a translation for it.</li>
+</ol>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

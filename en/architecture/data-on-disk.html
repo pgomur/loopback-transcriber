@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Data on disk | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Data on disk | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/architecture/data-on-disk.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="data-on-disk">Data on disk</h1>
+
+<h2 id="locations">Locations</h2>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>Path</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Settings</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\settings.json</code></td>
+<td>Atomic writes. A damaged file is moved aside as <code>settings.json.corrupt-&lt;date&gt;</code>.</td>
+</tr>
+<tr>
+<td>Models</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\models\</code></td>
+<td><code>whisper\ggml-turbo.bin</code> and <code>llm\Qwen3-4B-Q4_K_M.gguf</code>, each with its <code>.verified.json</code>. Configurable.</td>
+</tr>
+<tr>
+<td>Transcripts</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\transcripts\</code></td>
+<td>One folder per application and one subfolder per recording. Configurable.</td>
+</tr>
+<tr>
+<td>Unprocessed recordings</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\failed\</code></td>
+<td>See <a href="reliability.html">Reliability</a>.</td>
+</tr>
+<tr>
+<td>Log</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\logs\app.log</code></td>
+<td>Rotates to <code>app.log.1</code> once it passes 1 MB.</td>
+</tr>
+<tr>
+<td>Live metrics</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\live-metrics.log</code></td>
+<td>Emptied once it passes 512 KB.</td>
+</tr>
+<tr>
+<td>Recording in progress</td>
+<td><code>%TEMP%\LoopbackTranscriber\recording_&lt;date&gt;*.wav</code> and <code>.session.json</code></td>
+<td>Deleted after processing. Any left behind are recovered at startup.</td>
+</tr>
+<tr>
+<td>Files for Whisper</td>
+<td><code>%TEMP%\LoopbackTranscriber\*.16k.wav</code></td>
+<td>Deleted at the end of each processing run. Any left behind are deleted when their orphan recording is recovered or, if older than 7 days, when the next recording finishes (processed or kept unprocessed).</td>
+</tr>
+<tr>
+<td>Worker process jobs</td>
+<td><code>%TEMP%\LoopbackTranscriber\worker\</code></td>
+<td><code>&lt;guid&gt;.job.json</code>, <code>&lt;guid&gt;.result.json</code> and <code>&lt;guid&gt;.live.json</code>. Deleted when done.</td>
+</tr>
+<tr>
+<td>Re-transcriptions</td>
+<td><code>%TEMP%\LoopbackTranscriber\retranscribe\&lt;guid&gt;\</code></td>
+<td>Deleted when done.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="transcripts-folder">Transcripts folder</h2>
+<p>Each recording is a folder <code>transcripts\&lt;App&gt;\&lt;App&gt;_&lt;yyyyMMdd_HHmmss&gt;\</code>. Inside it, <code>&lt;base&gt;</code> is that folder's name:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+<th>When it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;base&gt;.md</code></td>
+<td>The transcript, in Markdown.</td>
+<td>Always.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;.wav</code></td>
+<td>Copy of the main track.</td>
+<td>Always.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;_mic.wav</code></td>
+<td>Copy of the microphone track.</td>
+<td>If the microphone was recorded.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;.recording.json</code></td>
+<td>Microphone offset.</td>
+<td>If there is a <code>_mic.wav</code>.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;.summary.json</code></td>
+<td>The summary.</td>
+<td>If one was generated.</td>
+</tr>
+</tbody>
+</table>
+<p><code>TranscriptHistoryService.LoadFromDisk</code> walks the first-level and second-level folders. A folder is a recording if it contains <code>&lt;folder-name&gt;.md</code>, <code>.txt</code> or <code>.wav</code>. The application and the date come from the name (<code>&lt;App&gt;_&lt;yyyyMMdd&gt;_&lt;HHmmss&gt;</code>). If the name does not follow that pattern, the whole name is used as the application and the folder's modification date as the date. That way recordings from older versions are read too, whether stored directly in <code>transcripts\&lt;base&gt;\</code> or as <code>.txt</code>.</p>
+<p><code>TranscriptsFolderWatcher</code> watches the folder and its subfolders: files and folders being created, deleted or renamed, not content changes. It reloads the history 500 ms after the last change. If the watcher fails, it is recreated on the next reload.</p>
+<h3 id="basemd"><code>&lt;base&gt;.md</code></h3>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Format</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Header</td>
+<td><code># &lt;App&gt; - dd/MM/yyyy HH:mm</code>, on the first line</td>
+<td><code># Teams - 18/10/2026 09:30</code></td>
+</tr>
+<tr>
+<td>Paragraphs</td>
+<td><code>&lt;label&gt;: &lt;text&gt;</code>, one per turn</td>
+<td><code>Participantes: Good morning everyone.</code> · <code>pgomur (Tú): The integration is done.</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The viewer does not show the header as part of the conversation.</li>
+<li>Paragraphs are separated by a blank line.</li>
+<li>The <code>&lt;speaker&gt;: </code> label only appears if the microphone was recorded. The labels are always stored in Spanish. See <a href="processing.html">Composition</a>.</li>
+<li>The viewer turns it into messages with <code>TranscriptMessageParser</code>: it drops the header, splits paragraphs on blank lines and recognizes the label with the <code>SpeakerLabels</code> pattern. Messages with your label are aligned to the right.</li>
+</ul>
+<h3 id="baserecordingjson"><code>&lt;base&gt;.recording.json</code></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MicStartOffsetTicks</code></td>
+<td>integer</td>
+<td>Offset of the microphone relative to the main track, in .NET ticks (100 ns). For example, <code>1250000</code> is 0.125 s.</td>
+</tr>
+</tbody>
+</table>
+<p>Only present if there is a <code>_mic.wav</code>. Used by re-transcription.</p>
+<h3 id="basesummaryjson"><code>&lt;base&gt;.summary.json</code></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Title</code></td>
+<td>text</td>
+<td>Summary title. Replaces the application name in the history.</td>
+</tr>
+<tr>
+<td><code>Summary</code></td>
+<td>text</td>
+<td>The sections, each with its label in the language it was generated in (<code>Purpose:</code>, <code>Key points:</code>, <code>Goals:</code>…) and its items on lines starting with <code>- </code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="temporary-files-of-a-recording">Temporary files of a recording</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recording_&lt;date&gt;.wav</code></td>
+<td>Application track (16-bit PCM, 44.1 kHz, stereo).</td>
+</tr>
+<tr>
+<td><code>recording_&lt;date&gt;_console.wav</code>, <code>_communications.wav</code></td>
+<td>Tracks of the default audio outputs (general and communications), in their native format.</td>
+</tr>
+<tr>
+<td><code>recording_&lt;date&gt;_mic.wav</code></td>
+<td>Microphone, in its native format.</td>
+</tr>
+<tr>
+<td><code>recording_&lt;date&gt;.session.json</code></td>
+<td><code>AppName</code>, <code>RecordedAt</code>, <code>ProcessStartedUtc</code>, <code>DeviceStartedUtc</code>, <code>MicStartedUtc</code>. Makes recovery possible.</td>
+</tr>
+</tbody>
+</table>
+<p>Older versions used the <code>grabacion_</code> prefix, which is still recognized.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

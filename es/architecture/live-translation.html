@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Traducci&#243;n en vivo | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Traducci&#243;n en vivo | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/architecture/live-translation.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="traducción-en-vivo">Traducción en vivo</h1>
+
+<p>La sesión en vivo (<code>LiveTranscriptionSession</code>) transforma el audio de la aplicación, mientras se graba, en líneas transcritas y traducidas. Es independiente de la transcripción final: no modifica la grabación ni su resultado.</p>
+<h2 id="tuberías">Tuberías</h2>
+<pre><code class="lang-mermaid">flowchart TB
+    A[&quot;ProcessLoopbackRecorder.AudioCaptured&lt;br/&gt;PCM 44,1 kHz estéreo&quot;] --&gt; Q[(&quot;Canal de audio&lt;br/&gt;3000 bloques&quot;)]
+    Q --&gt; S[&quot;LiveAudioSegmenter&lt;br/&gt;16 kHz mono · VAD&quot;]
+    S --&gt;|&quot;fragmentos y borradores&quot;| T[LiveTranscriberStage]
+    T --&gt;|&quot;líneas y borradores&quot;| R[LiveTranslatorStage]
+    T &lt;--&gt;|&quot;stdin/stdout @@L&quot;| W1[[&quot;Proceso auxiliar&lt;br/&gt;whisper-live&quot;]]
+    R &lt;--&gt;|&quot;stdin/stdout @@L&quot;| W2[[&quot;Proceso auxiliar&lt;br/&gt;translate-live&quot;]]
+    T --&gt; UI[&quot;LiveSessionController&lt;br/&gt;→ LiveTranscriptModel&quot;]
+    R --&gt; UI
+    class W1,W2 io
+    class UI ok
+</code></pre>
+<p><code>LiveSessionController.Start</code> crea la sesión con:</p>
+<ul>
+<li>Whisper: el mismo modelo que la transcripción final, el idioma de las reuniones (<code>ResolveMeetingLanguage</code>), GPU, y <code>LiveAudioContext</code> y <code>LiveFlashAttention</code> de los ajustes.</li>
+<li>Traductor: el modelo de resumen, si existe, con <code>núcleos / 2</code> hilos entre 2 y 6. Si no existe, la sesión solo transcribe.</li>
+</ul>
+<p>Los eventos de la sesión llegan desde hilos de fondo. El controlador los pasa al hilo de la interfaz y descarta los de una sesión que ya no es la actual.</p>
+<h2 id="1-segmentación-liveaudiosegmenter">1. Segmentación (<code>LiveAudioSegmenter</code>)</h2>
+<p>Recibe PCM de 16 bits a 44,1 kHz en estéreo, mezcla a mono y remuestrea a <strong>16 kHz</strong> promediando. Trabaja en <strong>tramas de 20 ms</strong> (320 muestras): una trama es voz si su nivel supera <strong>−42 dBFS</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Regla</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pre-roll al detectar voz</td>
+<td>10 tramas (200 ms)</td>
+</tr>
+<tr>
+<td>Fin de fragmento por pausa</td>
+<td>30 tramas (600 ms) de silencio, o 15 tramas (300 ms) si el fragmento ya dura 3 s</td>
+</tr>
+<tr>
+<td>Voz mínima para emitir un fragmento</td>
+<td>20 tramas (400 ms)</td>
+</tr>
+<tr>
+<td>Silencio que se conserva al final</td>
+<td>hasta 10 tramas (200 ms)</td>
+</tr>
+<tr>
+<td>Longitud máxima</td>
+<td>500 tramas (10 s). Se corta en la trama más silenciosa de los últimos 3 s.</td>
+</tr>
+<tr>
+<td>Borrador</td>
+<td>si el fragmento lleva al menos 25 tramas de voz y: han pasado 40 tramas (800 ms) desde el último borrador sin llegar a 10 tramas seguidas de silencio, o se llega justo a 8 tramas de silencio con más de 3 tramas de voz nuevas desde el último borrador</td>
+</tr>
+</tbody>
+</table>
+<p>Un <strong>borrador</strong> es el fragmento en curso, todavía abierto, que se transcribe para mostrar texto provisional. Cada borrador lleva un número de secuencia (<code>DraftSeq</code>). Si el fragmento final cubre exactamente el último borrador (con 3 tramas de voz de tolerancia), lo indica para reutilizar su texto.</p>
+<h2 id="2-transcripción-livetranscriberstage">2. Transcripción (<code>LiveTranscriberStage</code>)</h2>
+<p>Usa un <code>LiveWorkMailbox</code>: una cola acotada de <strong>8 fragmentos finales</strong> que descarta los más antiguos si se llena, más <strong>un único hueco de borrador</strong> en el que el último sustituye al anterior.</p>
+<ul>
+<li><strong>Prioridad.</strong> Los fragmentos finales van antes que los borradores. La excepción es que el borrador pendiente sea justo el que precede a ese final.</li>
+<li><strong>Generaciones.</strong> Cada fragmento final avanza un contador (<code>LiveGeneration</code>). Un borrador transcrito cuando ya ha llegado un final más nuevo se descarta, para no mostrar texto antiguo encima del nuevo.</li>
+<li><strong>Reutilización.</strong> Si un final cubre el último borrador transcrito, se usa su texto sin volver a llamar a Whisper. Las métricas lo marcan como <code>chunk-reused</code>.</li>
+<li>Un final igual al anterior, sin distinguir mayúsculas, no se repite.</li>
+<li><code>LiveTextSplitter</code> divide cada línea final: si tiene <strong>90 caracteres o más</strong>, la corta en los finales de frase (<code>.</code>, <code>!</code>, <code>?</code>, <code>…</code>) en trozos de al menos 28 caracteres.</li>
+</ul>
+<p>El <em>worker</em> <code>whisper-live</code> mantiene el modelo cargado durante toda la sesión. Cada petición lleva el PCM de 16 kHz en base64. El <em>worker</em> lo completa con silencio hasta 1 s si es más corto y aplica los mismos filtros de segmento que la transcripción final, con umbral de no-voz 0,6.</p>
+<h2 id="3-traducción-livetranslatorstage">3. Traducción (<code>LiveTranslatorStage</code>)</h2>
+<p>Usa otra cola, de <strong>6 líneas</strong>, con un hueco de borrador. Una línea descartada por cola llena se marca como <strong>no traducida</strong> (<code>TranslationSkipped</code>) en lugar de quedarse esperando.</p>
+<ul>
+<li>Cada línea se traduce con la <strong>línea anterior como contexto</strong>, que no se traduce.</li>
+<li>Los borradores también se traducen, para mostrar la traducción provisional. Si la línea final no se ha dividido y coincide con el último borrador ya traducido, se reutiliza esa traducción (<code>translation-reused</code> en las métricas).</li>
+<li>Cambiar el idioma de destino afecta a lo que se encole a partir de ese momento.</li>
+</ul>
+<p>El <em>worker</em> <code>translate-live</code> carga Qwen3-4B con 2048 tokens de contexto, temperatura 0,2, top-k 20 y top-p 0,9, con un máximo de tokens que depende de la longitud del texto (entre 64 y 400). El <em>prompt</em> le pide ser un intérprete que solo devuelve la traducción. Incluye <code>/no_think</code> y un bloque <code>&lt;think&gt;</code> vacío ya rellenado, para que Qwen3 no razone antes de responder. Antes de anunciarse como listo, traduce una frase de prueba para calentar el modelo.</p>
+<h2 id="4-supervisión-de-los-procesos-liveworkersupervisor">4. Supervisión de los procesos (<code>LiveWorkerSupervisor</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Situación</th>
+<th>Reacción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>El <em>worker</em> responde con <code>Error</code> a una petición</td>
+<td>Se registra y se salta ese fragmento o línea.</td>
+</tr>
+<tr>
+<td>Se agota el tiempo (60 s para Whisper, 30 s para traducir) o el proceso muere</td>
+<td>Se reinicia el <em>worker</em>, como máximo <strong>3 veces</strong> por sesión.</td>
+</tr>
+<tr>
+<td>El <em>worker</em> no está listo en 180 s</td>
+<td>La sesión informa del error.</td>
+</tr>
+<tr>
+<td>Más fallos</td>
+<td>La ventana muestra el error. La grabación sigue sin cambios.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="métricas">Métricas</h2>
+<p>Cada fragmento y cada traducción se escriben en <code>%LocalAppData%\LoopbackTranscriber\live-metrics.log</code>.</p>
+<p>Cada línea empieza con la fecha y la hora:</p>
+<table>
+<thead>
+<tr>
+<th>Línea</th>
+<th>Campos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chunk</code> (o <code>chunk-reused</code> si reutiliza el borrador, <code>draft</code> si es un borrador)</td>
+<td><code>audio</code> segundos de audio · <code>whisper</code> segundos de proceso · <code>rtf</code> proceso entre audio · <code>latency</code> retraso desde que se dejó de hablar · <code>queue</code> fragmentos en cola · <code>dropped</code> descartados · <code>chars</code> caracteres</td>
+</tr>
+<tr>
+<td><code>translation</code> (o <code>draft-translation</code>)</td>
+<td><code>chars</code> caracteres · <code>model</code> segundos de traducción · <code>latency</code> retraso · <code>queue</code> líneas en cola</td>
+</tr>
+<tr>
+<td><code>translation-reused</code></td>
+<td><code>chars</code> caracteres</td>
+</tr>
+</tbody>
+</table>
+<p>Al cerrar la sesión se añade una línea <code>SUMMARY</code> con el modelo, si se usó la GPU, el contexto de audio, <em>flash attention</em>, los fragmentos descartados y reutilizados, y los percentiles 50 y 90 de latencia de fragmentos, borradores y traducciones. La ventana muestra los mismos datos en su franja técnica (<code>LiveMetricsPresenter</code>).</p>
+<h2 id="descarte-de-audio">Descarte de audio</h2>
+<p>El canal de entrada guarda como máximo 3000 bloques y descarta los más antiguos. Esto solo ocurre si el segmentador se bloquea, lo que no debería pasar porque solo hace cálculo en memoria. El primer descarte se registra una vez en <code>app.log</code>.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

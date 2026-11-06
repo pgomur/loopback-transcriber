@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Procesado de una grabaci&#243;n | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Procesado de una grabaci&#243;n | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/architecture/processing.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="procesado-de-una-grabación">Procesado de una grabación</h1>
+
+<h2 id="el-flujo-recordingworkflow">El flujo: <code>RecordingWorkflow</code></h2>
+<p><code>RecordingWorkflow</code> no depende de WPF. Encadena la captura, el procesado y el guardado, y decide qué hacer con el audio si algo falla. <code>RecordingViewModel</code> solo traslada el resultado (<code>RecordingResult</code>) a propiedades.</p>
+<pre><code class="lang-mermaid">flowchart TD
+    A([&quot;StopAndProcessAsync&quot;]) --&gt; B[&quot;CaptureCoordinator.StopAsync&quot;]
+    B --&gt; C[&quot;RecordingProcessor.ProcessAsync&quot;]
+    B --&gt;|&quot;sin pista principal&quot;| E[&quot;ErrorAudioCapture&quot;]
+    C --&gt; D[&quot;TranscriptSaver.Save&quot;]
+    D --&gt; F[&quot;DeleteOriginals&lt;br/&gt;borra los temporales&quot;]
+    C --&gt;|excepción| P[&quot;Preserve&quot;]
+    E --&gt; P
+    P --&gt; G{&quot;¿FailedRecordingStore&lt;br/&gt;.TryPreserve?&quot;}
+    G --&gt;|sí| H[&quot;Borra los temporales&lt;br/&gt;restantes&quot;]
+    G --&gt;|no| I[&quot;Deja los originales&lt;br/&gt;en %TEMP%&quot;]
+    class F ok
+    class E,P fail
+    class H,I io
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Uso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>StartAsync(pid, appName)</code></td>
+<td>Arranca la captura. Devuelve los avisos de arranque, como el micrófono no grabado.</td>
+</tr>
+<tr>
+<td><code>StopAndProcessAsync(appName, recordedAt, callbacks)</code></td>
+<td>Parada normal: procesa, guarda y limpia. Si falla, conserva el audio.</td>
+</tr>
+<tr>
+<td><code>StopAndPreserveAsync(appName, recordedAt, reason)</code></td>
+<td>Para y conserva <strong>sin procesar</strong>. Se usa al salir, al apagar y en errores.</td>
+</tr>
+<tr>
+<td><code>RetryAsync(failedRecording, callbacks)</code></td>
+<td>Procesa una grabación conservada. Si sale bien, la borra del almacén.</td>
+</tr>
+<tr>
+<td><code>ListFailed()</code> / <code>DiscardFailed(recording)</code></td>
+<td>Grabaciones sin procesar.</td>
+</tr>
+<tr>
+<td><code>RecoverOrphans()</code></td>
+<td>Recuperación al arrancar. Ver <a href="reliability.html">Fiabilidad</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>El resumen <strong>no</strong> forma parte de este flujo: se genera a mano desde el visor.</p>
+<h2 id="el-procesado-recordingprocessor">El procesado: <code>RecordingProcessor</code></h2>
+<p><code>ProcessAsync(sourceWav, micWav, micStartOffset, settings, callbacks)</code> recibe las pistas y devuelve el texto final. Usa <code>IWhisperTranscriber</code> e <code>IAudioPreparer</code>, que los tests sustituyen.</p>
+<ol>
+<li><strong>Modelo.</strong> <code>EnsureModelDownloadedAsync</code> comprueba el modelo y lo descarga si falta. Estado: «<em>Comprobando el modelo de transcripción...</em>».</li>
+<li><strong>Conversión.</strong> Las dos pistas se convierten a WAV PCM 16 bits, <strong>16 kHz, mono</strong> (<code>AudioConverter.ConvertToWhisperFormat</code>: mezcla a mono al 50 % y remuestreo WDL) en <code>&lt;nombre&gt;.16k.wav</code>.</li>
+<li><strong>Puerta de ruido en el micrófono.</strong> <code>ApplyNoiseGate</code> silencia las ventanas de 50 ms cuyo nivel RMS queda <strong>más de 34 dB por debajo del pico</strong> de la pista, con fundidos de 10 ms en cada cambio. Si falla, se transcribe sin filtrar.</li>
+<li><strong>Transcripción</strong> de las dos pistas (ver abajo). El progreso combinado es la media de las dos.</li>
+<li><strong>Actividad del micrófono.</strong> Se descartan los segmentos del micrófono con menos del 15 % de ventanas activas o menos de 0,15 s activos (<code>GetActivityMap</code>, ventanas de 50 ms).</li>
+<li><strong>Filtro de eco</strong> entre el micrófono y la aplicación (ver abajo).</li>
+<li><strong>Composición</strong> del texto con etiquetas de hablante.</li>
+<li>Si el texto sale vacío y el audio dura <strong>20 s o más</strong>, se lanza <code>ErrorNoTextInAudio</code>: la grabación se conserva como fallida. Si dura menos, se devuelve el texto vacío: <code>TranscriptSaver</code> no guarda nada y <code>RecordingWorkflow</code> borra los temporales como en cualquier grabación terminada.</li>
+<li>Los <code>.16k.wav</code> se borran siempre al terminar, en un <code>finally</code>.</li>
+</ol>
+<h3 id="idioma">Idioma</h3>
+<table>
+<thead>
+<tr>
+<th><code>MeetingLanguage</code></th>
+<th>Pista de la aplicación</th>
+<th>Micrófono</th>
+<th>Ejecución</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;&quot;</code> (por defecto)</td>
+<td>idioma de la aplicación</td>
+<td>igual</td>
+<td>En paralelo, cada una con la mitad de hilos.</td>
+</tr>
+<tr>
+<td><code>es</code>, <code>en</code>, <code>pt</code>, <code>de</code>, <code>ru</code></td>
+<td>ese</td>
+<td>ese</td>
+<td>En paralelo.</td>
+</tr>
+<tr>
+<td><code>auto</code></td>
+<td>detectado</td>
+<td><strong>el detectado en la aplicación</strong></td>
+<td>En serie: primero la aplicación y luego el micrófono con ese idioma.</td>
+</tr>
+</tbody>
+</table>
+<p>La detección (<code>LanguageDetector</code>) mide el nivel de cada segundo de la pista y prueba ventanas de 30 s, empezando cada 5 s. Se queda con las 3 que tienen más segundos activos, con al menos 8 y sin solaparse. En cada una llama a <code>DetectLanguageWithProbability</code> de Whisper y suma la probabilidad del idioma devuelto. La confianza es la suma del idioma ganador dividida entre el número de ventanas. Si no llega a <strong>0,5</strong>, se usa el idioma de la aplicación. El resultado se registra en <code>app.log</code>.</p>
+<h3 id="whisper-whispertranscriptionservice">Whisper (<code>WhisperTranscriptionService</code>)</h3>
+<ul>
+<li>Una pista <strong>en silencio</strong> (pico ≤ −50 dBFS) devuelve 0 segmentos sin arrancar ningún proceso.</li>
+<li>Cada transcripción se ejecuta en un <strong>proceso auxiliar</strong> <code>whisper</code>. Ver <a href="workers.html">Procesos auxiliares</a>.</li>
+<li>Hilos por instancia: <code>núcleos / 2 / transcripciones simultáneas</code>, entre 2 y 16.</li>
+<li>Parámetros: sin contexto entre segmentos (<code>WithNoContext</code>), umbral de no-voz <strong>0,6</strong> (0,45 para el micrófono, modo estricto) y probabilidades activadas. GPU con Vulkan si la hay.</li>
+</ul>
+<p>Filtros por segmento (<code>FilterSegmentText</code>), en orden:</p>
+<ol>
+<li>Descarta etiquetas de no-voz como <code>[MUSIC]</code> o <code>(applause)</code> y textos sin letras ni números.</li>
+<li>Descarta los segmentos con probabilidad de no-voz ≥ 0,6 (≥ 0,45 en modo estricto).</li>
+<li>Descarta frases típicas de alucinación («thank you», «gracias por ver el video», «subtítulos realizados por la comunidad de amara.org»…) si su probabilidad de no-voz es ≥ 0,3 (≥ 0,2 en modo estricto).</li>
+<li>Descarta el texto escrito en otro alfabeto que el del idioma: un 30 % de letras o más fuera de él. Solo se aplica a idiomas de alfabeto latino o cirílico. Con el idioma sin determinar no se aplica.</li>
+<li>Elimina frases repetidas en bucle (<code>RemovePhraseLoops</code>) y descarta las repeticiones de una misma palabra (<code>IsRepeatedWordLoop</code>).</li>
+</ol>
+<p>Sobre el conjunto: <code>RemoveRepeatedSegments</code> quita los segmentos repetidos y <code>MergeCloseSegments</code> une los separados por <strong>2 s o menos</strong> hasta 400 caracteres.</p>
+<h3 id="filtro-de-eco-meetingechofilter">Filtro de eco (<code>MeetingEchoFilter</code>)</h3>
+<p>Con altavoces, el micrófono capta también a los participantes, y con auriculares la aplicación a veces devuelve tu propia voz. Para cada segmento del micrófono de <strong>3 palabras o más</strong>:</p>
+<ol>
+<li>Busca los segmentos de la aplicación que se solapan, con ±3 s de margen, una vez aplicado el desfase del micrófono.</li>
+<li>Si comparten al menos el <strong>60 %</strong> de las palabras, son la misma frase. Si no, el segmento se queda tal cual.</li>
+<li>Decide <strong>quién habló primero</strong>. El micrófono es el original si empieza <strong>300 ms o más antes</strong>, o si empieza a menos de 150 ms y es <strong>fuerte</strong>. Fuerte significa que su percentil 75 de nivel está a menos de 10 dB del percentil 90 de toda la pista (<code>MicLoudness</code>).</li>
+<li>Si el micrófono es el original, se conserva y se quitan de la aplicación los segmentos contenidos en él en un 60 % o más. Si no, se descarta el del micrófono como eco.</li>
+</ol>
+<h3 id="composición-transcriptcomposer">Composición (<code>TranscriptComposer</code>)</h3>
+<ul>
+<li>Ordena todos los segmentos por inicio. Los del micrófono se desplazan con <code>MicStartOffset</code>.</li>
+<li>Empieza un párrafo nuevo cuando cambia quien habla, tras una pausa de <strong>3 s o más</strong>, o cuando el párrafo pasa de <strong>700 caracteres</strong>.</li>
+<li>Si hay algún segmento del micrófono, cada párrafo empieza con la etiqueta: <code>Participantes:</code>, <code>Tu:</code> o <code>&lt;nombre&gt; (Tú):</code>. Si no, el texto va sin etiquetas.</li>
+</ul>
+<p>Las etiquetas se guardan <strong>siempre en español</strong> (<code>SpeakerLabels</code>) para que el fichero no dependa del idioma de la interfaz. El visor las traduce al mostrarlas (<code>SpeakerDisplay</code>).</p>
+<h2 id="el-guardado-transcriptsaver">El guardado: <code>TranscriptSaver</code></h2>
+<p>Escribe en <code>&lt;TranscriptsFolder&gt;\&lt;App&gt;\&lt;App&gt;_&lt;yyyyMMdd_HHmmss&gt;\</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Fichero</th>
+<th>Contenido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;base&gt;.md</code></td>
+<td>La cabecera <code># &lt;App&gt; - dd/MM/yyyy HH:mm</code>, una línea en blanco y el texto.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;.wav</code></td>
+<td>Copia de la pista principal.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;_mic.wav</code></td>
+<td>Copia del micrófono, si lo hay.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;.recording.json</code></td>
+<td><code>MicStartOffsetTicks</code>, solo si hay micrófono.</td>
+</tr>
+</tbody>
+</table>
+<p><code>&lt;App&gt;</code> es el nombre de la aplicación sin los caracteres no válidos en un nombre de fichero, que se sustituyen por <code>_</code> (<code>TranscriptHistoryService.GetAppFolderName</code>). Si el texto está vacío, no se guarda nada.</p>
+<h2 id="re-transcripción-transcriptretranscriber">Re-transcripción (<code>TranscriptRetranscriber</code>)</h2>
+<ol>
+<li>Toma <code>&lt;base&gt;.wav</code>, <code>&lt;base&gt;_mic.wav</code> si existe y el desfase de <code>&lt;base&gt;.recording.json</code>, o 0 si no lo hay.</li>
+<li>Ejecuta <code>RecordingProcessor.ProcessAsync</code> con los ajustes actuales, en una carpeta de trabajo <code>%TEMP%\LoopbackTranscriber\retranscribe\&lt;guid&gt;</code> que se borra al acabar.</li>
+<li>Reescribe el <code>.md</code> conservando su cabecera. Las transcripciones antiguas en <code>.txt</code> se reescriben como <code>.txt</code>.</li>
+<li>A diferencia de una grabación nueva, un resultado vacío es siempre un error, sin importar la duración.</li>
+</ol>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

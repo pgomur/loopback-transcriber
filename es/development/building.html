@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Compilar y publicar | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Compilar y publicar | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/development/building.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="compilar-y-publicar">Compilar y publicar</h1>
+
+<p>De la versión en <code>Directory.Build.props</code> al instalador:</p>
+<pre><code class="lang-mermaid">flowchart LR
+    V[&quot;Versión en&lt;br/&gt;Directory.Build.props&quot;] --&gt; B[&quot;dotnet build&lt;br/&gt;dotnet test&quot;]
+    B --&gt; P[&quot;dotnet publish&quot;]
+    P --&gt; D[(&quot;installer\publish\&quot;)]
+    D --&gt; I[&quot;ISCC.exe&quot;]
+    I --&gt; S([&quot;Instalador&lt;br/&gt;Setup-x.y.z.exe&quot;])
+    class D io
+    class S ok
+</code></pre>
+<h2 id="requisitos">Requisitos</h2>
+<ul>
+<li>Windows 11 de 64 bits. La aplicación usa APIs de audio de Windows y WPF.</li>
+<li>SDK de <strong>.NET 10</strong>.</li>
+<li>Visual Studio con soporte de .NET 10 y de soluciones <code>.slnx</code>, o cualquier editor con la CLI de <code>dotnet</code>.</li>
+</ul>
+<h2 id="estructura-de-la-solución">Estructura de la solución</h2>
+<table>
+<thead>
+<tr>
+<th>Ruta</th>
+<th>Contenido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LoopbackTranscriber.slnx</code></td>
+<td>La solución, con los dos proyectos.</td>
+</tr>
+<tr>
+<td><code>Directory.Build.props</code></td>
+<td>Versión y analizadores. Afecta a todos los proyectos.</td>
+</tr>
+<tr>
+<td><code>.editorconfig</code></td>
+<td>Ajustes de las reglas de análisis.</td>
+</tr>
+<tr>
+<td><code>.config\dotnet-tools.json</code></td>
+<td>DocFX como herramienta local, para esta documentación.</td>
+</tr>
+<tr>
+<td><code>LoopbackTranscriber\</code></td>
+<td>La aplicación: <code>WinExe</code>, <code>net10.0-windows</code>, WPF.</td>
+</tr>
+<tr>
+<td><code>LoopbackTranscriber.Tests\</code></td>
+<td>Los tests: xUnit, <code>net10.0-windows</code>, WPF.</td>
+</tr>
+<tr>
+<td><code>installer\</code></td>
+<td>El script de Inno Setup. Dentro se generan <code>publish\</code> (la publicación) y <code>Output\</code> (el instalador).</td>
+</tr>
+<tr>
+<td><code>docs\</code></td>
+<td>Esta documentación, en español e inglés.</td>
+</tr>
+<tr>
+<td><code>LICENSE</code></td>
+<td>Licencia MIT.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="compilar-y-probar">Compilar y probar</h2>
+<pre><code class="lang-powershell">dotnet build LoopbackTranscriber.slnx -c Release
+dotnet test  LoopbackTranscriber.slnx -c Release
+</code></pre>
+<p>En Visual Studio: <em>Compilar → Compilar solución</em> y <em>Prueba → Ejecutar todas las pruebas</em>. Hay más detalles en <a href="tests.html">Tests</a>.</p>
+<h2 id="reglas-de-calidad">Reglas de calidad</h2>
+<p><code>Directory.Build.props</code> se aplica a los dos proyectos:</p>
+<table>
+<thead>
+<tr>
+<th>Propiedad</th>
+<th>Valor</th>
+<th>Efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Version</code></td>
+<td><code>1.1.0</code></td>
+<td>Versión del ensamblado y del ejecutable. El instalador la lee del <code>.exe</code>.</td>
+</tr>
+<tr>
+<td><code>EnableNETAnalyzers</code></td>
+<td><code>true</code></td>
+<td>Analizadores de .NET activados.</td>
+</tr>
+<tr>
+<td><code>AnalysisLevel</code></td>
+<td><code>latest-recommended</code></td>
+<td>Conjunto recomendado de la última versión.</td>
+</tr>
+<tr>
+<td><code>TreatWarningsAsErrors</code></td>
+<td><code>true</code></td>
+<td>Cualquier aviso del compilador o de los analizadores <strong>rompe la compilación</strong>.</td>
+</tr>
+<tr>
+<td><code>Deterministic</code></td>
+<td><code>true</code></td>
+<td>Compilaciones reproducibles.</td>
+</tr>
+</tbody>
+</table>
+<p><code>.editorconfig</code> ajusta algunas reglas:</p>
+<table>
+<thead>
+<tr>
+<th>Ámbito</th>
+<th>Regla</th>
+<th>Motivo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Todo el código</td>
+<td><code>CA1822.api_surface = private, internal</code></td>
+<td>Sugiere <code>static</code> solo en miembros privados e internos, no en la API pública de los ViewModels, que usan los <em>bindings</em>.</td>
+</tr>
+<tr>
+<td>Todo el código</td>
+<td><code>CA1716</code> desactivada</td>
+<td>Permite nombres de espacios de nombres y miembros que coinciden con palabras reservadas de otros lenguajes.</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td><code>CA1707</code> desactivada</td>
+<td>Nombres de test con guiones bajos: <code>Metodo_Situacion_Resultado</code>.</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td><code>CA1861</code> desactivada</td>
+<td>Arrays constantes como argumentos en los tests.</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td><code>CA2255</code> desactivada</td>
+<td>Permite el <code>[ModuleInitializer]</code> que prepara el entorno de los tests.</td>
+</tr>
+</tbody>
+</table>
+<p>Además, cada compilación ejecuta la <a href="../architecture/localization.html">comprobación de localización</a>: una clave inexistente o una traducción que falta es un error.</p>
+<h2 id="detalles-del-proyecto">Detalles del proyecto</h2>
+<ul>
+<li><code>App.xaml</code> se compila como <code>Page</code>, no como <code>ApplicationDefinition</code>, para usar el <code>Program.Main</code> propio que atiende a los <a href="../architecture/workers.html">procesos auxiliares</a>.</li>
+<li><code>InternalsVisibleTo LoopbackTranscriber.Tests</code>: los tests acceden a los tipos <code>internal</code>, como los filtros o el protocolo de los <em>workers</em>.</li>
+<li><code>THIRD-PARTY-NOTICES.txt</code> se copia a la salida y a la publicación.</li>
+<li>Ajustes de ejecución: GC no concurrente, <code>TieredPGO</code> desactivado y <code>System.GC.ConserveMemory = 5</code>. Ver <a href="../architecture/overview.html">Visión general</a>.</li>
+</ul>
+<h2 id="publicar">Publicar</h2>
+<p>El perfil <code>Properties\PublishProfiles\FolderProfile.pubxml</code> es el que usa el instalador:</p>
+<table>
+<thead>
+<tr>
+<th>Propiedad</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Configuración</td>
+<td><code>Release</code></td>
+</tr>
+<tr>
+<td><code>RuntimeIdentifier</code></td>
+<td><code>win-x64</code></td>
+</tr>
+<tr>
+<td><code>SelfContained</code></td>
+<td><code>true</code>: incluye el <em>runtime</em> de .NET, no hace falta instalarlo</td>
+</tr>
+<tr>
+<td><code>PublishSingleFile</code></td>
+<td><code>false</code>: las bibliotecas nativas de Whisper y LLama van como ficheros</td>
+</tr>
+<tr>
+<td><code>PublishReadyToRun</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>PublishDir</code></td>
+<td><code>..\installer\publish\</code></td>
+</tr>
+</tbody>
+</table>
+<pre><code class="lang-powershell">dotnet publish LoopbackTranscriber\LoopbackTranscriber.csproj -p:PublishProfile=FolderProfile
+</code></pre>
+<p>O, en Visual Studio: clic derecho en el proyecto → <em>Publicar</em> → <em>FolderProfile</em>.</p>
+<p>El paso siguiente es generar el <a href="installer.html">instalador</a>.</p>
+<h2 id="cambiar-la-versión">Cambiar la versión</h2>
+<ol>
+<li>Cambia <code>&lt;Version&gt;</code> en <code>Directory.Build.props</code>.</li>
+<li>Publica.</li>
+<li>Compila el instalador. Toma la versión del <code>LoopbackTranscriber.exe</code> publicado, así que no hay que tocarlo.</li>
+</ol>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

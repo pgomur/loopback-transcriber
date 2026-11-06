@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Documentation | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Documentation | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/development/documentation.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="documentation">Documentation</h1>
+
+<p>This documentation is generated with <strong>DocFX</strong> in <strong>Spanish and English</strong>. The sources live in <code>docs\</code> on the <code>main</code> branch. The generated HTML is published to the <strong><code>docs-site</code></strong> branch, which GitHub Pages serves as a static site.</p>
+<h2 id="layout">Layout</h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.config\dotnet-tools.json</code></td>
+<td>DocFX as a local tool, with a pinned version.</td>
+</tr>
+<tr>
+<td><code>docs\index.html</code></td>
+<td>Root page: redirects to <code>es\</code> or <code>en\</code>.</td>
+</tr>
+<tr>
+<td><code>docs\template\public\main.js</code></td>
+<td>Language switch link and diagram colors.</td>
+</tr>
+<tr>
+<td><code>docs\template\public\main.css</code></td>
+<td>Styles for the landing page, the pages and the diagrams.</td>
+</tr>
+<tr>
+<td><code>docs\template-es\token.json</code></td>
+<td>Template texts in Spanish (&quot;En este artículo&quot;, &quot;Siguiente&quot;, alerts…). Only the Spanish version uses it.</td>
+</tr>
+<tr>
+<td><code>docs\images\</code></td>
+<td>Logo and favicon, shared by both languages.</td>
+</tr>
+<tr>
+<td><code>docs\build.ps1</code></td>
+<td>Builds the whole site into <code>docs\_site\</code>.</td>
+</tr>
+<tr>
+<td><code>docs\publish.ps1</code></td>
+<td>Builds it and publishes it to <code>docs-site</code>.</td>
+</tr>
+<tr>
+<td><code>docs\.gitignore</code></td>
+<td>Excludes <code>_site\</code> and <code>obj\</code>.</td>
+</tr>
+<tr>
+<td><code>docs\es\</code>, <code>docs\en\</code></td>
+<td>Each version of the site.</td>
+</tr>
+</tbody>
+</table>
+<p>Each language (<code>es\</code> and <code>en\</code>) has the same layout and the <strong>same file names</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docfx.json</code></td>
+<td>Build for that language.</td>
+</tr>
+<tr>
+<td><code>toc.yml</code></td>
+<td>Top menu.</td>
+</tr>
+<tr>
+<td><code>index.md</code></td>
+<td>Landing page.</td>
+</tr>
+<tr>
+<td><code>guide\</code></td>
+<td>User guide.</td>
+</tr>
+<tr>
+<td><code>architecture\</code></td>
+<td>How it works inside.</td>
+</tr>
+<tr>
+<td><code>development\</code></td>
+<td>Building, tests, installer and this page.</td>
+</tr>
+</tbody>
+</table>
+<p>The language switch link replaces <code>/es/</code> with <code>/en/</code> in the current address, or the other way round, so it takes you to the same page in the other language. That is why a page must have the same name in both. The chosen language is remembered in the browser. The root page uses it and, the first time, picks based on the browser language: Spanish if it starts with <code>es</code>, English otherwise.</p>
+<h2 id="building-and-previewing-locally">Building and previewing locally</h2>
+<p>From the repository root:</p>
+<pre><code class="lang-powershell">.\docs\build.ps1 -Serve
+</code></pre>
+<p>Open <a href="http://localhost:8080">http://localhost:8080</a>. The script:</p>
+<ol>
+<li>restores DocFX at the version pinned in <code>.config\dotnet-tools.json</code> (<code>dotnet tool restore</code>);</li>
+<li><strong><code>docfx build</code></strong> of <code>es\</code> and <code>en\</code>: each one generates <code>docs\_site\es\</code> and <code>docs\_site\en\</code> with the <code>modern</code> template, search and its language (<code>_lang</code>);</li>
+<li>copies <code>index.html</code> into <code>docs\_site\</code>;</li>
+<li>with <code>-Serve</code>, serves <code>docs\_site\</code>.</li>
+</ol>
+<p>It does not build or analyze the code: it only needs the .NET SDK to run DocFX.</p>
+<p>Without <code>-Serve</code> it only builds the site.</p>
+<p>Diagrams are <code>```mermaid</code> blocks, which the <code>modern</code> template renders in the browser.</p>
+<h2 id="publishing-to-github-pages">Publishing to GitHub Pages</h2>
+<h3 id="once-the-docs-site-branch">Once: the <code>docs-site</code> branch</h3>
+<p>The branch must be an <strong>orphan</strong>, with no history shared with <code>main</code>, so it only contains the HTML. If a <code>docs-site</code> created from <code>main</code> already exists, delete it first:</p>
+<pre><code class="lang-powershell">git push origin --delete docs-site
+git branch -D docs-site
+</code></pre>
+<p>You do not need to create it by hand: if it does not exist, <code>publish.ps1</code> creates it as an orphan in a temporary folder, without touching your working copy.</p>
+<h3 id="every-time-the-documentation-changes">Every time the documentation changes</h3>
+<pre><code class="lang-powershell">.\docs\publish.ps1 -Push
+</code></pre>
+<pre><code class="lang-mermaid">flowchart TD
+    A[&quot;build.ps1&quot;] --&gt; B[&quot;Temporary worktree&lt;br/&gt;%TEMP%\loopback-transcriber-docs-site&quot;]
+    B --&gt; C[&quot;Replaces its contents&lt;br/&gt;with _site\ and an empty .nojekyll&quot;]
+    C --&gt; D{&quot;Any changes?&quot;}
+    D --&gt;|no| N([&quot;Publishes nothing&quot;])
+    D --&gt;|yes| E[&quot;Commit&lt;br/&gt;Publish documentation from (short sha)&quot;]
+    E --&gt; F{&quot;-Push?&quot;}
+    F --&gt;|yes| G([&quot;git push&quot;])
+    F --&gt;|no| H([&quot;Stays local&quot;])
+    class G ok
+    class N,H io
+</code></pre>
+<p>If the <code>docs-site</code> branch does not exist, the worktree creates it as an orphan. When it finishes, the worktree is always removed. The <code>.nojekyll</code> file stops GitHub Pages from processing the site with Jekyll, which would drop files and folders starting with <code>_</code>.</p>
+<p>Without <code>-Push</code> it only makes the local commit, so you can review it first with <code>git log docs-site</code>. With <code>-Branch another-branch</code> it publishes to another branch.</p>
+<h3 id="once-turning-on-github-pages">Once: turning on GitHub Pages</h3>
+<p>On GitHub, <em>Settings → Pages → Build and deployment</em>:</p>
+<ul>
+<li><strong>Source</strong>: <em>Deploy from a branch</em>;</li>
+<li><strong>Branch</strong>: <code>docs-site</code>, folder <code>/ (root)</code>, then <em>Save</em>.</li>
+</ul>
+<p>Within a minute or two the site will be at <code>https://pgomur.github.io/loopback-transcriber/</code>, which redirects to <code>…/es/</code> or <code>…/en/</code>.</p>
+<div class="NOTE">
+<h5>Note</h5>
+<p>GitHub Pages is free for public repositories. For a private one it requires a paid plan, and the published site is public anyway, except on GitHub Enterprise Cloud.</p>
+</div>
+<h2 id="writing-pages">Writing pages</h2>
+<ul>
+<li>DocFX Markdown: tables, code blocks, <code>mermaid</code> and the <code>&gt; [!NOTE]</code>, <code>&gt; [!TIP]</code>, <code>&gt; [!IMPORTANT]</code> and <code>&gt; [!WARNING]</code> alerts.</li>
+<li>Links between pages are relative and point to the <code>.md</code>: <code>[Reliability](../architecture/reliability.md)</code>. DocFX warns if one does not exist.</li>
+<li><strong>Every change is made in both languages</strong> and in the same commit: the same file in <code>es\</code> and in <code>en\</code>, with the same name. A new page is added to both <code>toc.yml</code> files of its folder.</li>
+<li>If the behavior of a part of the code changes, update its Architecture page in the same commit. This documentation describes concrete values, such as thresholds, timings and paths, and goes stale if it is not maintained.</li>
+</ul>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

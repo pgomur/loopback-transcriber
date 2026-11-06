@@ -1,0 +1,331 @@
+{
+  "source_base_path": "C:/Users/pgome/Desktop/GIT/loopback-transcriber/docs/es",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "../images/favicon.ico",
+      "output": {
+        "resource": {
+          "relative_path": "images/favicon.ico"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "../images/logo.svg",
+      "output": {
+        "resource": {
+          "relative_path": "images/logo.svg"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/audio-capture.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/audio-capture.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/data-on-disk.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/data-on-disk.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/live-translation.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/live-translation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/localization.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/localization.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/models.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/models.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/overview.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/overview.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/processing.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/processing.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/reliability.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/reliability.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/startup.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/startup.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/summary.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/summary.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "architecture/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/toc.html"
+        },
+        ".json": {
+          "relative_path": "architecture/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/viewmodels.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/viewmodels.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "architecture/workers.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture/workers.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "development/building.md",
+      "output": {
+        ".html": {
+          "relative_path": "development/building.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "development/documentation.md",
+      "output": {
+        ".html": {
+          "relative_path": "development/documentation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "development/installer.md",
+      "output": {
+        ".html": {
+          "relative_path": "development/installer.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "development/tests.md",
+      "output": {
+        ".html": {
+          "relative_path": "development/tests.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "development/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "development/toc.html"
+        },
+        ".json": {
+          "relative_path": "development/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "guide/applications.md",
+      "output": {
+        ".html": {
+          "relative_path": "guide/applications.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "guide/getting-started.md",
+      "output": {
+        ".html": {
+          "relative_path": "guide/getting-started.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "guide/live-translation.md",
+      "output": {
+        ".html": {
+          "relative_path": "guide/live-translation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "guide/recording.md",
+      "output": {
+        ".html": {
+          "relative_path": "guide/recording.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "guide/settings.md",
+      "output": {
+        ".html": {
+          "relative_path": "guide/settings.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "guide/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "guide/toc.html"
+        },
+        ".json": {
+          "relative_path": "guide/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "guide/transcripts.md",
+      "output": {
+        ".html": {
+          "relative_path": "guide/transcripts.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "guide/troubleshooting.md",
+      "output": {
+        ".html": {
+          "relative_path": "guide/troubleshooting.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}

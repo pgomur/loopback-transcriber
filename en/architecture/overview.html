@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Overview | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Overview | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/architecture/overview.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="overview">Overview</h1>
+
+<p>LoopbackTranscriber is a single WPF project (<code>LoopbackTranscriber.csproj</code>, <code>net10.0-windows</code>) plus a test project (<code>LoopbackTranscriber.Tests</code>). It follows MVVM with CommunityToolkit.Mvvm and a Microsoft.Extensions.DependencyInjection container.</p>
+<h2 id="layers">Layers</h2>
+<pre><code class="lang-mermaid">flowchart TB
+    subgraph UI[&quot;Views · WPF&quot;]
+        direction LR
+        MW[&quot;MainWindow&lt;br/&gt;Views/*.xaml&quot;]
+        LW[&quot;LiveTranslation&lt;br/&gt;Window&quot;]
+        TM[TrayMenuWindow]
+    end
+    subgraph VM[&quot;ViewModels&quot;]
+        direction LR
+        Shell[MainViewModel]
+        Children[&quot;Targets · Recording&lt;br/&gt;History · Viewer&quot;]
+        Live[&quot;LiveTranslation&lt;br/&gt;ViewModel&quot;]
+        Tray[&quot;TrayMenuViewModel&lt;br/&gt;AppExitWorkflow&quot;]
+    end
+    subgraph SV[&quot;Services · no WPF except dispatcher and dialogs&quot;]
+        WF[&quot;Recording&lt;br/&gt;Workflow&quot;]
+        CC[&quot;Capture&lt;br/&gt;Coordinator&quot;]
+        RP[&quot;Recording&lt;br/&gt;Processor&quot;]
+        SUM[&quot;Summarization&lt;br/&gt;Service&quot;]
+        LTS[&quot;LiveTranscription&lt;br/&gt;Session&quot;]
+        ST[&quot;SettingsService&lt;br/&gt;Strings · AppLog&quot;]
+    end
+    subgraph IO[&quot;Interop and processes&quot;]
+        WAS[&quot;WASAPI · NAudio&quot;]
+        WK[&quot;Worker processes&lt;br/&gt;--worker&quot;]
+    end
+    MW ~~~ LW ~~~ TM
+    Shell ~~~ Children ~~~ Live ~~~ Tray
+    UI --&gt; VM
+    VM --&gt; SV
+    CC --&gt; WAS
+    RP --&gt; WK
+    SUM --&gt; WK
+    LTS --&gt; WK
+    class WAS,WK io
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Views/</code>, <code>MainWindow*.cs</code>, <code>Converters/</code>, <code>Styles/</code></td>
+<td>XAML and code-behind. Presentation only: window, tray, calendar, floating window.</td>
+</tr>
+<tr>
+<td><code>ViewModels/</code></td>
+<td>State and commands of each screen. They do not know the views.</td>
+</tr>
+<tr>
+<td><code>Services/</code></td>
+<td>Logic: capture, processing, transcription, summary, live session, persistence, localization and logging.</td>
+</tr>
+<tr>
+<td><code>Models/</code></td>
+<td>Plain data: settings, watched applications, history items, speaker labels.</td>
+</tr>
+<tr>
+<td><code>Interop/</code></td>
+<td>WASAPI COM interfaces, <em>process loopback</em> activation, audio sessions and the process tree.</td>
+</tr>
+<tr>
+<td><code>Build/</code></td>
+<td><code>LocalizationCheck.targets</code>: build-time translation check.</td>
+</tr>
+<tr>
+<td>Root</td>
+<td><code>Program</code>, <code>App</code>, <code>AppServices</code> (container), <code>CrashHandler</code>, <code>SingleInstance</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="design-principles">Design principles</h2>
+<p><strong>Nothing leaves the computer.</strong> The only network access is downloading the two models, from fixed Hugging Face revisions and with their SHA256 checked. See <a href="models.html">Models and integrity</a>.</p>
+<p><strong>No audio is lost.</strong> A recording that cannot be transcribed is kept to be retried, also when the application closes, hangs or the computer shuts down. See <a href="reliability.html">Reliability</a>.</p>
+<p><strong>Inference runs in separate processes.</strong> Whisper and LLamaSharp allocate native and GPU memory that is not always released when the model is unloaded. Each transcription and each summary runs in a child process that exits when done. That keeps the main application light while it waits in the tray. See <a href="workers.html">Worker processes</a>.</p>
+<p><strong>Services do not depend on WPF.</strong> <code>RecordingWorkflow</code>, <code>RecordingProcessor</code>, <code>CaptureCoordinator</code> and the parts of the live session (segmenter, work queue, line splitting) are tested without a window. Dependencies on the system (capture, Whisper, audio conversion, dialogs, dispatcher, process watcher) sit behind interfaces that the tests replace with test doubles.</p>
+<p><strong>Child ViewModels do not know each other.</strong> The shell (<code>MainViewModel</code>) coordinates them, and they talk to each other through messages. See <a href="viewmodels.html">ViewModels and messaging</a>.</p>
+<h2 id="main-dependencies">Main dependencies</h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CommunityToolkit.Mvvm</td>
+<td>8.4.2</td>
+<td><code>ObservableObject</code>, <code>[ObservableProperty]</code>, <code>[RelayCommand]</code>, <code>WeakReferenceMessenger</code>.</td>
+</tr>
+<tr>
+<td>Microsoft.Extensions.DependencyInjection</td>
+<td>10.0.0</td>
+<td>Service container.</td>
+</tr>
+<tr>
+<td>WPF-UI</td>
+<td>4.3.0</td>
+<td>Dark theme, accent color and Fluent controls.</td>
+</tr>
+<tr>
+<td>NAudio</td>
+<td>2.2.1</td>
+<td>Device and microphone capture; reading, writing and converting WAV.</td>
+</tr>
+<tr>
+<td>Whisper.net (+ Runtime, Runtime.Vulkan)</td>
+<td>1.9.1</td>
+<td>Speech recognition, on the CPU or on a Vulkan GPU.</td>
+</tr>
+<tr>
+<td>LLamaSharp (+ Backend.Cpu, Backend.Vulkan)</td>
+<td>0.27.0</td>
+<td>Summaries and translation with Qwen3-4B.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="runtime-settings">Runtime settings</h2>
+<p>The <code>.csproj</code> turns off concurrent GC and <em>Tiered PGO</em>, and sets <code>System.GC.ConserveMemory=5</code>. All of this aims to reduce the resident memory of an application that spends most of its time in the tray. In addition:</p>
+<ul>
+<li><code>MemoryTrimmer.Release()</code> compacts the heap and trims the working set: after each transcription and each summary, when a recording finishes processing, when the window is minimized or hidden, and once 4 s after it is first shown.</li>
+<li><code>BackgroundMemoryTrimmer</code> trims the working set every 5 minutes while the window is minimized or hidden in the tray.</li>
+</ul>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

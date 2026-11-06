@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Primeros pasos | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Primeros pasos | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/guide/getting-started.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="primeros-pasos">Primeros pasos</h1>
+
+<h2 id="instalación">Instalación</h2>
+<ol>
+<li>Ejecuta <code>LoopbackTranscriberSetup-&lt;versión&gt;.exe</code>. El asistente está en español, inglés, portugués, alemán y ruso.</li>
+<li>Si falta <strong>Microsoft Visual C++ Redistributable (x64)</strong>, el instalador lo descarga e instala, salvo que ya venga incluido en el propio instalador. Lo necesitan Whisper y el modelo de resumen. Si no se puede descargar, la instalación continúa y te indica de dónde instalarlo a mano.</li>
+<li>Si el instalador de Visual C++ pide reiniciar, el asistente te lo propone al terminar.</li>
+</ol>
+<p>La aplicación se instala en <code>Archivos de programa\LoopbackTranscriber</code>. Tus datos se guardan en <code>%LocalAppData%\LoopbackTranscriber</code>: consulta <a href="../architecture/data-on-disk.html">Datos en disco</a>.</p>
+<div class="NOTE">
+<h5>Nota</h5>
+<p>Solo puede haber una instancia abierta. Si vuelves a abrir la aplicación mientras ya está en marcha (por ejemplo, minimizada en la bandeja), se muestra la ventana de la que ya existe.</p>
+</div>
+<h2 id="primer-arranque-descarga-de-modelos">Primer arranque: descarga de modelos</h2>
+<p>Al arrancar, si falta alguno de los dos modelos (la primera vez, por ejemplo), se muestra la pantalla <strong>Antes de empezar</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Modelo</th>
+<th>Para qué</th>
+<th>Tamaño</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Whisper large-v3-turbo (GGML, q5_1)</td>
+<td>Convertir el audio en texto y la transcripción en vivo</td>
+<td>~624 MB</td>
+</tr>
+<tr>
+<td>Qwen3-4B (GGUF, Q4_K_M)</td>
+<td>Resúmenes y traducción en vivo</td>
+<td>~2,5 GB</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>Pulsa <strong>Descargar modelos</strong>. Los dos modelos se descargan a la vez. Cada descarga muestra su progreso y se puede <strong>Pausar</strong>, <strong>Reanudar</strong> o <strong>Cancelar</strong>. Una descarga en pausa continúa desde donde se quedó; <strong>Cancelar</strong> borra lo descargado.</li>
+<li>Al terminar, se comprueba la huella SHA256 de cada fichero. Si no coincide, el fichero se descarta y tendrás que volver a descargarlo.</li>
+<li><strong>Continuar</strong> solo se activa cuando los dos están listos. Al pulsarlo se abre <strong>Configuración</strong> para que revises tu nombre y los idiomas.</li>
+</ol>
+<p>Los modelos se guardan en <code>%LocalAppData%\LoopbackTranscriber\models</code>. Puedes cambiar esa carpeta en <a href="settings.html">Configuración</a>.</p>
+<div class="TIP">
+<h5>Sugerencia</h5>
+<p>En cada arranque, la aplicación comprueba en segundo plano que los modelos instalados no estén dañados. Si alguno lo está, lo borra y vuelve a mostrar esta pantalla para descargarlo de nuevo, salvo que haya una grabación en curso o procesándose. Los detalles están en <a href="../architecture/models.html">Modelos e integridad</a>.</p>
+</div>
+<h2 id="ajustes-recomendados-antes-de-grabar">Ajustes recomendados antes de grabar</h2>
+<p>En <strong>Configuración</strong>:</p>
+<ul>
+<li><strong>Tu nombre</strong>: aparece en las transcripciones en lugar de «Tú». Por defecto es el nombre de pila de tu cuenta de Windows.</li>
+<li><strong>Idioma de las reuniones</strong>: el idioma en que se habla. Si no lo eliges, se usa el idioma de la aplicación. Si las reuniones cambian de idioma, elige <strong>Detectar automáticamente</strong>.</li>
+<li><strong>Idioma de la aplicación</strong>: el de la interfaz y el de los resúmenes.</li>
+</ul>
+<h2 id="consentimiento">Consentimiento</h2>
+<p>Graba y transcribe solo con el consentimiento de las personas que participan. Eres responsable de informarlas y de cumplir la ley de tu país.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

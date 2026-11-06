@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Recording a meeting | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Recording a meeting | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/guide/recording.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="recording-a-meeting">Recording a meeting</h1>
+
+<h2 id="choosing-the-application">Choosing the application</h2>
+<p>The sidebar shows the applications being watched. <strong>Teams</strong> is included by default. You can add any other application that plays audio (Zoom, the browser for Meet, Discord…) from <a href="applications.html">Applications</a>.</p>
+<p>The list is refreshed every 1.5 seconds. An application can only be recorded while it is open. If it is, the status says &quot;<em>X detected. Press &quot;Start recording&quot; to start.</em>&quot;. If not, &quot;<em>X doesn't seem to be open yet. Open it and select it again.</em>&quot;.</p>
+<h2 id="starting-and-stopping">Starting and stopping</h2>
+<ol>
+<li>Select the application and click <strong>Start recording</strong>. The status changes to &quot;<em>Listening to X...</em>&quot; and the timer starts.</li>
+<li>Click <strong>Stop recording</strong> when you are done. The recording is processed straight away:
+<ul>
+<li>&quot;<em>Processing audio...</em>&quot;</li>
+<li>&quot;<em>Checking the transcription model...</em>&quot;</li>
+<li>&quot;<em>Transcribing... N%</em>&quot;</li>
+<li>&quot;<em>Transcript ready and saved</em>&quot;</li>
+</ul>
+</li>
+<li>The transcript appears in the viewer and is saved to the history.</li>
+</ol>
+<p>You can also start and stop from the <strong>tray icon</strong>: right-click → <em>Start recording X</em> / <em>Stop recording X</em>. The icon only appears while the window is minimized or closed with the <strong>X</strong>. Stopping from the tray shows the window, so you can follow the processing. While recording, hovering over the icon shows &quot;<em>Loopback Transcriber - Recording X</em>&quot;.</p>
+<div class="NOTE">
+<h5>Note</h5>
+<p>If you close the recorded application while recording, the recording stops and is processed as if you had clicked <strong>Stop recording</strong>.</p>
+</div>
+<h2 id="what-is-recorded">What is recorded</h2>
+<p>Three sources are recorded at the same time:</p>
+<table>
+<thead>
+<tr>
+<th>Track</th>
+<th>What it contains</th>
+<th>What it is for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Application</td>
+<td>Only the audio played by the chosen process and its child processes</td>
+<td>The voices of the other participants. It is the main source.</td>
+</tr>
+<tr>
+<td>Audio output</td>
+<td>Everything played through the Windows default outputs: the general one and, if it is a different one, the communications one. Each on its own track.</td>
+<td>Fallback if the application track turns out silent.</td>
+</tr>
+<tr>
+<td>Microphone</td>
+<td>The default microphone</td>
+<td>Your voice, on a separate track.</td>
+</tr>
+</tbody>
+</table>
+<p>When recording stops, if the application track has no signal, the loudest output track is used instead. The microphone is transcribed separately and aligned in time with the other track. That is how the transcript tells <strong>Participants</strong> apart from <strong>You</strong>, or your name followed by &quot;(You)&quot;.</p>
+<p>If the microphone cannot be opened, recording continues without it and you are warned: &quot;<em>Your microphone is not being recorded: the transcript will only include the participants.</em>&quot;. If it opens but only captures silence, its track is dropped when recording stops and the transcript has no speaker labels.</p>
+<h2 id="while-a-summary-is-being-generated">While a summary is being generated</h2>
+<p>You cannot start recording while an AI summary is being generated, because both compete for the GPU and memory. The button says so: &quot;<em>You can't record while an AI summary is being generated.</em>&quot;</p>
+<h2 id="if-no-text-is-detected">If no text is detected</h2>
+<p>If Whisper returns no text:</p>
+<ul>
+<li><strong>Recording shorter than 20 seconds</strong>: it is assumed nothing was said. The viewer shows &quot;<em>(No text was detected in the audio)</em>&quot;, the status changes to &quot;<em>Transcript ready.</em>&quot; and <strong>nothing is saved</strong>: neither text nor audio.</li>
+<li><strong>Recording of 20 seconds or more</strong>: it is treated as a failure (see below) and the audio is kept.</li>
+</ul>
+<h2 id="if-something-goes-wrong">If something goes wrong</h2>
+<p>Except in the case above, the application <strong>never deletes the audio</strong> of a recording that could not be transcribed. If processing fails, the status shows the error and the folder where the audio was saved, and the application's view shows the <strong>Unprocessed recording</strong> banner with two icon buttons, which show their name on hover:</p>
+<ul>
+<li><strong>Retry</strong>: processes it again with the current settings. Not available while recording, while another recording is being processed or while a summary is being generated.</li>
+<li><strong>Discard</strong>: deletes the audio for good, after asking for confirmation.</li>
+</ul>
+<p>Each unprocessed recording shows up in its application's view. Those recovered without knowing which application they belonged to show up as &quot;Meeting&quot; in every application's view.</p>
+<p>The same happens if the application closes during a recording, the computer shuts down or an unexpected error occurs. When you open it again, the recording shows up as <em>unprocessed</em>. The specific cases are in <a href="../architecture/reliability.html">Reliability</a>.</p>
+<h2 id="closing-the-application">Closing the application</h2>
+<ul>
+<li>The window's <strong>X</strong> does not close the application: it <strong>hides it to the tray</strong>, so you can keep recording. The first time, a notification explains this. Clicking the icon shows the window again.</li>
+<li>To really exit: right-click the tray icon → <strong>Exit</strong>.</li>
+<li>If you exit while recording, you are asked what to do:
+<ul>
+<li><strong>Yes</strong>: stop the recording, process it with the window visible, and exit when done.</li>
+<li><strong>No</strong>: exit now and keep the audio unprocessed for next time.</li>
+<li><strong>Cancel</strong>: keep recording.</li>
+</ul>
+</li>
+<li>If a recording is being processed, you are asked whether to wait for it to finish and then exit. If you say no, the application stays open.</li>
+</ul>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

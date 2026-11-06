@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Summary | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Summary | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/architecture/summary.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="summary">Summary</h1>
+
+<p><code>SummarizationService</code> implements <code>ISummarizer</code>. <code>ViewerViewModel</code> calls it with the transcript text, the model path and the interface language. The result (<code>RecordingSummary</code>: <code>Title</code> and <code>Summary</code>) is saved to <code>&lt;base&gt;.summary.json</code>.</p>
+<h2 id="where-it-runs">Where it runs</h2>
+<p><code>SummarizeAsync</code> serializes a <code>SummaryJob</code> (<code>TranscriptText</code>, <code>ModelPath</code>, <code>UiLanguage</code>) and runs it in a <code>summary</code> worker process. Progress arrives as <code>@@P &lt;percentage&gt;</code>. Inside the worker, <code>SummarizeInProcessAsync</code> does the actual work. When the process ends, all the model's memory is released. See <a href="workers.html">Worker processes</a>.</p>
+<h2 id="model-and-parameters">Model and parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td><code>Qwen3-4B-Q4_K_M.gguf</code> (see <a href="models.html">Models and integrity</a>)</td>
+</tr>
+<tr>
+<td>Context</td>
+<td>8192 tokens</td>
+</tr>
+<tr>
+<td>GPU layers</td>
+<td>all (<code>GpuLayerCount = 999</code>), with the Vulkan backend if available; otherwise CPU</td>
+</tr>
+<tr>
+<td>Threads</td>
+<td><code>cores / 2</code>, between 2 and 6</td>
+</tr>
+<tr>
+<td>Executor</td>
+<td>LLamaSharp <code>StatelessExecutor</code>: each prompt is independent</td>
+</tr>
+<tr>
+<td>Normal sampling</td>
+<td>temperature 0.6, top-k 30, top-p 0.9, repeat penalty 1.12, frequency 0.3, presence 0.3, penalty window 512</td>
+</tr>
+<tr>
+<td>Strong sampling</td>
+<td>temperature 0.8, repeat penalty 1.25, frequency 0.6, presence 0.5</td>
+</tr>
+<tr>
+<td>Stop</td>
+<td><code>&lt;\|im_end\|&gt;</code> or <code>&lt;/s&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="steps">Steps</h2>
+<pre><code class="lang-mermaid">flowchart TD
+    T([&quot;Transcript&quot;]) --&gt; L{&quot;≤ 9000&lt;br/&gt;characters?&quot;}
+    L --&gt;|yes| F[&quot;Final prompt&quot;]
+    L --&gt;|no| C[&quot;Split into parts&lt;br/&gt;of ≤ 9000&quot;]
+    C --&gt; K[&quot;Key points per part&lt;br/&gt;marking OBJETIVO / PROXIMO_PASO&quot;]
+    K --&gt; J[&quot;Join, ≤ 9000 characters&quot;]
+    J --&gt; F
+    F --&gt; P[&quot;Parse TITULO / RESUMEN&quot;]
+    P --&gt; R[&quot;Remove repeated lines&quot;]
+    R --&gt; M{&quot;Goals or Next steps&lt;br/&gt;missing?&quot;}
+    M --&gt;|yes| X[&quot;Follow-up prompts&quot;]
+    M --&gt;|no| O[&quot;Translate labels&quot;]
+    X --&gt; O
+    class O ok
+</code></pre>
+<h3 id="1-condense-if-long">1. Condense if long</h3>
+<p>If the transcript exceeds 9000 characters, <code>SplitIntoChunks</code> splits it into pieces of at most 9000. Each piece gets the <code>Chunk</code> prompt (at most 600 tokens), which asks for a list of key points:</p>
+<ul>
+<li>Goals and commitments are marked <code>[OBJETIVO]</code>, and upcoming meetings or follow-ups <code>[PROXIMO_PASO]</code>.</li>
+<li>Each part is trimmed to its character quota (<code>FitPointsToLimit</code>). Marked points are always kept, even when the others do not fit.</li>
+<li>The parts are joined under <code>Puntos clave (parte i de N):</code>. The whole is trimmed to 9000 characters.</li>
+</ul>
+<h3 id="2-final-prompt">2. Final prompt</h3>
+<p>The <code>Final</code> prompt (at most 1800 tokens) asks for <strong>plain text</strong> in exactly this format:</p>
+<table>
+<thead>
+<tr>
+<th>Label</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TITULO:</code></td>
+<td>The title, on the same line.</td>
+</tr>
+<tr>
+<td><code>RESUMEN:</code></td>
+<td>Marks the start of the sections.</td>
+</tr>
+<tr>
+<td><code>Proposito:</code></td>
+<td>Two or three sentences.</td>
+</tr>
+<tr>
+<td><code>Puntos clave:</code></td>
+<td>One line per point, starting with <code>- </code>.</td>
+</tr>
+<tr>
+<td><code>Temas:</code></td>
+<td>Each topic on a <code>* Topic</code> line and, below it, its details with <code>- </code>.</td>
+</tr>
+<tr>
+<td><code>Objetivos:</code></td>
+<td>One line per goal, with <code>- </code>.</td>
+</tr>
+<tr>
+<td><code>Proximos pasos:</code></td>
+<td>One line per step, with <code>- </code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The prompt's rules: write in the requested language even if the transcript is in another one, between 5 and 12 key points, invent nothing, leave out empty sections and do not repeat yourself. It also explains the speaker labels (<code>Tu</code>, <code>&lt;name&gt; (Tú)</code>, <code>Participantes</code>) so the model only uses them when they add something. The placeholders <code>{{SELF}}</code>, <code>{{SELF_NAMED}}</code> and <code>{{OTHERS}}</code> are replaced with <code>SpeakerLabels.ApplyToPrompt</code>.</p>
+<p>The prompts are written in Spanish, and the labels the model must produce are always the Spanish ones. Step 6 translates them.</p>
+<h3 id="3-repetition-loops">3. Repetition loops</h3>
+<p>While generating, <code>GenerateAsync</code> compares each new line of 5 words or more with the previous 10 lines. Two lines are near-duplicates if their Jaccard index over words of 3 or more letters is <strong>≥ 0.72</strong>. If 3 near-duplicates appear, it stops and <strong>runs the generation again with the strong sampling</strong>.</p>
+<h3 id="4-parsing-the-answer-parseresult">4. Parsing the answer (<code>ParseResult</code>)</h3>
+<ol>
+<li>Removes Qwen3's <code>&lt;think&gt;…&lt;/think&gt;</code> block if there is one (<code>StripThinkBlock</code>).</li>
+<li>Looks for the plain <code>TITULO:</code> / <code>RESUMEN:</code> format. It accepts accents, asterisks and any letter case.</li>
+<li>If not found, looks for the first JSON object with <code>title</code> and <code>summary</code>.</li>
+<li>Failing that, uses the first line as the title (60 characters at most) and the whole text as the summary.</li>
+</ol>
+<p>Then <code>RemoveRepeatedLines</code> removes near-duplicate lines within each section.</p>
+<h3 id="5-missing-sections">5. Missing sections</h3>
+<p>If the summary has no <strong>Objetivos</strong> (goals) or <strong>Próximos pasos</strong> (next steps), it asks for them with the <code>Goals</code> and <code>NextSteps</code> prompts (at most 300 tokens each) over the same text. The model answers <code>NINGUNO</code> if there are none. At most 8 items are added, normalized as <code>- …</code>.</p>
+<h3 id="6-labels-in-the-interface-language">6. Labels in the interface language</h3>
+<p>The model always writes the labels in Spanish: <code>Proposito</code>, <code>Puntos clave</code>, and so on. <code>LocalizeSectionLabels</code> replaces them with the <code>SummaryLabel*</code> keys of the requested language, except in Spanish, where they are left as they are. It also recognizes variants the model sometimes writes: with or without accents, singular (&quot;Objetivo&quot;, &quot;Próximo paso&quot;), &quot;Siguientes pasos&quot; and &quot;Tareas&quot;, which has its own label (<code>SummaryLabelTasks</code>) even though the prompt does not ask for it.</p>
+<h2 id="how-it-is-displayed">How it is displayed</h2>
+<p><code>ViewerViewModel</code> runs the saved text through <code>SummaryFormatter.Parse</code>, which splits it into sections (<code>SummarySection</code>) for the viewer:</p>
+<ul>
+<li>It recognizes section labels in the five languages (&quot;Puntos clave&quot;, &quot;Key points&quot;, &quot;Kernpunkte&quot;…) and shows each title with the text of the <strong>current</strong> language and its icon. A summary generated in Spanish shows English titles if the interface is switched to English; the content does not change.</li>
+<li><code>- …</code> lines are bullets, <code>* …</code> lines are topics, and bullets under a topic are indented one level.</li>
+</ul>
+<h2 id="progress">Progress</h2>
+<p><code>ProgressTracker</code> splits 100% between loading the model (150 units), each part (100 for prefill plus about 450 expected tokens) and the final prompt (100 plus about 900 tokens). The percentage stays at 99 until the end.</p>
+<h2 id="usage-restrictions">Usage restrictions</h2>
+<ul>
+<li>No summary is generated while recording or while a recording is being processed (<code>CaptureStateChangedMessage</code>).</li>
+<li>Recording cannot start while a summary is being generated (<code>SummaryActivityChangedMessage</code>).</li>
+<li>Closing the window during a summary asks for confirmation.</li>
+</ul>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

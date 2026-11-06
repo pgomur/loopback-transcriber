@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Tests | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Tests | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/development/tests.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="tests">Tests</h1>
+
+<p><code>LoopbackTranscriber.Tests</code> usa <strong>xUnit 2.9.3</strong> y se compila para <code>net10.0-windows</code> con WPF, porque los ViewModels dependen de tipos de WPF como <code>DispatcherTimer</code>. Los tests se ejecutan <strong>sin ventana, sin dispositivos de audio, sin modelos y sin procesos auxiliares</strong>: todo lo externo se sustituye por dobles.</p>
+<h2 id="ejecutar">Ejecutar</h2>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Ejecuta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dotnet test LoopbackTranscriber.slnx -c Release</code></td>
+<td>Todos los tests.</td>
+</tr>
+<tr>
+<td><code>dotnet test LoopbackTranscriber.slnx --filter Category=Unit</code></td>
+<td>Solo los unitarios.</td>
+</tr>
+<tr>
+<td><code>dotnet test LoopbackTranscriber.slnx --filter Category=Integration</code></td>
+<td>Solo los de integración.</td>
+</tr>
+<tr>
+<td><code>dotnet test LoopbackTranscriber.slnx --filter &quot;FullyQualifiedName~RecordingWorkflow&quot;</code></td>
+<td>Los de una clase, por su nombre.</td>
+</tr>
+</tbody>
+</table>
+<p>En Visual Studio: <em>Prueba → Explorador de pruebas → Ejecutar todas</em>. Para agrupar por categoría, usa <em>Agrupar por → Rasgos</em>.</p>
+<h2 id="organización">Organización</h2>
+<table>
+<thead>
+<tr>
+<th>Carpeta o fichero</th>
+<th>Contenido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GlobalUsings.cs</code></td>
+<td>Espacios de nombres comunes y el alias <code>TranscriptSegment</code>.</td>
+</tr>
+<tr>
+<td><code>Infrastructure\</code></td>
+<td>Utilidades compartidas por los tests.</td>
+</tr>
+<tr>
+<td><code>Fakes\</code></td>
+<td>Dobles de las interfaces de la aplicación.</td>
+</tr>
+<tr>
+<td><code>Models\</code></td>
+<td>Un fichero por tipo de <code>Models\</code>.</td>
+</tr>
+<tr>
+<td><code>Services\</code></td>
+<td>Un fichero por servicio.</td>
+</tr>
+<tr>
+<td><code>ViewModels\</code></td>
+<td>Un fichero por ViewModel.</td>
+</tr>
+</tbody>
+</table>
+<p>Cada clase de test se llama como la clase que prueba más <code>Tests</code>. Cada test tiene la forma <code>Situacion_ResultadoEsperado</code>, por ejemplo <code>WhileRecording_No_ExitsAtOnce_KeepingTheAudioToProcessLater</code>.</p>
+<h3 id="categorías">Categorías</h3>
+<p>Cada clase lleva un rasgo <code>[Trait(TestCategory.Name, …)]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Categoría</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Unit</code></td>
+<td>Lógica pura: sin disco, sin reloj y sin hilos. Tarda milisegundos.</td>
+</tr>
+<tr>
+<td><code>Integration</code></td>
+<td>Usa una carpeta temporal, ficheros WAV reales o tiempos reales. Sigue siendo rápida y aislada.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="infraestructura">Infraestructura</h2>
+<table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TestEnvironment</code></td>
+<td><code>[ModuleInitializer]</code> que se ejecuta antes de cualquier test. Crea <code>%TEMP%\LoopbackTranscriber.Tests\&lt;pid&gt;</code>, redirige <code>AppLog.LogPath</code> ahí para no escribir en el registro real y fija el idioma en español.</td>
+</tr>
+<tr>
+<td><code>TempDirectory</code></td>
+<td>Carpeta temporal propia de cada test. Se borra al liberarla.</td>
+</tr>
+<tr>
+<td><code>TestSettings</code></td>
+<td><code>AppSettings</code> con todas las carpetas dentro de la temporal. <code>CreateModelFiles</code> crea modelos falsos de 1 byte para que la aplicación crea que están instalados.</td>
+</tr>
+<tr>
+<td><code>WavFile</code></td>
+<td>Escribe y lee WAV de prueba: tonos, silencio, PCM o <em>float</em>, cabeceras rotas a propósito, duración y formato.</td>
+</tr>
+<tr>
+<td><code>Eventually.Until(condición, motivo)</code></td>
+<td>Espera sin bloquear, comprobando la condición cada 10 ms, hasta 5 s por defecto. Si no se cumple, falla con el motivo.</td>
+</tr>
+<tr>
+<td><code>CollectingProgress&lt;T&gt;</code></td>
+<td><code>IProgress&lt;T&gt;</code> síncrono que guarda los valores.</td>
+</tr>
+<tr>
+<td><code>InterfaceLanguage.Use(lang)</code></td>
+<td>Cambia el idioma de la interfaz y lo restaura al liberarse.</td>
+</tr>
+<tr>
+<td><code>InterfaceLanguageTestGroup</code></td>
+<td>Colección de xUnit <strong>sin paralelismo</strong>. El idioma es estado global, así que los tests que lo cambian van en ella.</td>
+</tr>
+<tr>
+<td><code>RecordingRig</code></td>
+<td>Monta el flujo de grabación completo con dobles: <code>CaptureCoordinator</code>, <code>RecordingWorkflow</code>, <code>RecordingProcessor</code>, <code>RecordingViewModel</code>, el almacén de fallidas y Teams como aplicación. Incluye ayudas como <code>StartRecordingAsync</code>, <code>WhisperSays</code> y <code>LeaveOrphan</code>.</td>
+</tr>
+<tr>
+<td><code>ShellRig</code></td>
+<td><code>MainViewModel</code> con todos sus hijos, sobre un <code>RecordingRig</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="dobles">Dobles</h2>
+<table>
+<thead>
+<tr>
+<th>Doble</th>
+<th>Sustituye a</th>
+<th>Qué permite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FakeProcess</code></td>
+<td><code>IProcessCapture</code></td>
+<td>Escribir un WAV de prueba, retrasar el arranque (<code>StartGate</code>), contar arranques y fijar el pico.</td>
+</tr>
+<tr>
+<td><code>FakeDevice</code></td>
+<td><code>IDeviceCapture</code></td>
+<td>Devolver pistas del dispositivo con el pico que se quiera.</td>
+</tr>
+<tr>
+<td><code>FakeMic</code></td>
+<td><code>IMicCapture</code></td>
+<td>Simular un micrófono que arranca o no (<code>StartSucceeds</code>).</td>
+</tr>
+<tr>
+<td><code>FakeWhisper</code></td>
+<td><code>IWhisperTranscriber</code></td>
+<td>Devolver segmentos por nombre de fichero, un idioma detectado, retener la transcripción (<code>Gate</code>) y registrar las peticiones.</td>
+</tr>
+<tr>
+<td><code>FakeAudio</code></td>
+<td><code>IAudioPreparer</code></td>
+<td>Duración, mapas de actividad y de nivel, y fallos de la puerta de ruido.</td>
+</tr>
+<tr>
+<td><code>FakeSettingsStore</code></td>
+<td><code>ISettingsStore</code></td>
+<td>Ajustes en memoria. Cada lectura devuelve una <strong>copia</strong>, como el servicio real. Cuenta las actualizaciones.</td>
+</tr>
+<tr>
+<td><code>FakeDialogs</code></td>
+<td><code>IDialogService</code></td>
+<td>Respuestas fijas a Sí/No y Sí/No/Cancelar. Registra errores e información.</td>
+</tr>
+<tr>
+<td><code>FakeTargetWatcher</code></td>
+<td><code>ITargetWatcher</code></td>
+<td>Marcar aplicaciones como abiertas o cerradas (<code>SetRunning</code>).</td>
+</tr>
+<tr>
+<td><code>FakeCustomApps</code></td>
+<td><code>ICustomAppsService</code></td>
+<td>Añadir y quitar aplicaciones.</td>
+</tr>
+<tr>
+<td><code>FakeSummarizer</code></td>
+<td><code>ISummarizer</code></td>
+<td>Resumen fijo y contador de llamadas.</td>
+</tr>
+<tr>
+<td><code>FakeLiveHost</code></td>
+<td><code>IRecordingHost</code></td>
+<td>Grabación simulada para la ventana flotante y la bandeja: retrasar o hacer fallar el arranque y reaccionar a la parada (<code>OnStop</code>).</td>
+</tr>
+<tr>
+<td><code>FakePageFactory</code></td>
+<td><code>IPageFactory</code></td>
+<td>Contar las páginas creadas.</td>
+</tr>
+<tr>
+<td><code>FakeModelVerifier</code></td>
+<td><code>IModelVerifier</code></td>
+<td>Resultado o excepción de la verificación de modelos.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="pautas">Pautas</h2>
+<ul>
+<li><strong>Ningún test toca el estado real del usuario</strong>: ni <code>settings.json</code>, ni <code>%LocalAppData%</code>, ni el registro, ni procesos o dispositivos reales.</li>
+<li>Los servicios que guardan en disco reciben su ruta por el constructor, como <code>SettingsService(notices, settingsPath)</code> o <code>FailedRecordingStore(rootFolder)</code>. Los tests les pasan una ruta dentro de su <code>TempDirectory</code>.</li>
+<li>Para esperar algo asíncrono, usa <code>Eventually.Until</code>, no <code>Task.Delay</code> con un tiempo fijo. Para controlar cuándo termina una operación, usa un <code>TaskCompletionSource</code> (los <code>Gate</code> de los dobles).</li>
+<li>Los mensajes entre ViewModels se prueban con un <code>WeakReferenceMessenger</code> propio de cada test, no con <code>WeakReferenceMessenger.Default</code>.</li>
+<li>Los textos esperados se obtienen con <code>Strings.Instance.Get(...)</code> o <code>Format(...)</code> en lugar de escribirlos a mano, salvo cuando lo que se prueba es la traducción.</li>
+<li>No uses tu nombre real en los datos de prueba: los tests usan <code>pgomur</code>.</li>
+</ul>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Models and integrity | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Models and integrity | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/architecture/models.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="models-and-integrity">Models and integrity</h1>
+
+<h2 id="the-two-models">The two models</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Transcription</th>
+<th>Summary and translation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td>Whisper large-v3-turbo, GGML q5_1</td>
+<td>Qwen3-4B, GGUF Q4_K_M</td>
+</tr>
+<tr>
+<td>Source</td>
+<td><code>huggingface.co/sandrohanea/whisper.net</code>, <code>q5_1</code> folder</td>
+<td><code>huggingface.co/Qwen/Qwen3-4B-GGUF</code></td>
+</tr>
+<tr>
+<td>Pinned revision</td>
+<td><code>79dea24237e62d8a6e20a978ba415446d19712b3</code></td>
+<td><code>bc640142c66e1fdd12af0bd68f40445458f3869b</code></td>
+</tr>
+<tr>
+<td>SHA256</td>
+<td><code>05265418cae607e28c62db4095612e2c1967885d87cbda5a104834414b563ac8</code></td>
+<td><code>7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5</code></td>
+</tr>
+<tr>
+<td>Pinned in</td>
+<td><code>WhisperTranscriptionService.ModelRevision</code> and <code>PinnedSha256</code></td>
+<td><code>SummarizationService.ModelRevision</code> and <code>ModelSha256</code></td>
+</tr>
+<tr>
+<td>Local file</td>
+<td><code>&lt;ModelsFolder&gt;\whisper\ggml-turbo.bin</code></td>
+<td><code>&lt;ModelsFolder&gt;\llm\Qwen3-4B-Q4_K_M.gguf</code></td>
+</tr>
+</tbody>
+</table>
+<p>The URLs point to a <strong>specific commit</strong> (<code>…/resolve/&lt;revision&gt;/…</code>), not to <code>main</code>. If the source repository is updated, the application keeps downloading exactly the same file.</p>
+<h2 id="download">Download</h2>
+<p><code>EnsureModelDownloadedAsync</code> works the same way in both services:</p>
+<ol>
+<li>If the file already exists and passes verification (see below), it is done.</li>
+<li>Downloads to <code>&lt;destination&gt;.download</code> in 1 MB blocks. If a <code>.download</code> from an earlier attempt already exists, it <strong>resumes</strong> with a <code>Range</code> header; if the server does not answer 206, it starts from scratch. The <code>.download</code> is only kept when the download is cancelled (which is what <em>Pause</em> does) or the application closes halfway. A network or disk error deletes it.</li>
+<li>Reports progress at most every 200 ms.</li>
+<li>If the bytes received do not match <code>Content-Length</code>, throws <code>ErrorDownloadIncomplete</code>.</li>
+<li>Computes the <strong>SHA256</strong> of the <code>.download</code>. If it does not match, deletes it and throws <code>ErrorModelHashMismatch</code>.</li>
+<li>Moves the <code>.download</code> to the destination and writes the verification marker.</li>
+</ol>
+<p>For Whisper, if the download fails it is retried once before throwing <code>ErrorModelDownloadFailed</code>. A model <strong>without a pinned hash</strong> is never downloaded: <code>ErrorModelNotPinned</code> is thrown.</p>
+<h2 id="verifying-without-recomputing-the-hash-every-time">Verifying without recomputing the hash every time</h2>
+<p>Computing the SHA256 of 2.5 GB takes a while. <code>ModelIntegrity</code> stores a <code>&lt;model&gt;.verified.json</code> marker next to each model:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What it stores</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Sha256</code></td>
+<td>The hash the file was checked against.</td>
+</tr>
+<tr>
+<td><code>Length</code></td>
+<td>The file size in bytes when it was checked.</td>
+</tr>
+<tr>
+<td><code>LastWriteTimeUtcTicks</code></td>
+<td>The file's modification date (UTC, in ticks) when it was checked.</td>
+</tr>
+</tbody>
+</table>
+<p><code>EnsureVerifiedAsync(path, expectedHash)</code>:</p>
+<ol>
+<li>If the marker matches the expected hash and the file's current size and modification time, the model <strong>is accepted without reading it</strong>.</li>
+<li>Otherwise it recomputes the SHA256:
+<ul>
+<li>if it matches, it writes the marker and accepts the model;</li>
+<li>if it does not match, it <strong>deletes the model</strong> and its marker and returns <code>false</code> so it gets downloaded again.</li>
+</ul>
+</li>
+<li>Verifications of the same file are serialized with one semaphore per path.</li>
+</ol>
+<p>If a model exists but <strong>cannot be loaded</strong> (<code>WhisperModelLoadException</code> or <code>LoadWeightsFailedException</code>), <code>ModelIntegrity.LoadFailed</code> deletes the marker and throws <code>ErrorModelLoadFailed</code>. On the next use the hash is recomputed: if the file is damaged it is deleted and downloaded again; if not, the problem lies elsewhere (GPU, memory).</p>
+<h2 id="verification-at-startup">Verification at startup</h2>
+<p><code>MainViewModel.Start</code> runs <code>IModelVerifier.VerifyInstalledModelsAsync</code> in the background:</p>
+<ul>
+<li>It checks both installed models with <code>EnsureVerifiedAsync</code>. Usually reading the marker is enough.</li>
+<li>If one was damaged and deleted, it goes back to the first-run screen. It does not do so while a recording is in progress or being processed.</li>
+<li>If a model cannot be read (locked, no permissions), it warns with <code>NoticeModelVerificationFailed</code> and leaves it alone: it will be checked again before use.</li>
+</ul>
+<h2 id="updating-a-model">Updating a model</h2>
+<ol>
+<li>On the file's Hugging Face page, copy the file's <strong>commit</strong> and <strong>SHA256</strong>.</li>
+<li>Change the revision and the hash <strong>together</strong>:
+<ul>
+<li>Whisper: <code>ModelRevision</code> and the <code>GgmlType.LargeV3Turbo</code> entry of <code>PinnedSha256</code> in <code>WhisperTranscriptionService.Download.cs</code>.</li>
+<li>Qwen3: <code>ModelRevision</code> and <code>ModelSha256</code> in <code>SummarizationService.Download.cs</code>. If the file name changes, also <code>ModelDownloadUrl</code>, <code>ModelName</code> and <code>AppSettings.SummaryModelFileName</code>.</li>
+</ul>
+</li>
+<li>Update the sizes in the <code>FirstRun*ModelSize</code> and <code>Config*ModelName</code> texts in <code>Strings.cs</code>.</li>
+<li>Users who already have the previous model will find that their marker does not match the new hash. The model will be rehashed, deleted, and the new one downloaded.</li>
+</ol>
+<p>To support another Whisper size (<code>small</code>, <code>medium</code>…), it is enough to add its hash to <code>PinnedSha256</code>. <code>ParseModelSize</code> already recognizes the names.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

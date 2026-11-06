@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Grabar una reuni&#243;n | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Grabar una reuni&#243;n | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/guide/recording.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="grabar-una-reunión">Grabar una reunión</h1>
+
+<h2 id="elegir-la-aplicación">Elegir la aplicación</h2>
+<p>En la barra lateral aparecen las aplicaciones que se vigilan. <strong>Teams</strong> viene de serie. Puedes añadir cualquier otra que reproduzca audio (Zoom, el navegador para Meet, Discord…) desde <a href="applications.html">Aplicaciones</a>.</p>
+<p>La lista se actualiza cada 1,5 segundos. Una aplicación solo se puede grabar mientras está abierta. Si lo está, el estado indica «<em>X detectado. Pulsa &quot;Iniciar grabación&quot; para empezar.</em>». Si no, «<em>X no parece estar abierto todavía. Ábrelo y vuelve a seleccionarlo.</em>».</p>
+<h2 id="empezar-y-parar">Empezar y parar</h2>
+<ol>
+<li>Selecciona la aplicación y pulsa <strong>Iniciar grabación</strong>. El estado pasa a «<em>Escuchando X...</em>» y empieza a contar el tiempo.</li>
+<li>Pulsa <strong>Detener grabación</strong> al terminar. La grabación se procesa en el momento:
+<ul>
+<li>«<em>Procesando audio...</em>»</li>
+<li>«<em>Comprobando el modelo de transcripción...</em>»</li>
+<li>«<em>Transcribiendo... N%</em>»</li>
+<li>«<em>Transcripción lista y guardada</em>»</li>
+</ul>
+</li>
+<li>La transcripción aparece en el visor y se guarda en el historial.</li>
+</ol>
+<p>También puedes empezar y parar desde el <strong>icono de la bandeja</strong>: clic derecho → <em>Iniciar grabación de X</em> / <em>Detener grabación de X</em>. El icono solo aparece mientras la ventana está minimizada o cerrada con la <strong>X</strong>. Al parar desde la bandeja se muestra la ventana, para que veas el procesado. Mientras se graba, al pasar el ratón por el icono se lee «<em>Loopback Transcriber - Grabando X</em>».</p>
+<div class="NOTE">
+<h5>Nota</h5>
+<p>Si cierras la aplicación grabada mientras grabas, la grabación se para y se procesa como si hubieras pulsado <strong>Detener grabación</strong>.</p>
+</div>
+<h2 id="qué-se-graba">Qué se graba</h2>
+<p>Se graban tres fuentes a la vez:</p>
+<table>
+<thead>
+<tr>
+<th>Pista</th>
+<th>Qué contiene</th>
+<th>Para qué sirve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aplicación</td>
+<td>Solo el audio que reproduce el proceso elegido y sus procesos hijos</td>
+<td>La voz de los demás participantes. Es la fuente principal.</td>
+</tr>
+<tr>
+<td>Salida de audio</td>
+<td>Todo lo que suena por las salidas predeterminadas de Windows: la general y, si es otra, la de comunicaciones. Cada una en su pista.</td>
+<td>Respaldo si la pista de la aplicación sale en silencio.</td>
+</tr>
+<tr>
+<td>Micrófono</td>
+<td>El micrófono predeterminado</td>
+<td>Tu voz, en una pista aparte.</td>
+</tr>
+</tbody>
+</table>
+<p>Al parar, si la pista de la aplicación no tiene señal, se usa la pista de salida con más volumen. El micrófono se transcribe por separado y se alinea en el tiempo con la otra pista. Así la transcripción distingue entre <strong>Participantes</strong> y <strong>Tú</strong>, o tu nombre seguido de «(Tú)».</p>
+<p>Si el micrófono no se puede abrir, la grabación continúa sin él y se avisa: «<em>No se ha grabado tu micrófono: la transcripción solo incluirá a los participantes.</em>». Si se abre pero solo capta silencio, su pista se descarta al parar y la transcripción sale sin etiquetas de quién habla.</p>
+<h2 id="mientras-se-genera-un-resumen">Mientras se genera un resumen</h2>
+<p>No se puede empezar a grabar mientras se genera un resumen con IA, porque los dos compiten por la GPU y la memoria. El botón lo indica: «<em>No se puede grabar mientras se genera un resumen con IA.</em>».</p>
+<h2 id="si-no-se-detecta-texto">Si no se detecta texto</h2>
+<p>Si Whisper no devuelve texto:</p>
+<ul>
+<li><strong>Grabación de menos de 20 segundos</strong>: se considera que no se dijo nada. El visor muestra «<em>(No se detectó ningún texto en el audio)</em>», el estado pasa a «<em>Transcripción lista.</em>» y <strong>no se guarda nada</strong>: ni texto ni audio.</li>
+<li><strong>Grabación de 20 segundos o más</strong>: se trata como un fallo (ver abajo) y el audio se conserva.</li>
+</ul>
+<h2 id="si-algo-falla">Si algo falla</h2>
+<p>Salvo en el caso anterior, la aplicación <strong>nunca borra el audio</strong> de una grabación que no se ha podido transcribir. Si el procesado falla, el estado indica el error y la carpeta donde se ha guardado el audio, y en la vista de la aplicación aparece el aviso <strong>Grabación sin procesar</strong> con dos botones de icono, que muestran su nombre al pasar el ratón:</p>
+<ul>
+<li><strong>Reintentar</strong>: vuelve a procesarla con los ajustes actuales. No está disponible mientras se graba, se procesa otra grabación o se genera un resumen.</li>
+<li><strong>Descartar</strong>: borra el audio definitivamente, después de pedirte confirmación.</li>
+</ul>
+<p>Cada grabación sin procesar aparece en la vista de su aplicación. Las recuperadas sin saber de qué aplicación eran aparecen como «Reunión» en la vista de todas.</p>
+<p>Lo mismo ocurre si la aplicación se cierra durante una grabación, se apaga el equipo o se produce un error inesperado. Al volver a abrirla, la grabación aparece como <em>sin procesar</em>. Los casos concretos están en <a href="../architecture/reliability.html">Fiabilidad</a>.</p>
+<h2 id="cerrar-la-aplicación">Cerrar la aplicación</h2>
+<ul>
+<li>La <strong>X</strong> de la ventana no cierra la aplicación: la <strong>oculta en la bandeja</strong>, para que puedas seguir grabando. La primera vez se muestra un aviso explicándolo. Un clic en el icono vuelve a mostrar la ventana.</li>
+<li>Para salir de verdad: clic derecho en el icono de la bandeja → <strong>Salir</strong>.</li>
+<li>Si sales con una grabación en curso, se pregunta qué hacer:
+<ul>
+<li><strong>Sí</strong>: para la grabación, la procesa con la ventana visible y sale al terminar.</li>
+<li><strong>No</strong>: sale ya y conserva el audio sin procesar para la próxima vez.</li>
+<li><strong>Cancelar</strong>: sigue grabando.</li>
+</ul>
+</li>
+<li>Si se está procesando una grabación, se pregunta si quieres esperar a que termine y salir. Si respondes que no, la aplicación no se cierra.</li>
+</ul>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

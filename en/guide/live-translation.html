@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Live translation | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Live translation | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/guide/live-translation.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="live-translation">Live translation</h1>
+
+<p>Live translation opens a <strong>floating window</strong> that shows, while recording, what the participants are saying and its translation. It helps you follow a meeting in a language you do not master.</p>
+<h2 id="opening-it">Opening it</h2>
+<ul>
+<li>From the application view, with the <strong>Live translation</strong> button. It is only enabled while the application is open. If the floating window is already open for that application, the same button closes it.</li>
+<li>From the tray icon (with the main window minimized or hidden): right-click → <strong>Live translation for X</strong>. While the window is open, the same entry becomes <strong>Close live translation for X</strong>.</li>
+</ul>
+<p>Only one floating window can be open at a time: opening it for another application closes the previous one. It appears against the right edge of the screen, vertically centered.</p>
+<h2 id="using-it">Using it</h2>
+<ol>
+<li>In <strong>Translate to:</strong>, choose the target language: Spanish, English, Portuguese, German or Russian. The choice is remembered.</li>
+<li>Click <strong>Start recording and translating</strong>. A normal recording of that application starts and the window begins showing text within a few seconds.</li>
+<li>Click <strong>Stop recording</strong> to stop. The recording is processed like any other, the window shows the progress, and the full transcript is saved to the history.</li>
+</ol>
+<p>If the recording of that application is started some other way (the main window or the tray) while the floating window is open, live translation starts anyway.</p>
+<p>While someone is speaking, a <strong>draft</strong> appears and keeps being corrected. When there is a pause, the sentence is fixed as a final line and translated. Long sentences are split over several lines.</p>
+<p>The status line shows &quot;<em>Recording · 00:00</em>&quot; and, while the models load, &quot;<em>Loading the speech model…</em>&quot; and &quot;<em>loading the translator…</em>&quot;. When not recording, it shows &quot;<em>Idle</em>&quot;.</p>
+<h3 id="window-controls">Window controls</h3>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Opacity</td>
+<td>Makes the window more or less transparent, between 30% and 100%. Remembered.</td>
+</tr>
+<tr>
+<td>Always on top</td>
+<td>Keeps the window above all others. On when the window opens.</td>
+</tr>
+<tr>
+<td>Open Loopback Transcriber</td>
+<td>Shows the main window.</td>
+</tr>
+<tr>
+<td>Close</td>
+<td>Closes the floating window. Any recording in progress keeps going.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="technical-data">Technical data</h3>
+<p>When <strong>Show technical data</strong> is on, a strip at the bottom shows:</p>
+<ul>
+<li><strong>Signal</strong>: the level of the application audio, or &quot;<em>no audio from the app</em>&quot;.</li>
+<li><strong>Last chunk</strong> (or <strong>draft</strong>): seconds of audio, seconds of processing, and the delay since that speech ended.</li>
+<li><strong>Translation</strong>: translation time and delay.</li>
+</ul>
+<h2 id="settings">Settings</h2>
+<p>In the sidebar, <strong>Live translation</strong> opens the floating window settings, with a preview:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Translate to</td>
+<td>The last one chosen; the first time, the application language</td>
+</tr>
+<tr>
+<td>Show the original text below the translation</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Text size</td>
+<td>19 (from 14 to 32)</td>
+</tr>
+<tr>
+<td>Window opacity</td>
+<td>100% (from 30% to 100%)</td>
+</tr>
+<tr>
+<td>Show technical data (signal and timings)</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>Changes apply immediately to the floating window, if it is open.</p>
+<h2 id="limitations">Limitations</h2>
+<ul>
+<li><strong>Only the application audio is transcribed live</strong>, not your microphone. Your voice does appear in the final transcript.</li>
+<li>Translation uses the same model as summaries (Qwen3-4B). If it is not downloaded, the window only shows the transcription and says &quot;<em>no translation: the summary model is missing</em>&quot;.</li>
+<li>If the speech model is missing, the window says &quot;<em>The speech model is missing. Download it in Settings.</em>&quot;.</li>
+<li>If the computer cannot keep up, the oldest chunks are dropped first so the delay does not build up. A sentence may be missing from the window, but never from the final transcript, which is made afterwards from the full audio.</li>
+</ul>
+<p>How it works internally is described in <a href="../architecture/live-translation.html">Architecture: live translation</a>.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

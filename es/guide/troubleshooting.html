@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Soluci&#243;n de problemas | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Soluci&#243;n de problemas | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/guide/troubleshooting.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="solución-de-problemas">Solución de problemas</h1>
+
+<h2 id="dónde-mirar">Dónde mirar</h2>
+<table>
+<thead>
+<tr>
+<th>Fichero</th>
+<th>Contenido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>%LocalAppData%\LoopbackTranscriber\logs\app.log</code></td>
+<td>Registro de la aplicación y de sus procesos auxiliares. Cada línea lleva fecha, nivel (<code>INFO</code>, <code>WARN</code>, <code>ERROR</code>) y PID. Al pasar de 1 MB se renombra a <code>app.log.1</code> y empieza uno nuevo.</td>
+</tr>
+<tr>
+<td><code>%LocalAppData%\LoopbackTranscriber\live-metrics.log</code></td>
+<td>Tiempos de la traducción en vivo, fragmento a fragmento, y un resumen <code>SUMMARY</code> al acabar cada sesión. Se vacía al pasar de 512 KB.</td>
+</tr>
+</tbody>
+</table>
+<p>Cuando la aplicación se cierra por un error inesperado, el mensaje indica la ruta del registro.</p>
+<p>Whisper y el modelo de resumen se ejecutan en <strong>procesos auxiliares</strong>: el mismo <code>LoopbackTranscriber.exe</code> lanzado con <code>--worker &lt;tipo&gt;</code>. Para identificarlos en el Administrador de tareas, abre la pestaña <em>Detalles</em> y añade la columna <em>Línea de comandos</em>. Los tipos son <code>whisper</code>, <code>summary</code>, <code>whisper-live</code> y <code>translate-live</code>.</p>
+<h2 id="problemas-frecuentes">Problemas frecuentes</h2>
+<h3 id="no-se-detectó-ningún-texto-en-n-s-de-audio-posible-fallo-del-modelo-o-de-la-gpu">«No se detectó ningún texto en N s de audio (posible fallo del modelo o de la GPU)»</h3>
+<p>La grabación dura 20 segundos o más y Whisper no devolvió texto. El audio se conserva como <strong>grabación sin procesar</strong>.</p>
+<ol>
+<li>Pulsa <strong>Reintentar</strong>.</li>
+<li>Si se repite, actualiza el controlador de la GPU. Whisper usa Vulkan si está disponible.</li>
+<li>Comprueba en el registro qué pista se usó. Busca <code>falling back to device track</code> y <code>ProcessLoopbackRecorder: packets=…, peak=…</code>. Un <code>peak</code> de 0 indica que la aplicación no reprodujo audio.</li>
+</ol>
+<p>En grabaciones de menos de 20 segundos, una transcripción vacía no se considera un error: no se guarda nada y el audio se descarta.</p>
+<h3 id="la-pista-de-la-aplicación-sale-en-silencio">La pista de la aplicación sale en silencio</h3>
+<p>Algunas aplicaciones reproducen el audio de las llamadas desde un proceso que no es hijo del principal. En ese caso la aplicación usa la pista de la <strong>salida de audio</strong>, que incluye cualquier otro sonido del equipo. Para evitarlo, añade en <a href="applications.html">Aplicaciones</a> el proceso que aparece en <strong>Procesos detectados con audio</strong> durante la llamada.</p>
+<h3 id="el-proceso-auxiliar-se-cerró-de-forma-inesperada-código-n">«El proceso auxiliar se cerró de forma inesperada (código N)»</h3>
+<p>El proceso de Whisper o del resumen terminó sin devolver resultado. El registro incluye las últimas 40 líneas de su salida de error.</p>
+<ul>
+<li>La causa más habitual es que falte <strong>Microsoft Visual C++ Redistributable (x64)</strong>. Instálalo desde <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe">https://aka.ms/vs/17/release/vc_redist.x64.exe</a>.</li>
+<li>El código <code>2</code> significa que el proceso terminó porque la aplicación principal se cerró.</li>
+</ul>
+<h3 id="el-modelo-descargado--no-coincide-con-la-huella-esperada-y-se-ha-descartado">«El modelo descargado (…) no coincide con la huella esperada y se ha descartado»</h3>
+<p>La descarga llegó dañada o incompleta. Vuelve a descargarlo desde <strong>Configuración</strong>. Si se repite, revisa si un proxy o un antivirus modifica las descargas.</p>
+<h3 id="no-se-pudo-cargar-el-modelo-">«No se pudo cargar el modelo …»</h3>
+<p>El fichero existe pero no se puede cargar. En el siguiente uso se vuelve a comprobar su SHA256: si está dañado se borra y se puede descargar otra vez.</p>
+<h3 id="no-se-ha-grabado-tu-micrófono">«No se ha grabado tu micrófono»</h3>
+<p>No se pudo abrir el micrófono predeterminado. Revisa en <em>Configuración de Windows → Privacidad y seguridad → Micrófono</em> que las aplicaciones de escritorio tengan acceso, y que haya un micrófono predeterminado.</p>
+<h3 id="no-se-pudo-crear-el-archivo-de-recuperación">«No se pudo crear el archivo de recuperación…»</h3>
+<p>No se pudo escribir en la carpeta temporal (<code>%TEMP%\LoopbackTranscriber</code>). La grabación continúa, pero si la aplicación se cierra de golpe no se podrá recuperar. Revisa el espacio libre y los permisos.</p>
+<h3 id="no-se-pudo-recuperar-una-grabación-interrumpida">«No se pudo recuperar una grabación interrumpida…»</h3>
+<p>Al arrancar se encontró audio de una grabación interrumpida que no se pudo pasar a <strong>grabaciones sin procesar</strong>. El audio sigue en <code>%TEMP%\LoopbackTranscriber</code> y se vuelve a intentar en cada arranque.</p>
+<h3 id="no-se-pudo-iniciar-la-grabación-">«No se pudo iniciar la grabación: …»</h3>
+<p>No se pudo empezar a capturar el audio de la aplicación. El estado muestra el motivo después de los dos puntos. Comprueba que la aplicación sigue abierta, vuelve a seleccionarla e inténtalo de nuevo. El detalle queda en <code>app.log</code>, en la línea <code>RecordingViewModel.StartRecordingAsync: failed to start recording</code>.</p>
+<h3 id="no-se-pudo-iniciar-el-proceso-auxiliar">«No se pudo iniciar el proceso auxiliar.»</h3>
+<p>La aplicación no pudo lanzar un proceso auxiliar o no obtuvo su respuesta. Cierra la aplicación desde la bandeja y vuelve a abrirla. Si se repite, revisa <code>app.log</code>.</p>
+<h3 id="no-se-pudo-comprobar-el-modelo--o-no-se-pudieron-comprobar-los-modelos-instalados">«No se pudo comprobar el modelo …» o «No se pudieron comprobar los modelos instalados…»</h3>
+<p>Al arrancar no se pudo leer un modelo para comprobar su huella, por ejemplo porque otro programa lo tiene abierto o faltan permisos. El modelo no se borra y se vuelve a comprobar antes de usarlo.</p>
+<h3 id="no-se-pudo-generar-el-resumen--o-no-se-pudo-volver-a-transcribir-">«No se pudo generar el resumen: …» o «No se pudo volver a transcribir: …»</h3>
+<p>El motivo aparece después de los dos puntos y suele ser uno de los errores de esta página, como un fallo del proceso auxiliar o del modelo. «<em>No se encontró el audio de esta grabación.</em>» significa que el <code>.wav</code> de la grabación se ha borrado o movido.</p>
+<h3 id="no-se-pudo-leer-la-transcripción-no-se-pudo-eliminar-la-transcripción-o-no-se-pudo-eliminar-la-grabación">«No se pudo leer la transcripción…», «No se pudo eliminar la transcripción…» o «No se pudo eliminar la grabación…»</h3>
+<p>El fichero o la carpeta están abiertos en otro programa o no tienes permisos sobre ellos. Ciérralos e inténtalo de nuevo. Si la búsqueda falla por el mismo motivo, la lista muestra «<em>No se ha podido completar la búsqueda</em>».</p>
+<h3 id="no-aparece-una-transcripción-en-el-historial">No aparece una transcripción en el historial</h3>
+<p>Si una carpeta de grabación no se puede leer, se avisa con «<em>No se pudo leer una transcripción y no aparece en el historial</em>», con su ruta. Una carpeta solo aparece en el historial si contiene un <code>.md</code>, un <code>.txt</code> o un <code>.wav</code> con su mismo nombre.</p>
+<h2 id="empezar-de-cero">Empezar de cero</h2>
+<ol>
+<li>Sal de la aplicación desde la bandeja.</li>
+<li>Borra <code>%LocalAppData%\LoopbackTranscriber\settings.json</code>. Para empezar totalmente de cero, borra la carpeta <code>%LocalAppData%\LoopbackTranscriber</code> entera: se perderán las transcripciones y los modelos.</li>
+<li>Al desinstalar, el desinstalador ofrece borrar esa carpeta y <code>%TEMP%\LoopbackTranscriber</code>.</li>
+</ol>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

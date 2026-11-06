@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Installer | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Installer | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/development/installer.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="installer">Installer</h1>
+
+<p>The installer is built with <strong>Inno Setup 6</strong> from <code>installer\LoopbackTranscriber.iss</code>. It uses features from version 6.3 or later, such as <code>x64compatible</code> and the download page.</p>
+<h2 id="building-it">Building it</h2>
+<ol>
+<li><a href="building.html#publishing">Publish</a> the application to <code>installer\publish\</code>.</li>
+<li>Optional: copy <code>vc_redist.x64.exe</code> into <code>installer\redist\</code> to bundle it in the installer and not depend on the download. The folder is in <code>.gitignore</code>.</li>
+<li>Compile the script with <code>ISCC.exe installer\LoopbackTranscriber.iss</code> (by default in <code>C:\Program Files (x86)\Inno Setup 6\</code>), or open it in the Inno Setup IDE and click <em>Compile</em>.</li>
+<li>The result is <code>installer\Output\LoopbackTranscriberSetup-&lt;version&gt;.exe</code>.</li>
+</ol>
+<p>If <code>publish\LoopbackTranscriber.exe</code> does not exist, compilation stops with an error explaining it.</p>
+<h2 id="what-the-script-does">What the script does</h2>
+<h3 id="version">Version</h3>
+<p>It is read from the published executable with <code>GetVersionComponents</code>:</p>
+<ul>
+<li><code>AppVersion</code> and the file name use <code>Major.Minor.Revision</code>, for example <code>1.1.0</code>;</li>
+<li><code>VersionInfoVersion</code> uses all four components.</li>
+</ul>
+<p>That way the version is only defined in <code>Directory.Build.props</code>.</p>
+<h3 id="installation">Installation</h3>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AppId</code></td>
+<td><code>{B6E1F6C4-6E8B-4A6E-9C2A-6C7B9A9E9C3D}</code>. It must not change: it identifies the application for upgrades and uninstalling.</td>
+</tr>
+<tr>
+<td>Destination</td>
+<td><code>{autopf}\LoopbackTranscriber</code></td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td>x64 only, installed in 64-bit mode</td>
+</tr>
+<tr>
+<td>Minimum Windows version</td>
+<td><code>10.0.22000</code> (Windows 11)</td>
+</tr>
+<tr>
+<td>Wizard languages</td>
+<td>Spanish, English, Brazilian Portuguese, German and Russian. It only asks for the language when it does not match Windows, and remembers the one from the previous install.</td>
+</tr>
+<tr>
+<td>Wizard style</td>
+<td>modern, with the application icon</td>
+</tr>
+<tr>
+<td>Compression</td>
+<td>solid LZMA2 <em>ultra64</em></td>
+</tr>
+<tr>
+<td><code>AppMutex</code></td>
+<td><code>Local\LoopbackTranscriber-B6E1F6C4-…</code>, the same single-instance mutex the application uses. The wizard detects whether it is open and offers to close it (<code>CloseApplications</code>). It does not reopen it by itself.</td>
+</tr>
+<tr>
+<td><code>SetupMutex</code></td>
+<td>Prevents two installers from running at once.</td>
+</tr>
+<tr>
+<td>Shortcuts</td>
+<td>Start menu, and an optional desktop shortcut (unchecked)</td>
+</tr>
+<tr>
+<td>At the end</td>
+<td>offers to launch the application</td>
+</tr>
+</tbody>
+</table>
+<h3 id="files">Files</h3>
+<p>It copies everything in <code>publish\</code> <strong>except</strong> what is not used on Windows x64:</p>
+<ul>
+<li>runtimes for <code>linux-x64</code>, <code>vulkan\linux-x64</code>, <code>win-arm64</code> and <code>win-x86</code>;</li>
+<li>satellite resources for languages the application does not have: <code>cs</code>, <code>fr</code>, <code>it</code>, <code>ja</code>, <code>ko</code>, <code>pl</code>, <code>tr</code>, <code>zh-Hans</code>, <code>zh-Hant</code>.</li>
+</ul>
+<p>The <code>[InstallDelete]</code> section deletes those same folders if they were left by an earlier installation.</p>
+<h3 id="visual-c-redistributable">Visual C++ Redistributable</h3>
+<p>Whisper.net and LLamaSharp need the Visual C++ 2015-2022 x64 runtime.</p>
+<pre><code class="lang-mermaid">flowchart TD
+    A([&quot;On clicking Install&quot;]) --&gt; B{&quot;Is Visual C++&lt;br/&gt;missing?&quot;}
+    B --&gt;|not missing| Z([&quot;Does nothing&quot;])
+    B --&gt;|missing| C{&quot;Bundled in&lt;br/&gt;redist\?&quot;}
+    C --&gt;|yes| E[&quot;Extracts it to the&lt;br/&gt;temporary folder&quot;]
+    C --&gt;|no| D[&quot;Downloads it from&lt;br/&gt;aka.ms/vs/17/release/vc_redist.x64.exe&quot;]
+    D --&gt;|fails| W[&quot;Warns and continues&lt;br/&gt;without it&quot;]
+    D --&gt;|ok| F
+    E --&gt; F[&quot;After copying the files:&lt;br/&gt;vc_redist.x64.exe /install /quiet /norestart&quot;]
+    class Z,F ok
+    class W fail
+</code></pre>
+<p><code>VCRedistMissing()</code> treats it as installed if <code>HKLM64\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64</code> has <code>Installed = 1</code> and <code>Minor ≥ 30</code>.</p>
+<p>The exit code of the Visual C++ installer decides what happens next:</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+<th>Reaction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Installed</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>1638</code></td>
+<td>An equal or newer version was already installed</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>1641</code>, <code>3010</code></td>
+<td>A restart is needed</td>
+<td>The wizard offers to restart at the end.</td>
+</tr>
+<tr>
+<td>Other</td>
+<td>Error</td>
+<td>Shows the code and the link to install it manually.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="uninstalling">Uninstalling</h3>
+<p>After uninstalling, if <code>%LocalAppData%\LoopbackTranscriber</code> exists, it asks whether to delete the data too: settings, transcripts, models and unprocessed recordings. The default answer is <strong>No</strong>. If accepted, it deletes that folder and <code>%TEMP%\LoopbackTranscriber</code>. Folders the user changed in Settings are not touched. A silent uninstall neither asks nor deletes anything.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

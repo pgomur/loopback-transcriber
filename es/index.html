@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>LoopbackTranscriber | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="LoopbackTranscriber | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="images/favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/index.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="landing" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+
+<div class="lt-hero">
+  <div>
+    <div class="lt-brand">
+      <img src="images/logo.svg" alt="Logo de LoopbackTranscriber">
+      <div>
+        <h1>LoopbackTranscriber</h1>
+        <p class="lt-kicker">Aplicación de escritorio para Windows · Código abierto (MIT)</p>
+      </div>
+    </div>
+    <p class="lt-tagline">Graba, transcribe y resume tus reuniones sin que nada salga de tu equipo.</p>
+    <p class="lt-intro">Graba el audio de una aplicación concreta (Teams, Zoom, Meet en el navegador…) junto con tu micrófono. Después lo transcribe con Whisper, distingue lo que dices tú de lo que dicen los demás y, cuando se lo pides, genera un resumen con un modelo de lenguaje. Mientras grabas, también puede mostrar la reunión traducida en una ventana flotante.</p>
+    <div class="lt-actions">
+      <a class="lt-button lt-button-primary" href="guide/getting-started.html">Primeros pasos</a>
+      <a class="lt-button lt-button-secondary" href="architecture/overview.html">Cómo funciona por dentro</a>
+      <a class="lt-button lt-button-secondary" href="https://github.com/pgomur/loopback-transcriber">GitHub</a>
+    </div>
+  </div>
+  <aside class="lt-facts">
+    <ul class="lt-facts-list">
+      <li>
+        <span class="lt-fact-icon"><i class="bi bi-windows"></i></span>
+        <div class="lt-fact-body">
+          <span class="lt-fact-label">Sistema</span>
+          <span class="lt-fact-value">Windows 11 de 64 bits</span>
+          <span class="lt-fact-note">10.0.22000 o superior</span>
+        </div>
+      </li>
+      <li>
+        <span class="lt-fact-icon"><i class="bi bi-gpu-card"></i></span>
+        <div class="lt-fact-body">
+          <span class="lt-fact-label">Aceleración</span>
+          <span class="lt-fact-value">GPU con Vulkan</span>
+          <span class="lt-fact-note">Sin ella, CPU (más lento)</span>
+        </div>
+      </li>
+      <li>
+        <span class="lt-fact-icon"><i class="bi bi-soundwave"></i></span>
+        <div class="lt-fact-body">
+          <span class="lt-fact-label">Transcripción</span>
+          <span class="lt-fact-value">Whisper large-v3-turbo</span>
+          <span class="lt-fact-note">Modelo de ~624 MB</span>
+        </div>
+      </li>
+      <li>
+        <span class="lt-fact-icon"><i class="bi bi-stars"></i></span>
+        <div class="lt-fact-body">
+          <span class="lt-fact-label">Resumen y traducción</span>
+          <span class="lt-fact-value">Qwen3-4B</span>
+          <span class="lt-fact-note">Modelo de ~2,5 GB</span>
+        </div>
+      </li>
+      <li>
+        <span class="lt-fact-icon"><i class="bi bi-cloud-arrow-down"></i></span>
+        <div class="lt-fact-body">
+          <span class="lt-fact-label">Conexión</span>
+          <span class="lt-fact-value">Solo al descargar modelos</span>
+          <span class="lt-fact-note">El resto, en tu equipo</span>
+        </div>
+      </li>
+      <li>
+        <span class="lt-fact-icon"><i class="bi bi-code-slash"></i></span>
+        <div class="lt-fact-body">
+          <span class="lt-fact-label">Hecha con</span>
+          <span class="lt-fact-value">WPF · .NET 10</span>
+          <span class="lt-fact-note">Patrón MVVM</span>
+        </div>
+      </li>
+      <li class="lt-fact-wide">
+        <span class="lt-fact-icon"><i class="bi bi-translate"></i></span>
+        <div class="lt-fact-body">
+          <span class="lt-fact-label">Idiomas</span>
+          <span class="lt-fact-value"><span class="lt-lang" title="Español">ES</span> <span class="lt-lang" title="Inglés">EN</span> <span class="lt-lang" title="Portugués">PT</span> <span class="lt-lang" title="Alemán">DE</span> <span class="lt-lang" title="Ruso">RU</span></span>
+          <span class="lt-fact-note">Interfaz, reuniones (o detección automática) y traducción</span>
+        </div>
+      </li>
+    </ul>
+  </aside>
+</div>
+<div class="lt-section-head">
+  <h2 class="lt-section-title">Cómo se usa</h2>
+  <p><strong>Opcional:</strong> abre la <a href="guide/live-translation.html">traducción en vivo</a> para seguir la reunión traducida mientras grabas.</p>
+</div>
+<ol class="lt-steps">
+  <li>
+    <h3>Elige la aplicación</h3>
+    <p>Teams viene de serie. Zoom, el navegador u otras se añaden en <strong>Aplicaciones</strong>.</p>
+    <a class="lt-step-link" href="guide/applications.html">Ver en la guía</a>
+  </li>
+  <li>
+    <h3>Graba</h3>
+    <p>Pulsa <strong>Iniciar grabación</strong> (o usa el icono de la bandeja). Se graban a la vez la aplicación, la salida de audio predeterminada y tu micrófono.</p>
+    <a class="lt-step-link" href="guide/recording.html">Ver en la guía</a>
+  </li>
+  <li>
+    <h3>Obtén la transcripción</h3>
+    <p>Al pulsar <strong>Detener grabación</strong>, Whisper la transcribe y, si se grabó tu micrófono, separa <strong>Participantes</strong> y <strong>Tú</strong>. Se guarda en el historial.</p>
+    <a class="lt-step-link" href="guide/transcripts.html">Ver en la guía</a>
+  </li>
+  <li>
+    <h3>Resume</h3>
+    <p>En la pestaña <strong>Resumen IA</strong>, pulsa <strong>Resumir</strong>: título, puntos clave, objetivos y próximos pasos.</p>
+    <a class="lt-step-link" href="guide/transcripts.html">Ver en la guía</a>
+  </li>
+</ol>
+<div class="lt-section-head">
+  <h2 class="lt-section-title">Funciones</h2>
+  <p>Cada función enlaza a su guía de uso y a su explicación técnica.</p>
+</div>
+<div class="lt-grid">
+  <div class="lt-card">
+    <h3>Grabación por aplicación</h3>
+    <p>Solo el audio del programa elegido, más tu micrófono en una pista aparte. Si esa pista sale en silencio, usa la salida de audio predeterminada.</p>
+    <div class="lt-links"><a href="guide/recording.html">Guía</a> · <a href="architecture/audio-capture.html">Técnica</a></div>
+  </div>
+  <div class="lt-card">
+    <h3>Cualquier aplicación</h3>
+    <p>Teams viene de serie. Añade Zoom, Discord o el navegador (para Meet) entre los procesos que están reproduciendo audio.</p>
+    <div class="lt-links"><a href="guide/applications.html">Guía</a> · <a href="architecture/audio-capture.html">Técnica</a></div>
+  </div>
+  <div class="lt-card">
+    <h3>Transcripción con Whisper</h3>
+    <p>Whisper <code>large-v3-turbo</code>, en GPU Vulkan si la hay. Idioma fijo o detección automática. Filtra alucinaciones, repeticiones y eco.</p>
+    <div class="lt-links"><a href="guide/settings.html">Guía</a> · <a href="architecture/processing.html">Técnica</a></div>
+  </div>
+  <div class="lt-card">
+    <h3>Quién habla</h3>
+    <p>Tu micrófono se transcribe aparte y se alinea con la reunión. Cada párrafo indica <strong>Participantes</strong> o <strong>Tú</strong>, con tu nombre delante si lo has configurado.</p>
+    <div class="lt-links"><a href="guide/recording.html">Guía</a> · <a href="architecture/processing.html">Técnica</a></div>
+  </div>
+  <div class="lt-card">
+    <h3>Historial y búsqueda</h3>
+    <p>Busca en título, aplicación, fecha, resumen y texto completo, sin distinguir mayúsculas ni tildes. Filtra por fechas y duración, y vuelve a transcribir con los ajustes actuales.</p>
+    <div class="lt-links"><a href="guide/transcripts.html">Guía</a> · <a href="architecture/data-on-disk.html">Técnica</a></div>
+  </div>
+  <div class="lt-card">
+    <h3>Resumen con IA</h3>
+    <p>Qwen3-4B escribe título, propósito, puntos clave, temas, objetivos y próximos pasos, en el idioma de la aplicación.</p>
+    <div class="lt-links"><a href="guide/transcripts.html">Guía</a> · <a href="architecture/summary.html">Técnica</a></div>
+  </div>
+  <div class="lt-card">
+    <h3>Traducción en vivo</h3>
+    <p>Ventana flotante con lo que dicen los participantes y su traducción a español, inglés, portugués, alemán o ruso.</p>
+    <div class="lt-links"><a href="guide/live-translation.html">Guía</a> · <a href="architecture/live-translation.html">Técnica</a></div>
+  </div>
+  <div class="lt-card">
+    <h3>Sin pérdidas</h3>
+    <p>Si algo falla (un error, un cierre, un apagado o un cuelgue), el audio se conserva como grabación sin procesar para reintentarlo.</p>
+    <div class="lt-links"><a href="guide/recording.html">Guía</a> · <a href="architecture/reliability.html">Técnica</a></div>
+  </div>
+</div>
+<div class="lt-section-head">
+  <h2 class="lt-section-title">Privacidad y datos</h2>
+  <p>Qué usa internet y dónde quedan tus ficheros.</p>
+</div>
+<div class="lt-grid lt-grid-2">
+  <div class="lt-card">
+    <h3>Todo se queda en tu equipo</h3>
+    <p>El audio, las transcripciones y los resúmenes no salen de él. La aplicación solo se conecta a internet para descargar los dos modelos, desde una revisión fija de Hugging Face y comprobando su SHA256. El instalador puede descargar además Microsoft Visual C++ Redistributable si falta en el equipo.</p>
+    <p>Graba solo con el consentimiento de las personas que participan.</p>
+    <div class="lt-links"><a href="architecture/models.html">Modelos e integridad</a></div>
+  </div>
+  <div class="lt-card">
+    <h3>Dónde se guarda todo</h3>
+    <p>En <code>%LocalAppData%\LoopbackTranscriber</code>: ajustes, modelos, transcripciones, grabaciones sin procesar y registro. Las carpetas de modelos y de transcripciones se pueden cambiar en Configuración.</p>
+    <p>Cada grabación es una carpeta con el texto en Markdown (<code>.md</code>) y el audio (<code>.wav</code>), y, si los hay, tu micrófono (<code>_mic.wav</code>) y el resumen (<code>.summary.json</code>).</p>
+    <div class="lt-links"><a href="architecture/data-on-disk.html">Datos en disco</a></div>
+  </div>
+</div>
+<div class="lt-section-head">
+  <h2 class="lt-section-title">Toda la documentación</h2>
+</div>
+<div class="lt-docs">
+  <div class="lt-doc-group">
+    <h3>Guía de uso</h3>
+    <ul class="lt-doc-list">
+      <li><a href="guide/getting-started.html">Primeros pasos</a></li>
+      <li><a href="guide/recording.html">Grabar una reunión</a></li>
+      <li><a href="guide/transcripts.html">Transcripciones y resúmenes</a></li>
+      <li><a href="guide/live-translation.html">Traducción en vivo</a></li>
+      <li><a href="guide/applications.html">Aplicaciones</a></li>
+      <li><a href="guide/settings.html">Configuración</a></li>
+      <li><a href="guide/troubleshooting.html">Solución de problemas</a></li>
+    </ul>
+  </div>
+  <div class="lt-doc-group lt-doc-wide">
+    <h3>Arquitectura</h3>
+    <ul class="lt-doc-list">
+      <li><a href="architecture/overview.html">Visión general</a></li>
+      <li><a href="architecture/startup.html">Arranque y cierre</a></li>
+      <li><a href="architecture/viewmodels.html">ViewModels y mensajería</a></li>
+      <li><a href="architecture/audio-capture.html">Captura de audio</a></li>
+      <li><a href="architecture/processing.html">Procesado de una grabación</a></li>
+      <li><a href="architecture/summary.html">Resumen</a></li>
+      <li><a href="architecture/live-translation.html">Traducción en vivo</a></li>
+      <li><a href="architecture/workers.html">Procesos auxiliares</a></li>
+      <li><a href="architecture/models.html">Modelos e integridad</a></li>
+      <li><a href="architecture/reliability.html">Fiabilidad</a></li>
+      <li><a href="architecture/localization.html">Localización</a></li>
+      <li><a href="architecture/data-on-disk.html">Datos en disco</a></li>
+    </ul>
+  </div>
+  <div class="lt-doc-group">
+    <h3>Desarrollo</h3>
+    <ul class="lt-doc-list">
+      <li><a href="development/building.html">Compilar y publicar</a></li>
+      <li><a href="development/tests.html">Tests</a></li>
+      <li><a href="development/installer.html">Instalador</a></li>
+      <li><a href="development/documentation.html">Documentación</a></li>
+    </ul>
+  </div>
+</div>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Tests | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Tests | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/development/tests.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="tests">Tests</h1>
+
+<p><code>LoopbackTranscriber.Tests</code> uses <strong>xUnit 2.9.3</strong> and targets <code>net10.0-windows</code> with WPF, because the ViewModels depend on WPF types such as <code>DispatcherTimer</code>. Tests run <strong>without a window, audio devices, models or worker processes</strong>: everything external is replaced by test doubles.</p>
+<h2 id="running">Running</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dotnet test LoopbackTranscriber.slnx -c Release</code></td>
+<td>All the tests.</td>
+</tr>
+<tr>
+<td><code>dotnet test LoopbackTranscriber.slnx --filter Category=Unit</code></td>
+<td>Only the unit tests.</td>
+</tr>
+<tr>
+<td><code>dotnet test LoopbackTranscriber.slnx --filter Category=Integration</code></td>
+<td>Only the integration tests.</td>
+</tr>
+<tr>
+<td><code>dotnet test LoopbackTranscriber.slnx --filter &quot;FullyQualifiedName~RecordingWorkflow&quot;</code></td>
+<td>The tests of one class, by name.</td>
+</tr>
+</tbody>
+</table>
+<p>In Visual Studio: <em>Test → Test Explorer → Run All</em>. To group by category, use <em>Group By → Traits</em>.</p>
+<h2 id="layout">Layout</h2>
+<table>
+<thead>
+<tr>
+<th>Folder or file</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GlobalUsings.cs</code></td>
+<td>Common namespaces and the <code>TranscriptSegment</code> alias.</td>
+</tr>
+<tr>
+<td><code>Infrastructure\</code></td>
+<td>Utilities shared by the tests.</td>
+</tr>
+<tr>
+<td><code>Fakes\</code></td>
+<td>Test doubles for the application's interfaces.</td>
+</tr>
+<tr>
+<td><code>Models\</code></td>
+<td>One file per type in <code>Models\</code>.</td>
+</tr>
+<tr>
+<td><code>Services\</code></td>
+<td>One file per service.</td>
+</tr>
+<tr>
+<td><code>ViewModels\</code></td>
+<td>One file per ViewModel.</td>
+</tr>
+</tbody>
+</table>
+<p>Each test class is named after the class it tests plus <code>Tests</code>. Each test follows the <code>Situation_ExpectedResult</code> shape, for example <code>WhileRecording_No_ExitsAtOnce_KeepingTheAudioToProcessLater</code>.</p>
+<h3 id="categories">Categories</h3>
+<p>Each class has a <code>[Trait(TestCategory.Name, …)]</code> trait:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Unit</code></td>
+<td>Pure logic: no disk, no clock, no threads. Runs in milliseconds.</td>
+</tr>
+<tr>
+<td><code>Integration</code></td>
+<td>Uses a temporary folder, real WAV files or real timing. Still fast and isolated.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="infrastructure">Infrastructure</h2>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TestEnvironment</code></td>
+<td><code>[ModuleInitializer]</code> that runs before any test. Creates <code>%TEMP%\LoopbackTranscriber.Tests\&lt;pid&gt;</code>, redirects <code>AppLog.LogPath</code> there so nothing is written to the real log, and sets the language to Spanish.</td>
+</tr>
+<tr>
+<td><code>TempDirectory</code></td>
+<td>A temporary folder of each test's own. Deleted when disposed.</td>
+</tr>
+<tr>
+<td><code>TestSettings</code></td>
+<td><code>AppSettings</code> with every folder inside the temporary one. <code>CreateModelFiles</code> creates fake 1-byte models so the application believes they are installed.</td>
+</tr>
+<tr>
+<td><code>WavFile</code></td>
+<td>Writes and reads test WAVs: tones, silence, PCM or float, deliberately broken headers, duration and format.</td>
+</tr>
+<tr>
+<td><code>Eventually.Until(condition, reason)</code></td>
+<td>Waits without blocking, checking the condition every 10 ms, for up to 5 s by default. If it is not met, fails with the reason.</td>
+</tr>
+<tr>
+<td><code>CollectingProgress&lt;T&gt;</code></td>
+<td>Synchronous <code>IProgress&lt;T&gt;</code> that stores the values.</td>
+</tr>
+<tr>
+<td><code>InterfaceLanguage.Use(lang)</code></td>
+<td>Changes the interface language and restores it when disposed.</td>
+</tr>
+<tr>
+<td><code>InterfaceLanguageTestGroup</code></td>
+<td>xUnit collection <strong>without parallelization</strong>. The language is global state, so tests that change it go in it.</td>
+</tr>
+<tr>
+<td><code>RecordingRig</code></td>
+<td>Assembles the whole recording flow with doubles: <code>CaptureCoordinator</code>, <code>RecordingWorkflow</code>, <code>RecordingProcessor</code>, <code>RecordingViewModel</code>, the failed recordings store and Teams as the application. Includes helpers such as <code>StartRecordingAsync</code>, <code>WhisperSays</code> and <code>LeaveOrphan</code>.</td>
+</tr>
+<tr>
+<td><code>ShellRig</code></td>
+<td><code>MainViewModel</code> with all its children, on top of a <code>RecordingRig</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="test-doubles">Test doubles</h2>
+<table>
+<thead>
+<tr>
+<th>Double</th>
+<th>Replaces</th>
+<th>What it allows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FakeProcess</code></td>
+<td><code>IProcessCapture</code></td>
+<td>Writing a test WAV, delaying the start (<code>StartGate</code>), counting starts and setting the peak.</td>
+</tr>
+<tr>
+<td><code>FakeDevice</code></td>
+<td><code>IDeviceCapture</code></td>
+<td>Returning device tracks with any peak you like.</td>
+</tr>
+<tr>
+<td><code>FakeMic</code></td>
+<td><code>IMicCapture</code></td>
+<td>Simulating a microphone that starts or not (<code>StartSucceeds</code>).</td>
+</tr>
+<tr>
+<td><code>FakeWhisper</code></td>
+<td><code>IWhisperTranscriber</code></td>
+<td>Returning segments by file name and a detected language, holding the transcription (<code>Gate</code>) and recording the requests.</td>
+</tr>
+<tr>
+<td><code>FakeAudio</code></td>
+<td><code>IAudioPreparer</code></td>
+<td>Duration, activity and level maps, and noise gate failures.</td>
+</tr>
+<tr>
+<td><code>FakeSettingsStore</code></td>
+<td><code>ISettingsStore</code></td>
+<td>In-memory settings. Each read returns a <strong>copy</strong>, like the real service. Counts updates.</td>
+</tr>
+<tr>
+<td><code>FakeDialogs</code></td>
+<td><code>IDialogService</code></td>
+<td>Fixed answers to Yes/No and Yes/No/Cancel. Records errors and info messages.</td>
+</tr>
+<tr>
+<td><code>FakeTargetWatcher</code></td>
+<td><code>ITargetWatcher</code></td>
+<td>Marking applications as open or closed (<code>SetRunning</code>).</td>
+</tr>
+<tr>
+<td><code>FakeCustomApps</code></td>
+<td><code>ICustomAppsService</code></td>
+<td>Adding and removing applications.</td>
+</tr>
+<tr>
+<td><code>FakeSummarizer</code></td>
+<td><code>ISummarizer</code></td>
+<td>A fixed summary and a call counter.</td>
+</tr>
+<tr>
+<td><code>FakeLiveHost</code></td>
+<td><code>IRecordingHost</code></td>
+<td>A simulated recording for the floating window and the tray: delaying or failing the start, and reacting to the stop (<code>OnStop</code>).</td>
+</tr>
+<tr>
+<td><code>FakePageFactory</code></td>
+<td><code>IPageFactory</code></td>
+<td>Counting the pages created.</td>
+</tr>
+<tr>
+<td><code>FakeModelVerifier</code></td>
+<td><code>IModelVerifier</code></td>
+<td>Result or exception of the model verification.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="guidelines">Guidelines</h2>
+<ul>
+<li><strong>No test touches the user's real state</strong>: not <code>settings.json</code>, <code>%LocalAppData%</code>, the log, nor real processes or devices.</li>
+<li>Services that save to disk take their path through the constructor, such as <code>SettingsService(notices, settingsPath)</code> or <code>FailedRecordingStore(rootFolder)</code>. Tests pass them a path inside their <code>TempDirectory</code>.</li>
+<li>To wait for something asynchronous, use <code>Eventually.Until</code>, not <code>Task.Delay</code> with a fixed time. To control when an operation finishes, use a <code>TaskCompletionSource</code> (the doubles' <code>Gate</code>s).</li>
+<li>Messages between ViewModels are tested with a <code>WeakReferenceMessenger</code> of each test's own, not <code>WeakReferenceMessenger.Default</code>.</li>
+<li>Expected texts are obtained with <code>Strings.Instance.Get(...)</code> or <code>Format(...)</code> instead of being written by hand, except when the translation itself is what is being tested.</li>
+<li>Do not use your real name in test data: the tests use <code>pgomur</code>.</li>
+</ul>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

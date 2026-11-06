@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Fiabilidad | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Fiabilidad | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/architecture/reliability.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="fiabilidad">Fiabilidad</h1>
+
+<p>El objetivo es que <strong>ninguna grabación se pierda</strong>: si no se puede transcribir ahora, su audio se conserva para reintentarlo después. Esta página recoge todos los caminos por los que una grabación puede quedar a medias y qué se hace en cada uno.</p>
+<h2 id="grabaciones-sin-procesar-failedrecordingstore">Grabaciones sin procesar (<code>FailedRecordingStore</code>)</h2>
+<p>Una grabación conservada es una carpeta en <code>%LocalAppData%\LoopbackTranscriber\failed\</code>:</p>
+<p>El nombre de la carpeta es la fecha de la grabación y 8 caracteres aleatorios, por ejemplo <code>20261018_093000_1a2b3c4d</code>. Dentro:</p>
+<table>
+<thead>
+<tr>
+<th>Fichero</th>
+<th>Contenido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>manifest.json</code></td>
+<td><code>AppName</code>, <code>RecordedAt</code>, <code>SourceWav</code>, <code>MicWav</code>, <code>MicStartOffsetTicks</code>, <code>Error</code>, <code>ErrorKey</code> y <code>ErrorArgs</code>.</td>
+</tr>
+<tr>
+<td><code>meeting.wav</code></td>
+<td>La pista principal.</td>
+</tr>
+<tr>
+<td><code>microphone.wav</code></td>
+<td>El micrófono, si lo había.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>TryPreserve</code> crea la carpeta, escribe el manifiesto y <strong>mueve</strong> los WAV. Si no puede mover el micrófono, se queda solo con la pista principal y avisa. Si falla la pista principal, deshace lo hecho y devuelve <code>null</code>, y los originales se quedan donde estaban.</li>
+<li><code>List</code> lee los manifiestos y descarta las carpetas sin <code>meeting.wav</code>. Un manifiesto ilegible genera un aviso (<code>NoticeUnreadableFailedRecording</code>) y la carpeta no se toca.</li>
+<li>El error se guarda con su <strong>clave de localización</strong> (<code>ErrorKey</code>, <code>ErrorArgs</code>), así el motivo se muestra en el idioma actual aunque se haya cambiado desde entonces.</li>
+<li><strong>Reintentar</strong> (<code>RecordingWorkflow.RetryAsync</code>) procesa la grabación con los ajustes actuales y, si sale bien, borra la carpeta. Si vuelve a fallar, la carpeta se queda como estaba. <strong>Descartar</strong> la borra después de pedir confirmación.</li>
+<li><code>RecordingViewModel</code> muestra en la vista de cada aplicación las grabaciones con su <code>AppName</code> y, en todas, las que tienen el nombre por defecto (<code>Meeting</code>).</li>
+</ul>
+<h2 id="cada-camino-cubierto">Cada camino, cubierto</h2>
+<table>
+<thead>
+<tr>
+<th>Qué pasa</th>
+<th>Dónde se trata</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Falla la transcripción (modelo, GPU, sin texto en ≥ 20 s)</td>
+<td><code>RecordingWorkflow.StopAndProcessAsync</code></td>
+<td>El audio pasa a <em>sin procesar</em> con el motivo.</td>
+</tr>
+<tr>
+<td>Sin texto en una grabación de &lt; 20 s</td>
+<td><code>RecordingProcessor.ProcessAsync</code></td>
+<td><strong>Única excepción</strong>: no es un fallo. No se guarda nada y el audio se borra.</td>
+</tr>
+<tr>
+<td>El usuario sale con una grabación en curso y elige <em>No</em></td>
+<td><code>AppExitWorkflow</code> → <code>PreserveInterruptedRecordingAsync</code> (10 s)</td>
+<td><em>Sin procesar</em> (<code>RecordingInterruptedReason</code>).</td>
+</tr>
+<tr>
+<td>Windows cierra sesión o se apaga</td>
+<td><code>MainWindow.OnSessionEnding</code> → <code>PreserveInterruptedRecording</code> (3 s)</td>
+<td><em>Sin procesar</em>.</td>
+</tr>
+<tr>
+<td>Excepción no controlada en la interfaz</td>
+<td><code>CrashHandler</code> → <code>PreserveInterruptedRecording</code> (3 s)</td>
+<td><em>Sin procesar</em>. El mensaje lo confirma (<code>CrashBodyPreserved</code>).</td>
+</tr>
+<tr>
+<td>Excepción no controlada en otro hilo</td>
+<td><code>CrashHandler</code> → rescate en el hilo de la interfaz (2 s para responder)</td>
+<td><em>Sin procesar</em> si da tiempo.</td>
+</tr>
+<tr>
+<td>El proceso muere de golpe (corte de luz, administrador de tareas)</td>
+<td><code>OrphanRecordingRecovery</code> en el siguiente arranque</td>
+<td><em>Sin procesar</em> (<code>RecordingRecoveredReason</code>).</td>
+</tr>
+<tr>
+<td>No se puede mover a <code>failed\</code></td>
+<td><code>CaptureCoordinator.PreserveFailed</code></td>
+<td>Los originales se quedan en <code>%TEMP%</code> y los recupera el siguiente arranque.</td>
+</tr>
+<tr>
+<td>Se cuelga el controlador de audio al parar</td>
+<td><code>ProcessLoopbackRecorder.AbandonStuckCapture</code></td>
+<td>Se cierra el WAV con lo capturado y se sigue.</td>
+</tr>
+</tbody>
+</table>
+<p>Los rescates síncronos (<code>PreserveInterruptedRecording</code>) se usan donde no se puede esperar con <code>await</code>, como el manejador de errores o <code>SessionEnding</code>. Ejecutan el trabajo en el <em>thread pool</em> y esperan con un límite de tiempo. Como nunca necesitan el hilo que llama, no pueden bloquearse mutuamente.</p>
+<h2 id="grabaciones-huérfanas">Grabaciones huérfanas</h2>
+<p>Una grabación es <strong>huérfana</strong> si su audio está en <code>%TEMP%\LoopbackTranscriber</code> pero ninguna instancia la está grabando. <code>MainViewModel.Start</code> llama a <code>RecordingViewModel.RecoverOrphanRecordingsAsync</code>, que ejecuta <code>OrphanRecordingRecovery.Run</code>:</p>
+<ol>
+<li><strong>Busca</strong> los <code>recording_*.session.json</code> (y <code>grabacion_*</code>, el prefijo de versiones antiguas) y los WAV con nombre de grabación que no tienen <code>.session.json</code>.</li>
+<li><strong>Omite</strong> las que pertenecen a la instancia actual (<code>CaptureCoordinator._ownedBaseNames</code>).</li>
+<li><strong>Aplaza</strong> las que tienen algún WAV en uso: lo comprueba abriéndolo con <code>FileShare.None</code>. Se reintenta hasta 4 veces, cada 30 s. Si siguen en uso, quedan para el siguiente arranque.</li>
+<li>Para cada una:
+<ul>
+<li>Lee la sesión. Sin <code>.session.json</code>, la aplicación es <code>Meeting</code> y la fecha se toma del nombre del fichero.</li>
+<li>Ignora los WAV derivados (<code>.16k.wav</code>) y los que no tienen datos más allá de la cabecera (<code>WavRepair.HasAudioData</code>).</li>
+<li><strong>Repara la cabecera</strong> de cada WAV (<code>WavRepair.TryRepairHeader</code>). Si el tamaño de <code>data</code> es 0 o mayor que el fichero, escribe el tamaño real, redondeado al <code>blockAlign</code>, y corrige el de <code>RIFF</code>.</li>
+<li><strong>Elige la pista</strong> con el mismo criterio que una parada normal: el proceso si tiene un pico ≥ 0,01; si no, la pista de salida con más pico ≥ 0,01; si no, la del proceso aunque esté en silencio. Solo si no hay pista del proceso ni de salida, el micrófono pasa a ser la pista principal. Ver <a href="audio-capture.html">Captura de audio</a>.</li>
+<li>Calcula el desfase del micrófono con las horas guardadas en la sesión.</li>
+<li>Mueve las pistas a <code>failed\</code> y borra el resto.</li>
+<li>Si no hay audio, borra todo sin avisar.</li>
+</ul>
+</li>
+<li>Las que fallan se avisan con <code>NoticeOrphanRecoveryFailed</code>. Su audio sigue en <code>%TEMP%</code> y se reintentan en el siguiente arranque.</li>
+</ol>
+<h2 id="ajustes">Ajustes</h2>
+<p><code>SettingsService</code> guarda los ajustes en memoria como JSON: cada <code>Snapshot()</code> es una copia independiente y cada <code>Update(cambio)</code> aplica el cambio a una copia nueva bajo un <em>lock</em>.</p>
+<ul>
+<li><strong>Escritura atómica</strong>: <code>settings.json.tmp</code> y después <code>File.Replace</code>, o <code>File.Move</code> la primera vez.</li>
+<li><strong>Sin escrituras inútiles</strong>: si el JSON no cambia, no se escribe.</li>
+<li><strong>Reintentos</strong>: 3 intentos, con 100 ms × intento de espera. Si fallan todos, los cambios quedan pendientes en memoria, se avisa una vez (<code>NoticeSettingsNotSaved</code>) y se reintenta en el siguiente cambio y en <code>App.OnExit</code> (<code>FlushPendingWrite</code>).</li>
+<li><strong>Fichero dañado</strong>: se renombra a <code>settings.json.corrupt-&lt;yyyyMMdd-HHmmss&gt;</code>, se usan los valores por defecto y se avisa (<code>NoticeSettingsReset</code>).</li>
+</ul>
+<h2 id="errores-con-significado-para-el-usuario">Errores con significado para el usuario</h2>
+<p><code>UserError</code> crea excepciones normales (<code>InvalidOperationException</code>, <code>InvalidDataException</code>, <code>IOException</code>) con su <strong>clave de localización</strong> y argumentos en <code>Exception.Data</code>. El <code>Message</code> va en inglés para el registro.</p>
+<ul>
+<li><code>UserMessage.From(ex)</code> recupera la clave, y <code>Localize()</code> la traduce al idioma actual cuando se muestra.</li>
+<li>Una excepción sin clave se muestra como <code>ErrorUnexpected</code> con su mensaje.</li>
+<li>Las claves viajan intactas a través de los procesos auxiliares (<code>ErrorKey</code> y <code>ErrorArgs</code>) y de las grabaciones sin procesar (<code>manifest.json</code>).</li>
+</ul>
+<h2 id="fallos-esperados-y-fallos-de-programación">Fallos esperados y fallos de programación</h2>
+<p><code>ExpectedFailures</code> agrupa las excepciones que se consideran fallos del entorno:</p>
+<table>
+<thead>
+<tr>
+<th>Predicado</th>
+<th>Excepciones</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IsFile</code></td>
+<td><code>IOException</code>, <code>UnauthorizedAccessException</code></td>
+</tr>
+<tr>
+<td><code>IsAudioFile</code></td>
+<td>las anteriores, <code>FormatException</code> e <code>InvalidDataException</code></td>
+</tr>
+<tr>
+<td><code>IsDeviceOrFile</code></td>
+<td><code>COMException</code>, <code>InvalidComObjectException</code>, <code>IOException</code>, <code>UnauthorizedAccessException</code></td>
+</tr>
+</tbody>
+</table>
+<p>Los <code>catch</code> del código filtran con estos predicados (<code>catch (Exception ex) when (ExpectedFailures.IsFile(ex))</code>). Un fallo de programación, como un <code>NullReferenceException</code>, no se oculta: llega al <code>CrashHandler</code> y queda en el registro.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

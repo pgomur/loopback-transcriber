@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Localizaci&#243;n | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Localizaci&#243;n | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/architecture/localization.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="localización">Localización</h1>
+
+<p>La interfaz está en <strong>español, inglés, portugués, alemán y ruso</strong>. Todos los textos están en una sola clase, <code>Services/Strings.cs</code>. Una comprobación en tiempo de compilación garantiza que ninguna clave falta ni sobra.</p>
+<h2 id="strings"><code>Strings</code></h2>
+<p>Cada clave guarda un texto por idioma. Por ejemplo, <code>RecordStart</code> es «Iniciar grabación» en español y «Start recording» en inglés, y tiene también su versión en portugués, alemán y ruso.</p>
+<table>
+<thead>
+<tr>
+<th>Miembro</th>
+<th>Uso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Strings.Instance</code></td>
+<td>Instancia única. Implementa <code>INotifyPropertyChanged</code>.</td>
+</tr>
+<tr>
+<td><code>Get(key)</code> / <code>Format(key, args)</code></td>
+<td>Texto en el idioma actual.</td>
+</tr>
+<tr>
+<td><code>GetIn(lang, key)</code> / <code>FormatIn(lang, key, args)</code></td>
+<td>Texto en un idioma concreto. Lo usan los mensajes del registro (en inglés) y las etiquetas del resumen.</td>
+</tr>
+<tr>
+<td><code>this[key]</code></td>
+<td>Para XAML: <code>{Binding Path=[RecordStart], Source={x:Static services:Strings.Instance}}</code>.</td>
+</tr>
+<tr>
+<td><code>SetLanguage(lang)</code></td>
+<td>Cambia el idioma, notifica <code>Item[]</code> (WPF refresca todos los <em>bindings</em>) y lanza <code>LanguageChanged</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Si a un idioma le falta una clave, se usa el inglés. Si la clave no existe, se devuelve la propia clave. La comprobación de compilación impide que ninguna de las dos cosas llegue a una versión publicada.</p>
+<p>Cambiar el idioma en <strong>Configuración</strong> se aplica en el momento. <code>MainViewModel</code> reenvía <code>LanguageChanged</code> al visor y a la grabación para que reconstruyan los textos que no vienen de un <em>binding</em>, como el estado y las etiquetas de hablante.</p>
+<h2 id="qué-no-se-traduce-al-guardar">Qué no se traduce al guardar</h2>
+<p>Para que los ficheros no dependan del idioma de quien grabó:</p>
+<ul>
+<li><strong>Etiquetas de hablante</strong> en el <code>.md</code>: siempre <code>Participantes</code>, <code>Tu</code> y <code>&lt;nombre&gt; (Tú)</code> (<code>SpeakerLabels</code>). El visor las traduce al mostrarlas.</li>
+<li><strong>Nombre de aplicación por defecto</strong>: se guarda <code>Meeting</code> y se muestra con <code>DefaultAppName</code> («Reunión»). Se acepta también el antiguo <code>reunion</code>.</li>
+<li><strong>Errores</strong>: se guardan con su clave, no con el texto. Ver <a href="reliability.html#errores-con-significado-para-el-usuario">Fiabilidad</a>.</li>
+</ul>
+<p>En cambio, el <strong>resumen</strong> se escribe en el idioma de la interfaz en el momento de generarlo, con las etiquetas de sección ya traducidas. Al mostrarlo, el visor sustituye los títulos de sección por los del idioma actual (<code>SummaryFormatter</code>).</p>
+<h2 id="comprobación-en-compilación-buildlocalizationchecktargets">Comprobación en compilación (<code>Build/LocalizationCheck.targets</code>)</h2>
+<p>Una tarea MSBuild en línea (<code>RoslynCodeTaskFactory</code>) se ejecuta antes de <code>CoreCompile</code>. Lee <code>Strings.cs</code>, todos los <code>.cs</code> del proyecto y todos los XAML (<code>Page</code> y <code>ApplicationDefinition</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Código</th>
+<th>Nivel</th>
+<th>Qué detecta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LT0000</code></td>
+<td>error</td>
+<td>No se encontró ninguna clave: el formato de <code>Strings.cs</code> ha cambiado y la tarea no sabe leerlo.</td>
+</tr>
+<tr>
+<td><code>LT0001</code></td>
+<td>error</td>
+<td>Se usa una clave que no existe.</td>
+</tr>
+<tr>
+<td><code>LT0002</code></td>
+<td>error</td>
+<td>A una clave le falta un idioma o lo tiene vacío.</td>
+</tr>
+<tr>
+<td><code>LT0003</code></td>
+<td>aviso</td>
+<td>Una clave no se usa en ningún sitio.</td>
+</tr>
+<tr>
+<td><code>LT0004</code></td>
+<td>error</td>
+<td>Clave duplicada.</td>
+</tr>
+</tbody>
+</table>
+<p>Se reconocen como usos de una clave:</p>
+<ul>
+<li><code>Strings.Instance.Get(&quot;X&quot;)</code>, <code>Format(&quot;X&quot;, …)</code>, <code>GetIn(lang, &quot;X&quot;)</code>, <code>FormatIn(lang, &quot;X&quot;, …)</code> y <code>Strings.Instance[&quot;X&quot;]</code>;</li>
+<li><code>UserMessage.FromKey(&quot;X&quot;, …)</code> y <code>UserError.&lt;método&gt;(&quot;X&quot;, …)</code> o <code>UserError.&lt;método&gt;(inner, &quot;X&quot;, …)</code>;</li>
+<li>en XAML, <code>Binding [X] … Source={x:Static …:Strings.Instance}</code>;</li>
+<li>cualquier literal que empiece por un prefijo de <code>KeyLiteralPrefixes</code>: hoy <code>SummaryLabel</code>, porque esas claves se construyen en un <code>switch</code>.</li>
+</ul>
+<p>Para no marcar como «no usada» una clave que se pasa en una variable, cuenta como usada cualquier literal de C# idéntico a una clave.</p>
+<p>La tarea se omite en el proyecto temporal <code>_wpftmp</code> que WPF genera al compilar XAML. También se puede desactivar con <code>-p:SkipLocalizationCheck=true</code>.</p>
+<h2 id="añadir-un-idioma">Añadir un idioma</h2>
+<ol>
+<li>Añade la traducción <code>[&quot;xx&quot;] = &quot;…&quot;</code> a <strong>todas</strong> las claves de <code>Strings.cs</code>. La comprobación avisa de cada una que falte.</li>
+<li>Añade <code>xx</code> a <code>Languages=&quot;es;en;pt;de;ru&quot;</code> en <code>LocalizationCheck.targets</code>.</li>
+<li>Añádelo a <code>AvailableUiLanguages</code> (<code>ConfigViewModel</code>), a <code>AppSettings.DetectSystemLanguage</code>, a <code>LiveTranslationPreferences.SupportedLanguages</code>, a la lista de idiomas y a <code>LanguageNameFor</code> (nombre en inglés para el traductor) de <code>LiveTranslationViewModel</code>, y a la lista de idiomas y los textos de ejemplo (<code>PreviewSamples</code>) de <code>LiveTranslationSettingsViewModel</code>.</li>
+<li>Añade su nombre a <code>SummarizationService.GetSummaryLanguageName</code>, que da el nombre del idioma para el <em>prompt</em>.</li>
+<li>Añade el idioma a <code>[Languages]</code> del instalador si Inno Setup tiene traducción.</li>
+</ol>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

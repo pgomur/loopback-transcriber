@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Configuraci&#243;n | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Configuraci&#243;n | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/guide/settings.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="configuración">Configuración</h1>
+
+<h2 id="pantalla-de-configuración">Pantalla de configuración</h2>
+<h3 id="general">General</h3>
+<table>
+<thead>
+<tr>
+<th>Ajuste</th>
+<th>Qué hace</th>
+<th>Por defecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tu nombre</strong></td>
+<td>Etiqueta tus intervenciones como «<em>Nombre (Tú)</em>» en lugar de «<em>Tú</em>». Hasta 20 caracteres. Se guarda 0,7 s después de dejar de escribir. Si lo dejas vacío, se usa «<em>Tú</em>».</td>
+<td>El nombre de pila de tu cuenta de Windows o, si no lo tiene, tu usuario con la inicial en mayúscula.</td>
+</tr>
+<tr>
+<td><strong>Idioma de la aplicación</strong></td>
+<td>Idioma de la interfaz y de los resúmenes: español, inglés, portugués, alemán o ruso. Se aplica al momento.</td>
+<td>El de Windows, si es uno de esos cinco. Si no, inglés.</td>
+</tr>
+<tr>
+<td><strong>Idioma de las reuniones</strong></td>
+<td>Idioma en que se habla, para tu micrófono y los participantes: <strong>Detectar automáticamente</strong> o uno de los cinco idiomas.</td>
+<td>Sigue al idioma de la aplicación mientras no elijas otro.</td>
+</tr>
+<tr>
+<td><strong>Interfaz traslúcida</strong></td>
+<td>Aplica el efecto Mica de Windows 11 al fondo de la ventana. No se aplica en la pantalla de primera ejecución.</td>
+<td>Desactivado</td>
+</tr>
+</tbody>
+</table>
+<div class="TIP">
+<h5>Sugerencia</h5>
+<p>Fijar el idioma de las reuniones da mejores resultados que la detección automática si siempre hablas el mismo idioma. Usa <strong>Detectar automáticamente</strong> si cambia de una reunión a otra. Cómo se detecta se explica en <a href="../architecture/processing.html#idioma">Procesado de una grabación</a>.</p>
+</div>
+<h3 id="modelos-de-ia">Modelos de IA</h3>
+<p>Dos apartados, <strong>Transcripción</strong> y <strong>Resumen con IA</strong>, muestran cada modelo, su tamaño en disco o si falta, y un botón para descargarlo: <strong>Descargar modelo de transcripción</strong> y <strong>Descargar modelo de resumen</strong>.</p>
+<ul>
+<li>Si un modelo ya está en la carpeta, se comprueba su integridad en lugar de descargarlo otra vez.</li>
+<li>El estado se actualiza solo si aparecen o desaparecen ficheros en la carpeta de modelos.</li>
+<li>Aquí las descargas no se pueden pausar. Si se interrumpen, por ejemplo al cerrar la aplicación, la siguiente descarga continúa desde donde se quedó.</li>
+</ul>
+<h3 id="carpetas-y-guardado">Carpetas y guardado</h3>
+<table>
+<thead>
+<tr>
+<th>Carpeta</th>
+<th>Por defecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Carpeta de modelos</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\models</code></td>
+</tr>
+<tr>
+<td>Carpeta de transcripciones</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\transcripts</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Abrir</strong> la muestra en el Explorador y <strong>Cambiar</strong> elige otra.</p>
+<div class="IMPORTANT">
+<h5>Importante</h5>
+<p>Cambiar una carpeta <strong>no mueve</strong> su contenido. Si cambias la carpeta de modelos, mueve tú los ficheros o vuelve a descargarlos. Si cambias la de transcripciones, el historial mostrará solo lo que haya en la nueva. Al desinstalar, las carpetas que hayas cambiado no se borran.</p>
+</div>
+<h3 id="acerca-de">Acerca de</h3>
+<p>El enlace al perfil de GitHub del autor, el aviso legal (consentimiento para grabar, procesamiento local y que los resúmenes pueden contener errores) y <strong>Licencias de software de terceros</strong>, que abre <code>THIRD-PARTY-NOTICES.txt</code>.</p>
+<h2 id="el-fichero-de-ajustes">El fichero de ajustes</h2>
+<p>Todos los ajustes se guardan en <code>%LocalAppData%\LoopbackTranscriber\settings.json</code>. La aplicación lo escribe sola y no hace falta editarlo. Lo describimos aquí para diagnosticar problemas y porque tres ajustes avanzados solo existen en este fichero.</p>
+<table>
+<thead>
+<tr>
+<th>Clave</th>
+<th>Tipo</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ModelSize</code></td>
+<td>texto</td>
+<td>Modelo de Whisper. Por defecto <code>turbo</code>, el único con huella SHA256 fijada. Otro valor (<code>tiny</code>, <code>base</code>, <code>small</code>, <code>medium</code>, <code>large</code>) solo funciona si el fichero <code>ggml-&lt;valor&gt;.bin</code> ya está en <code>models\whisper</code>, y <strong>no se verifica</strong>. Si no está, se produce un error. La primera ejecución y la verificación al arrancar usan siempre <code>turbo</code>, y cualquier cambio guardado desde <strong>Configuración</strong> devuelve este valor a <code>turbo</code>.</td>
+</tr>
+<tr>
+<td><code>ModelsFolder</code></td>
+<td>texto</td>
+<td>Carpeta de modelos.</td>
+</tr>
+<tr>
+<td><code>TranscriptsFolder</code></td>
+<td>texto</td>
+<td>Carpeta de transcripciones.</td>
+</tr>
+<tr>
+<td><code>MeetingLanguage</code></td>
+<td>texto</td>
+<td><code>&quot;&quot;</code> sigue al idioma de la aplicación, <code>auto</code> detecta el idioma, y <code>es</code>, <code>en</code>, <code>pt</code>, <code>de</code> o <code>ru</code> fijan uno.</td>
+</tr>
+<tr>
+<td><code>UiLanguage</code></td>
+<td>texto</td>
+<td><code>es</code>, <code>en</code>, <code>pt</code>, <code>de</code> o <code>ru</code>.</td>
+</tr>
+<tr>
+<td><code>TranslucentUi</code></td>
+<td>booleano</td>
+<td>Interfaz traslúcida.</td>
+</tr>
+<tr>
+<td><code>UserName</code></td>
+<td>texto</td>
+<td>Tu nombre en las transcripciones. En las etiquetas, los dos puntos se sustituyen por espacios.</td>
+</tr>
+<tr>
+<td><code>UserNameInitialized</code></td>
+<td>booleano</td>
+<td>Ya se propuso el nombre de Windows. No se vuelve a proponer aunque borres el nombre.</td>
+</tr>
+<tr>
+<td><code>TrayHintShown</code></td>
+<td>booleano</td>
+<td>Ya se mostró el aviso de «sigue en la bandeja».</td>
+</tr>
+<tr>
+<td><code>FirstRunSetupCompleted</code></td>
+<td>booleano</td>
+<td>Ya se completó la descarga inicial de modelos.</td>
+</tr>
+<tr>
+<td><code>CustomApps</code></td>
+<td>lista</td>
+<td>Aplicaciones añadidas: <code>Id</code> (<code>custom:&lt;proceso en minúsculas&gt;</code>), <code>DisplayName</code> y <code>ProcessName</code>.</td>
+</tr>
+<tr>
+<td><code>LiveTranslationLanguage</code></td>
+<td>texto</td>
+<td>Idioma de destino de la traducción en vivo.</td>
+</tr>
+<tr>
+<td><code>LiveWindowOpacity</code></td>
+<td>número</td>
+<td>Opacidad de la ventana flotante, de 0,3 a 1.</td>
+</tr>
+<tr>
+<td><code>LiveShowOriginal</code></td>
+<td>booleano</td>
+<td>Mostrar el original bajo la traducción.</td>
+</tr>
+<tr>
+<td><code>LiveShowMetrics</code></td>
+<td>booleano</td>
+<td>Mostrar la franja de datos técnicos.</td>
+</tr>
+<tr>
+<td><code>LiveTextSize</code></td>
+<td>número</td>
+<td>Tamaño del texto de la ventana flotante, de 14 a 32.</td>
+</tr>
+<tr>
+<td><code>LiveAudioContext</code></td>
+<td>entero</td>
+<td><strong>Avanzado.</strong> Tamaño del contexto de audio de Whisper en la transcripción en vivo. <code>0</code> usa el del modelo. Valores menores reducen la latencia a costa de precisión.</td>
+</tr>
+<tr>
+<td><code>LiveFlashAttention</code></td>
+<td>booleano</td>
+<td><strong>Avanzado.</strong> Activa <em>flash attention</em> en Whisper en vivo. Si el modelo no carga con ella, se reintenta sin ella.</td>
+</tr>
+</tbody>
+</table>
+<p>Si editas el fichero a mano, hazlo con la aplicación cerrada. La aplicación lee el fichero solo al arrancar y, con cada cambio de ajustes, lo reescribe entero con lo que tiene en memoria, así que tus cambios se perderían.</p>
+<h3 id="qué-pasa-si-el-fichero-se-daña">Qué pasa si el fichero se daña</h3>
+<ul>
+<li>Si <code>settings.json</code> no es un JSON válido, se aparta como <code>settings.json.corrupt-&lt;fecha&gt;</code>, se usan los valores por defecto y se avisa: «<em>No se pudo leer la configuración y se han restablecido los valores por defecto.</em>».</li>
+<li>Si no se puede escribir (disco lleno, sin permisos, antivirus), se intenta tres veces. Los cambios se mantienen en memoria, se vuelve a intentar con el siguiente cambio y al cerrar, y se avisa una vez.</li>
+</ul>
+<p>La escritura es atómica: se escribe un <code>settings.json.tmp</code> y se sustituye el original. Un corte de luz no deja el fichero a medias.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

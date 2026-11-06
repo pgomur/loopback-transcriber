@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Live translation | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Live translation | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/architecture/live-translation.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="live-translation">Live translation</h1>
+
+<p>The live session (<code>LiveTranscriptionSession</code>) turns the application audio, while recording, into transcribed and translated lines. It is independent from the final transcription: it does not change the recording or its result.</p>
+<h2 id="pipeline">Pipeline</h2>
+<pre><code class="lang-mermaid">flowchart TB
+    A[&quot;ProcessLoopbackRecorder.AudioCaptured&lt;br/&gt;PCM 44.1 kHz stereo&quot;] --&gt; Q[(&quot;Audio channel&lt;br/&gt;3000 blocks&quot;)]
+    Q --&gt; S[&quot;LiveAudioSegmenter&lt;br/&gt;16 kHz mono · VAD&quot;]
+    S --&gt;|&quot;chunks and drafts&quot;| T[LiveTranscriberStage]
+    T --&gt;|&quot;lines and drafts&quot;| R[LiveTranslatorStage]
+    T &lt;--&gt;|&quot;stdin/stdout @@L&quot;| W1[[&quot;Worker process&lt;br/&gt;whisper-live&quot;]]
+    R &lt;--&gt;|&quot;stdin/stdout @@L&quot;| W2[[&quot;Worker process&lt;br/&gt;translate-live&quot;]]
+    T --&gt; UI[&quot;LiveSessionController&lt;br/&gt;→ LiveTranscriptModel&quot;]
+    R --&gt; UI
+    class W1,W2 io
+    class UI ok
+</code></pre>
+<p><code>LiveSessionController.Start</code> creates the session with:</p>
+<ul>
+<li>Whisper: the same model as the final transcription, the meeting language (<code>ResolveMeetingLanguage</code>), GPU, and <code>LiveAudioContext</code> and <code>LiveFlashAttention</code> from the settings.</li>
+<li>Translator: the summary model, if present, with <code>cores / 2</code> threads between 2 and 6. If it is not present, the session only transcribes.</li>
+</ul>
+<p>Session events arrive from background threads. The controller marshals them to the UI thread and drops those from a session that is no longer the current one.</p>
+<h2 id="1-segmentation-liveaudiosegmenter">1. Segmentation (<code>LiveAudioSegmenter</code>)</h2>
+<p>It receives 16-bit PCM at 44.1 kHz stereo, mixes it down to mono and resamples to <strong>16 kHz</strong> by averaging. It works in <strong>20 ms frames</strong> (320 samples): a frame is speech if its level is above <strong>−42 dBFS</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pre-roll when speech is detected</td>
+<td>10 frames (200 ms)</td>
+</tr>
+<tr>
+<td>End of chunk on a pause</td>
+<td>30 frames (600 ms) of silence, or 15 frames (300 ms) if the chunk already lasts 3 s</td>
+</tr>
+<tr>
+<td>Minimum speech to emit a chunk</td>
+<td>20 frames (400 ms)</td>
+</tr>
+<tr>
+<td>Trailing silence kept</td>
+<td>up to 10 frames (200 ms)</td>
+</tr>
+<tr>
+<td>Maximum length</td>
+<td>500 frames (10 s). It is cut at the quietest frame within the last 3 s.</td>
+</tr>
+<tr>
+<td>Draft</td>
+<td>when the chunk has at least 25 speech frames and either 40 frames (800 ms) have passed since the last draft without reaching 10 silent frames in a row, or it has just reached 8 silent frames with more than 3 new speech frames since the last draft</td>
+</tr>
+</tbody>
+</table>
+<p>A <strong>draft</strong> is the chunk in progress, still open, that is transcribed to show provisional text. Each draft carries a sequence number (<code>DraftSeq</code>). If the final chunk exactly covers the last draft (with a 3-speech-frame tolerance), it says so, so that its text can be reused.</p>
+<h2 id="2-transcription-livetranscriberstage">2. Transcription (<code>LiveTranscriberStage</code>)</h2>
+<p>It uses a <code>LiveWorkMailbox</code>: a bounded queue of <strong>8 final chunks</strong> that drops the oldest when full, plus <strong>a single draft slot</strong> where the latest draft replaces the previous one.</p>
+<ul>
+<li><strong>Priority.</strong> Final chunks go before drafts. The exception is when the pending draft is exactly the one preceding that final chunk.</li>
+<li><strong>Generations.</strong> Each final chunk advances a counter (<code>LiveGeneration</code>). A draft transcribed after a newer final chunk has arrived is discarded, so old text is never shown over newer text.</li>
+<li><strong>Reuse.</strong> If a final chunk covers the last transcribed draft, its text is used without calling Whisper again. The metrics mark it as <code>chunk-reused</code>.</li>
+<li>A final line identical to the previous one, ignoring case, is not repeated.</li>
+<li><code>LiveTextSplitter</code> splits each final line: if it is <strong>90 characters or longer</strong>, it is cut at sentence ends (<code>.</code>, <code>!</code>, <code>?</code>, <code>…</code>) into pieces of at least 28 characters.</li>
+</ul>
+<p>The <code>whisper-live</code> worker keeps the model loaded for the whole session. Each request carries the 16 kHz PCM in base64. The worker pads it with silence up to 1 s if shorter and applies the same segment filters as the final transcription, with a no-speech threshold of 0.6.</p>
+<h2 id="3-translation-livetranslatorstage">3. Translation (<code>LiveTranslatorStage</code>)</h2>
+<p>It uses another queue, of <strong>6 lines</strong>, with a draft slot. A line dropped because the queue is full is marked as <strong>not translated</strong> (<code>TranslationSkipped</code>) instead of waiting forever.</p>
+<ul>
+<li>Each line is translated with the <strong>previous line as context</strong>, which is not translated itself.</li>
+<li>Drafts are translated too, to show a provisional translation. If the final line was not split and matches the last translated draft, that translation is reused (<code>translation-reused</code> in the metrics).</li>
+<li>Changing the target language applies to whatever is queued from then on.</li>
+</ul>
+<p>The <code>translate-live</code> worker loads Qwen3-4B with a 2048-token context, temperature 0.2, top-k 20 and top-p 0.9, and a token limit that depends on the text length (between 64 and 400). The prompt asks it to act as an interpreter that returns only the translation. It includes <code>/no_think</code> and an empty, pre-filled <code>&lt;think&gt;</code> block so Qwen3 does not reason before answering. Before announcing itself as ready, it translates a test sentence to warm the model up.</p>
+<h2 id="4-worker-supervision-liveworkersupervisor">4. Worker supervision (<code>LiveWorkerSupervisor</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Reaction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The worker answers a request with <code>Error</code></td>
+<td>It is logged and that chunk or line is skipped.</td>
+</tr>
+<tr>
+<td>A timeout (60 s for Whisper, 30 s for translation) or the process dies</td>
+<td>The worker is restarted, at most <strong>3 times</strong> per session.</td>
+</tr>
+<tr>
+<td>The worker is not ready within 180 s</td>
+<td>The session reports the error.</td>
+</tr>
+<tr>
+<td>Further failures</td>
+<td>The window shows the error. The recording carries on unchanged.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="metrics">Metrics</h2>
+<p>Each chunk and each translation is written to <code>%LocalAppData%\LoopbackTranscriber\live-metrics.log</code>.</p>
+<p>Each line starts with the date and time:</p>
+<table>
+<thead>
+<tr>
+<th>Line</th>
+<th>Fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chunk</code> (or <code>chunk-reused</code> when it reuses the draft, <code>draft</code> for a draft)</td>
+<td><code>audio</code> seconds of audio · <code>whisper</code> processing seconds · <code>rtf</code> processing over audio · <code>latency</code> delay since speech ended · <code>queue</code> queued chunks · <code>dropped</code> dropped · <code>chars</code> characters</td>
+</tr>
+<tr>
+<td><code>translation</code> (or <code>draft-translation</code>)</td>
+<td><code>chars</code> characters · <code>model</code> translation seconds · <code>latency</code> delay · <code>queue</code> queued lines</td>
+</tr>
+<tr>
+<td><code>translation-reused</code></td>
+<td><code>chars</code> characters</td>
+</tr>
+</tbody>
+</table>
+<p>When the session closes, a <code>SUMMARY</code> line is added with the model, whether the GPU was used, the audio context, flash attention, the dropped and reused chunks, and the 50th and 90th latency percentiles for chunks, drafts and translations. The window shows the same data in its technical strip (<code>LiveMetricsPresenter</code>).</p>
+<h2 id="dropped-audio">Dropped audio</h2>
+<p>The input channel holds at most 3000 blocks and drops the oldest. This only happens if the segmenter stalls, which should not happen because it only does in-memory computation. The first drop is logged once in <code>app.log</code>.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

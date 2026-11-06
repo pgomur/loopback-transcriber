@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Datos en disco | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Datos en disco | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/architecture/data-on-disk.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="datos-en-disco">Datos en disco</h1>
+
+<h2 id="ubicaciones">Ubicaciones</h2>
+<table>
+<thead>
+<tr>
+<th>Qué</th>
+<th>Ruta</th>
+<th>Notas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ajustes</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\settings.json</code></td>
+<td>Escritura atómica. Un fichero dañado se aparta como <code>settings.json.corrupt-&lt;fecha&gt;</code>.</td>
+</tr>
+<tr>
+<td>Modelos</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\models\</code></td>
+<td><code>whisper\ggml-turbo.bin</code> y <code>llm\Qwen3-4B-Q4_K_M.gguf</code>, cada uno con su <code>.verified.json</code>. Configurable.</td>
+</tr>
+<tr>
+<td>Transcripciones</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\transcripts\</code></td>
+<td>Una carpeta por aplicación y una subcarpeta por grabación. Configurable.</td>
+</tr>
+<tr>
+<td>Grabaciones sin procesar</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\failed\</code></td>
+<td>Ver <a href="reliability.html">Fiabilidad</a>.</td>
+</tr>
+<tr>
+<td>Registro</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\logs\app.log</code></td>
+<td>Rota a <code>app.log.1</code> al pasar de 1 MB.</td>
+</tr>
+<tr>
+<td>Métricas en vivo</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\live-metrics.log</code></td>
+<td>Se vacía al pasar de 512 KB.</td>
+</tr>
+<tr>
+<td>Grabación en curso</td>
+<td><code>%TEMP%\LoopbackTranscriber\recording_&lt;fecha&gt;*.wav</code> y <code>.session.json</code></td>
+<td>Se borran al procesar. Si quedan, se recuperan al arrancar.</td>
+</tr>
+<tr>
+<td>Ficheros para Whisper</td>
+<td><code>%TEMP%\LoopbackTranscriber\*.16k.wav</code></td>
+<td>Se borran al terminar cada procesado. Los que queden se borran al recuperar su grabación huérfana o, si tienen más de 7 días, al terminar la siguiente grabación (procesada o conservada sin procesar).</td>
+</tr>
+<tr>
+<td>Trabajos de los procesos auxiliares</td>
+<td><code>%TEMP%\LoopbackTranscriber\worker\</code></td>
+<td><code>&lt;guid&gt;.job.json</code>, <code>&lt;guid&gt;.result.json</code> y <code>&lt;guid&gt;.live.json</code>. Se borran al terminar.</td>
+</tr>
+<tr>
+<td>Re-transcripciones</td>
+<td><code>%TEMP%\LoopbackTranscriber\retranscribe\&lt;guid&gt;\</code></td>
+<td>Se borra al terminar.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="carpeta-de-transcripciones">Carpeta de transcripciones</h2>
+<p>Cada grabación es una carpeta <code>transcripts\&lt;App&gt;\&lt;App&gt;_&lt;yyyyMMdd_HHmmss&gt;\</code>. Dentro, <code>&lt;base&gt;</code> es el nombre de esa carpeta:</p>
+<table>
+<thead>
+<tr>
+<th>Fichero</th>
+<th>Contenido</th>
+<th>Cuándo existe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;base&gt;.md</code></td>
+<td>La transcripción, en Markdown.</td>
+<td>Siempre.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;.wav</code></td>
+<td>Copia de la pista principal.</td>
+<td>Siempre.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;_mic.wav</code></td>
+<td>Copia de la pista del micrófono.</td>
+<td>Si se grabó el micrófono.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;.recording.json</code></td>
+<td>Desfase del micrófono.</td>
+<td>Si hay <code>_mic.wav</code>.</td>
+</tr>
+<tr>
+<td><code>&lt;base&gt;.summary.json</code></td>
+<td>El resumen.</td>
+<td>Si se generó.</td>
+</tr>
+</tbody>
+</table>
+<p><code>TranscriptHistoryService.LoadFromDisk</code> recorre las carpetas de primer nivel y las de segundo nivel. Una carpeta es una grabación si contiene <code>&lt;nombre-de-la-carpeta&gt;.md</code>, <code>.txt</code> o <code>.wav</code>. Del nombre (<code>&lt;App&gt;_&lt;yyyyMMdd&gt;_&lt;HHmmss&gt;</code>) salen la aplicación y la fecha. Si el nombre no sigue ese patrón, se usa el nombre entero como aplicación y la fecha de modificación de la carpeta. Así se leen también las grabaciones de versiones anteriores, guardadas directamente en <code>transcripts\&lt;base&gt;\</code> o en <code>.txt</code>.</p>
+<p><code>TranscriptsFolderWatcher</code> vigila la carpeta y sus subcarpetas: la creación, el borrado y el cambio de nombre de ficheros y carpetas, no los cambios de contenido. Recarga el historial 500 ms después del último cambio. Si el vigilante falla, se vuelve a crear al recargar.</p>
+<h3 id="basemd"><code>&lt;base&gt;.md</code></h3>
+<table>
+<thead>
+<tr>
+<th>Parte</th>
+<th>Formato</th>
+<th>Ejemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cabecera</td>
+<td><code># &lt;App&gt; - dd/MM/yyyy HH:mm</code>, en la primera línea</td>
+<td><code># Teams - 18/10/2026 09:30</code></td>
+</tr>
+<tr>
+<td>Párrafos</td>
+<td><code>&lt;etiqueta&gt;: &lt;texto&gt;</code>, uno por intervención</td>
+<td><code>Participantes: Buenos días a todos.</code> · <code>pgomur (Tú): La integración está terminada.</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>El visor no muestra la cabecera como parte de la conversación.</li>
+<li>Los párrafos van separados por una línea en blanco.</li>
+<li>La etiqueta <code>&lt;hablante&gt;: </code> solo aparece si se grabó el micrófono. Ver <a href="processing.html">Composición</a>.</li>
+<li>El visor lo convierte en mensajes con <code>TranscriptMessageParser</code>: quita la cabecera, separa los párrafos por las líneas en blanco y reconoce la etiqueta con el patrón de <code>SpeakerLabels</code>. Los mensajes con tu etiqueta se alinean a la derecha.</li>
+</ul>
+<h3 id="baserecordingjson"><code>&lt;base&gt;.recording.json</code></h3>
+<table>
+<thead>
+<tr>
+<th>Clave</th>
+<th>Tipo</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MicStartOffsetTicks</code></td>
+<td>entero</td>
+<td>Desfase del micrófono respecto a la pista principal, en <em>ticks</em> de .NET (100 ns). Por ejemplo, <code>1250000</code> son 0,125 s.</td>
+</tr>
+</tbody>
+</table>
+<p>Solo existe si hay <code>_mic.wav</code>. Lo usa la re-transcripción.</p>
+<h3 id="basesummaryjson"><code>&lt;base&gt;.summary.json</code></h3>
+<table>
+<thead>
+<tr>
+<th>Clave</th>
+<th>Tipo</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Title</code></td>
+<td>texto</td>
+<td>Título del resumen. Sustituye al nombre de la aplicación en el historial.</td>
+</tr>
+<tr>
+<td><code>Summary</code></td>
+<td>texto</td>
+<td>Las secciones, cada una con su etiqueta en el idioma en que se generó (<code>Propósito:</code>, <code>Puntos clave:</code>, <code>Objetivos:</code>…) y sus puntos en líneas que empiezan por <code>- </code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="ficheros-temporales-de-una-grabación">Ficheros temporales de una grabación</h2>
+<table>
+<thead>
+<tr>
+<th>Fichero</th>
+<th>Contenido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recording_&lt;fecha&gt;.wav</code></td>
+<td>Pista de la aplicación (PCM 16 bits, 44,1 kHz, estéreo).</td>
+</tr>
+<tr>
+<td><code>recording_&lt;fecha&gt;_console.wav</code>, <code>_communications.wav</code></td>
+<td>Pistas de las salidas de audio predeterminadas (general y de comunicaciones), en su formato nativo.</td>
+</tr>
+<tr>
+<td><code>recording_&lt;fecha&gt;_mic.wav</code></td>
+<td>Micrófono, en su formato nativo.</td>
+</tr>
+<tr>
+<td><code>recording_&lt;fecha&gt;.session.json</code></td>
+<td><code>AppName</code>, <code>RecordedAt</code>, <code>ProcessStartedUtc</code>, <code>DeviceStartedUtc</code>, <code>MicStartedUtc</code>. Permite la recuperación.</td>
+</tr>
+</tbody>
+</table>
+<p>Las versiones anteriores usaban el prefijo <code>grabacion_</code>, que se sigue reconociendo.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

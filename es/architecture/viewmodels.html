@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>ViewModels y mensajer&#237;a | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="ViewModels y mensajer&#237;a | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/architecture/viewmodels.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="viewmodels-y-mensajería">ViewModels y mensajería</h1>
+
+<h2 id="el-shell-y-sus-hijos">El shell y sus hijos</h2>
+<p><code>MainViewModel</code> es solo el <strong>shell</strong>: navegación entre pantallas, selección de aplicación y entradas de la bandeja y de la ventana flotante. Recibe cuatro ViewModels hijos, un <code>IPageFactory</code>, <code>ISettingsStore</code>, <code>IMessenger</code> e <code>IModelVerifier</code>. No depende de ningún servicio concreto.</p>
+<pre><code class="lang-mermaid">flowchart LR
+    Shell([&quot;MainViewModel&quot;])
+    subgraph CH[&quot;ViewModels hijos&quot;]
+        Targets[TargetsViewModel]
+        Recording[RecordingViewModel]
+        Viewer[ViewerViewModel]
+        History[HistoryViewModel]
+    end
+    Bus[(&quot;IMessenger&lt;br/&gt;WeakReferenceMessenger&quot;)]
+    Pages[&quot;FirstRun · Config · Applications&lt;br/&gt;LiveTranslationSettings&quot;]
+    Shell --&gt; Targets
+    Shell --&gt; Recording
+    Shell --&gt; Viewer
+    Shell --&gt; History
+    Shell -. IPageFactory .-&gt; Pages
+    Targets -. envía .-&gt; Bus
+    Recording &lt;-. envía y recibe .-&gt; Bus
+    Viewer &lt;-. envía y recibe .-&gt; Bus
+    History &lt;-. envía y recibe .-&gt; Bus
+    class Bus ok
+    class Pages io
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Hijo</th>
+<th>Responsabilidad</th>
+<th>Depende de</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TargetsViewModel</code></td>
+<td>Aplicaciones vigiladas, su estado (abierta o no, PID), selección y aplicaciones añadidas.</td>
+<td><code>ITargetWatcher</code>, <code>ICustomAppsService</code></td>
+</tr>
+<tr>
+<td><code>RecordingViewModel</code></td>
+<td>Grabar y parar, estado y cronómetro, grabaciones sin procesar de la aplicación seleccionada (reintentar o descartar), recuperación de huérfanas y rescate en cierres.</td>
+<td><code>RecordingWorkflow</code>, <code>IDialogService</code></td>
+</tr>
+<tr>
+<td><code>HistoryViewModel</code></td>
+<td>Historial global y por aplicación, cada uno con su búsqueda (<code>HistorySearchState</code>) y sus filtros (<code>HistoryFilterState</code>), selección y borrado. Vigila la carpeta con <code>TranscriptsFolderWatcher</code>, que agrupa los cambios en 500 ms.</td>
+<td><code>TranscriptHistoryService</code></td>
+</tr>
+<tr>
+<td><code>ViewerViewModel</code></td>
+<td>Visor (pestañas Transcripción y Resumen), generación y regeneración de resúmenes y re-transcripción.</td>
+<td><code>ISummarizer</code>, <code>TranscriptHistoryService</code>, <code>TranscriptRetranscriber</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Regla</strong>: el shell llama a los hijos directamente. Los hijos <strong>no se referencian entre sí</strong>: se hablan solo por mensajes.</p>
+<h2 id="mensajes">Mensajes</h2>
+<p>Todos se definen en <code>ViewModels/Messages.cs</code> y viajan por <code>WeakReferenceMessenger</code>. Las suscripciones usan <em>lambdas</em> estáticas con el receptor como parámetro, para no capturar <code>this</code>, y cada ViewModel se da de baja en <code>Dispose</code> con <code>UnregisterAll</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Mensaje</th>
+<th>Emisor</th>
+<th>Receptores</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TargetSelectionChangedMessage(Target)</code></td>
+<td>Targets</td>
+<td>Shell, Recording</td>
+<td>Cambió la aplicación seleccionada. El shell navega a su vista y Recording la toma como destino.</td>
+</tr>
+<tr>
+<td><code>TargetStatusesSyncedMessage</code></td>
+<td>Targets</td>
+<td>Shell</td>
+<td>Se actualizó el estado de las aplicaciones. El shell lo reenvía a Recording, que para la grabación si la aplicación grabada se cerró.</td>
+</tr>
+<tr>
+<td><code>TargetListChangedMessage</code></td>
+<td>Targets</td>
+<td>Shell</td>
+<td>Se añadió o quitó una aplicación.</td>
+</tr>
+<tr>
+<td><code>CaptureStateChangedMessage(IsActive)</code></td>
+<td>Recording</td>
+<td>Viewer</td>
+<td>Hay una captura o un procesado en curso. Bloquea resúmenes y re-transcripciones.</td>
+</tr>
+<tr>
+<td><code>TranscriptReadyMessage(Text, FilePath)</code></td>
+<td>Recording</td>
+<td>Viewer</td>
+<td>Hay una transcripción nueva que mostrar.</td>
+</tr>
+<tr>
+<td><code>RecordingSavedMessage</code></td>
+<td>Recording, Viewer</td>
+<td>History</td>
+<td>Cambió algo en disco. History recarga.</td>
+</tr>
+<tr>
+<td><code>TranscriptDeletedMessage(FilePath)</code></td>
+<td>History</td>
+<td>Viewer</td>
+<td>Se borró una transcripción. Si estaba abierta, el visor se vacía.</td>
+</tr>
+<tr>
+<td><code>SummaryActivityChangedMessage(IsGenerating)</code></td>
+<td>Viewer</td>
+<td>Recording</td>
+<td>Se está generando un resumen. Bloquea empezar a grabar.</td>
+</tr>
+<tr>
+<td><code>FindTranscriptRequest(FilePath)</code></td>
+<td>Viewer</td>
+<td>History</td>
+<td>Petición con respuesta: Viewer pide el <code>TranscriptHistoryItem</code> de una ruta.</td>
+</tr>
+<tr>
+<td><code>LiveTranslationPreferencesChangedMessage</code></td>
+<td>Ventana flotante, ajustes en vivo</td>
+<td>Ventana flotante, ajustes en vivo</td>
+<td>Cambió una preferencia de la traducción en vivo. Ambos se resincronizan.</td>
+</tr>
+<tr>
+<td><code>TranslucentUiChangedMessage(Enabled)</code></td>
+<td>Config</td>
+<td><code>MainWindow</code></td>
+<td>Activar o desactivar la interfaz traslúcida.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="páginas-secundarias">Páginas secundarias</h2>
+<p><code>IPageFactory</code> crea bajo demanda <code>FirstRunViewModel</code>, <code>ConfigViewModel</code>, <code>ApplicationsViewModel</code> y <code>LiveTranslationSettingsViewModel</code>, que son <em>transient</em> en el contenedor. El shell guarda la instancia creada y, al volver a la página, llama a <code>RefreshFromDisk()</code>. Al salir de <code>Config</code>, llama a <code>FlushPendingChanges()</code> para guardar un nombre de usuario a medio escribir.</p>
+<p>La navegación es una propiedad <code>CurrentView</code> de tipo <code>MainViewMode</code> (<code>FirstRun</code>, <code>AppView</code>, <code>History</code>, <code>Config</code>, <code>Applications</code>, <code>LiveTranslation</code>) más una propiedad booleana <code>Is…Active</code> por pantalla para los <em>bindings</em>.</p>
+<h2 id="irecordinghost-la-grabación-vista-desde-fuera"><code>IRecordingHost</code>: la grabación vista desde fuera</h2>
+<p>La ventana flotante y el menú de la bandeja necesitan saber si se graba, empezar o parar, y recibir el audio. Pero no deben conocer al shell. <code>IRecordingHost</code> expone justo eso:</p>
+<table>
+<thead>
+<tr>
+<th>Miembro</th>
+<th>Uso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IsRecording</code>, <code>IsBusy</code>, <code>StatusText</code>, <code>ElapsedText</code>, <code>IsTranscribingActive</code>, <code>TranscriptionProgressPercent</code></td>
+<td>Estado que se muestra.</td>
+</tr>
+<tr>
+<td><code>CanToggleRecording</code>, <code>RecordDisabledReason</code>, <code>CanStartRecordingFor(target)</code></td>
+<td>Si se puede grabar y, si no, por qué.</td>
+</tr>
+<tr>
+<td><code>SelectedTarget</code></td>
+<td>Aplicación seleccionada.</td>
+</tr>
+<tr>
+<td><code>StartRecordingForAsync(target)</code></td>
+<td>Selecciona la aplicación con <code>Targets.Select</code> y solo graba si la selección se aplicó de verdad en Targets y en Recording.</td>
+</tr>
+<tr>
+<td><code>StopRecordingAsync()</code></td>
+<td>Para y procesa.</td>
+</tr>
+<tr>
+<td><code>AudioCaptured</code></td>
+<td>Bloques PCM de la pista de la aplicación, para la sesión en vivo.</td>
+</tr>
+</tbody>
+</table>
+<p><code>RecordingHost</code> lo implementa directamente sobre <code>RecordingViewModel</code> y <code>TargetsViewModel</code>, y reenvía sus <code>PropertyChanged</code>.</p>
+<h2 id="la-ventana-flotante">La ventana flotante</h2>
+<p><code>LiveTranslationViewModel</code> contiene solo el estado de la ventana. <code>LiveTranslationFactory</code> lo crea para una aplicación concreta (<code>Create(target, openMainWindow)</code>) y se apoya en tres piezas:</p>
+<table>
+<thead>
+<tr>
+<th>Pieza</th>
+<th>Responsabilidad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LiveSessionController</code></td>
+<td>Ciclo de vida de la <code>LiveTranscriptionSession</code>: arrancar con los modelos y ajustes actuales, enviar el audio, parar, y pasar los eventos de la sesión al hilo de la interfaz. Descarta los eventos de una sesión que ya no es la actual.</td>
+</tr>
+<tr>
+<td><code>LiveTranscriptModel</code></td>
+<td>Las líneas mostradas (<code>LiveLine</code>), los borradores de transcripción y de traducción y sus reglas: qué se sustituye, qué se marca como no traducido, cuándo se limpia.</td>
+</tr>
+<tr>
+<td><code>LiveMetricsPresenter</code></td>
+<td>Los textos de la franja de datos técnicos.</td>
+</tr>
+</tbody>
+</table>
+<p>La sesión en vivo se arranca cuando la ventana está abierta <strong>y</strong> se graba su aplicación, sin importar quién inició la grabación. Se para al dejar de grabarla. El funcionamiento de la sesión está en <a href="live-translation.html">Traducción en vivo</a>.</p>
+<h2 id="la-bandeja">La bandeja</h2>
+<ul>
+<li><code>TrayMenuViewModel.Build(actions)</code> construye las entradas del menú (<code>TrayMenuEntry</code>) según el estado:
+<ul>
+<li>en la primera ejecución, solo <em>Abrir</em> y <em>Salir</em>;</li>
+<li>sin grabar, <em>Iniciar grabación de X</em> por cada aplicación vigilada, activa solo si se puede grabar, y, si la grabación está bloqueada, el motivo como entrada desactivada;</li>
+<li>grabando, una línea de estado con el tiempo en directo y <em>Detener grabación de X</em>, que además muestra la ventana;</li>
+<li>siempre, <em>Traducción en vivo de X</em> por cada aplicación vigilada, activa solo si está abierta, o, si hay una ventana flotante, solo <em>Cerrar traducción en vivo de X</em>.</li>
+</ul>
+</li>
+<li>Las acciones de grabar o parar se ejecutan con un único <code>AsyncRelayCommand</code>. Mientras una está en marcha, las entradas se desactivan y los clics extra se ignoran.</li>
+<li><code>TryRunExit</code> impide lanzar dos salidas a la vez.</li>
+<li><code>TryConsumeTrayHint</code> muestra una sola vez el aviso de «sigue en la bandeja» y lo guarda en los ajustes.</li>
+<li><code>TrayIconService</code> gestiona el icono nativo y <code>TrayMenuWindow</code> dibuja el menú.</li>
+</ul>
+<h2 id="avisos-al-usuario">Avisos al usuario</h2>
+<p>Los servicios que no deben mostrar diálogos (ajustes, historial, almacén de fallidas, verificador de modelos) añaden avisos a <code>UserNotices</code>. <code>AddOnce(identidad, …)</code> evita repetir el mismo aviso. <code>UserNoticePresenter</code> empieza a mostrarlos cuando la ventana termina de dibujarse por primera vez. A partir de ahí los muestra en cuanto llegan, todos los pendientes juntos en un único diálogo «Aviso».</p>
+<h2 id="hilos">Hilos</h2>
+<p>Los ViewModels se actualizan en el hilo de la interfaz. Los eventos que llegan de otros hilos (vigilante de procesos, sesión en vivo, progreso de los procesos auxiliares) pasan por <code>IUiDispatcher</code> o por <code>Progress&lt;T&gt;</code>, que se crea en el hilo de la interfaz.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Arranque y cierre | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Arranque y cierre | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/architecture/startup.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="arranque-y-cierre">Arranque y cierre</h1>
+
+<h2 id="punto-de-entrada">Punto de entrada</h2>
+<p><code>Program.Main</code> (<code>[STAThread]</code>) decide primero si el proceso es la aplicación o un <strong>proceso auxiliar</strong>:</p>
+<pre><code class="lang-mermaid">flowchart LR
+    A([&quot;Program.Main&quot;]) --&gt; B{&quot;¿args[1] es --worker&lt;br/&gt;y hay 5 argumentos o más?&quot;}
+    B --&gt;|sí| W[&quot;WorkerHost.Run&lt;br/&gt;y Environment.Exit con su código&quot;]
+    B --&gt;|no| C[&quot;new App()&lt;br/&gt;InitializeComponent · Run&quot;]
+    class W io
+    class C ok
+</code></pre>
+<p>Un proceso auxiliar <strong>nunca crea <code>App</code> ni ventanas</strong>.</p>
+<p><code>App.xaml</code> se declara como <code>Page</code> y no como <code>ApplicationDefinition</code> (lo hace el <code>.csproj</code>) para que el <code>Main</code> sea este y no el generado por WPF. Así un proceso auxiliar arranca sin cargar nada de la interfaz. Ver <a href="workers.html">Procesos auxiliares</a>.</p>
+<h2 id="apponstartup"><code>App.OnStartup</code></h2>
+<p>En este orden:</p>
+<ol>
+<li><strong><code>CrashHandler.Install</code></strong> se suscribe a <code>DispatcherUnhandledException</code>, <code>AppDomain.UnhandledException</code> y <code>TaskScheduler.UnobservedTaskException</code>. Va lo primero para cubrir también el propio arranque.</li>
+<li><strong><code>SingleInstance.TryAcquire</code></strong> toma el mutex <code>Local\LoopbackTranscriber-B6E1F6C4-…</code>. Si ya lo tiene otra instancia, le señala el evento <code>…-Activate</code> (con <code>AllowSetForegroundWindow</code> para que pueda pasar al frente) y esta termina. Un mutex abandonado por una instancia que se cerró de golpe se toma igualmente.</li>
+<li><strong>Ajustes</strong>: crea <code>UserNotices</code> y <code>SettingsService</code>. <code>EnsureDefaultUserName()</code> propone el nombre de Windows la primera vez y se fija el idioma con <code>Strings.Instance.SetLanguage(...)</code>.</li>
+<li><strong>Tema</strong>: WPF-UI en oscuro, con el acento <code>#6A2BD9</code>.</li>
+<li><strong>Contenedor</strong>: <code>AppServices.Build(settings, notices)</code> registra todos los servicios y ViewModels y valida el grafo al construirlo (<code>ValidateOnBuild = true</code>).</li>
+<li>Resuelve <code>MainWindow</code>, la registra en <code>CrashHandler.Attach</code> junto con <code>RecordingViewModel</code> para poder rescatar la grabación, empieza a escuchar las activaciones de otras instancias y muestra la ventana.</li>
+</ol>
+<p>El constructor de <code>MainWindow</code> llama a <code>MainViewModel.Start()</code>, que:</p>
+<ul>
+<li>arranca el vigilante de procesos (<code>TargetsViewModel.Start</code>);</li>
+<li>carga el historial;</li>
+<li>lanza en segundo plano la <strong>recuperación de grabaciones huérfanas</strong> y la <strong>verificación de los modelos instalados</strong>.</li>
+</ul>
+<h2 id="el-contenedor-appservices">El contenedor (<code>AppServices</code>)</h2>
+<p>Todo es <em>singleton</em> salvo los ViewModels de las páginas secundarias, que son <em>transient</em> y se crean bajo demanda a través de <code>IPageFactory</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Registro</th>
+<th>Implementación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ISettingsStore</code></td>
+<td><code>SettingsService</code> (creado antes del contenedor)</td>
+</tr>
+<tr>
+<td><code>UserNotices</code></td>
+<td>instancia compartida de avisos para el usuario</td>
+</tr>
+<tr>
+<td><code>ITargetWatcher</code></td>
+<td><code>TargetProcessWatcher</code></td>
+</tr>
+<tr>
+<td><code>ICustomAppsService</code></td>
+<td><code>CustomAppsService</code></td>
+</tr>
+<tr>
+<td><code>ISummarizer</code></td>
+<td><code>SummarizationService</code></td>
+</tr>
+<tr>
+<td><code>IModelVerifier</code></td>
+<td><code>ModelVerifier</code></td>
+</tr>
+<tr>
+<td><code>IWhisperTranscriber</code></td>
+<td><code>WhisperTranscriptionService</code>, que también se registra con su propio tipo</td>
+</tr>
+<tr>
+<td><code>IAudioPreparer</code></td>
+<td><code>NaudioAudioPreparer</code></td>
+</tr>
+<tr>
+<td><code>TranscriptHistoryService</code>, <code>TranscriptsFolderWatcher</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>RecordingProcessor</code>, <code>TranscriptSaver</code>, <code>TranscriptRetranscriber</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>FailedRecordingStore</code></td>
+<td>carpeta <code>%LocalAppData%\LoopbackTranscriber\failed</code></td>
+</tr>
+<tr>
+<td><code>CaptureCoordinator</code></td>
+<td>con <code>ProcessLoopbackRecorder</code>, <code>DeviceLoopbackRecorder</code>, <code>MicrophoneRecorder</code> y el <code>FailedRecordingStore</code></td>
+</tr>
+<tr>
+<td><code>RecordingWorkflow</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>IDialogService</code></td>
+<td><code>WpfDialogService</code></td>
+</tr>
+<tr>
+<td><code>IUiDispatcher</code></td>
+<td><code>WpfUiDispatcher.Instance</code></td>
+</tr>
+<tr>
+<td><code>IMessenger</code></td>
+<td><code>WeakReferenceMessenger.Default</code></td>
+</tr>
+<tr>
+<td>ViewModels del shell</td>
+<td><code>HistoryViewModel</code>, <code>ViewerViewModel</code>, <code>TargetsViewModel</code>, <code>RecordingViewModel</code>, <code>MainViewModel</code></td>
+</tr>
+<tr>
+<td><code>IRecordingHost</code></td>
+<td><code>RecordingHost</code></td>
+</tr>
+<tr>
+<td><code>ILiveTranslationFactory</code></td>
+<td><code>LiveTranslationFactory</code></td>
+</tr>
+<tr>
+<td>Otros</td>
+<td><code>TrayMenuViewModel</code>, <code>AppExitWorkflow</code>, <code>UserNoticePresenter</code>, <code>MainWindow</code></td>
+</tr>
+<tr>
+<td><em>Transient</em></td>
+<td><code>FirstRunViewModel</code>, <code>ConfigViewModel</code>, <code>ApplicationsViewModel</code>, <code>LiveTranslationSettingsViewModel</code></td>
+</tr>
+<tr>
+<td><code>IPageFactory</code></td>
+<td><code>ServiceProviderPageFactory</code>, que los resuelve del contenedor</td>
+</tr>
+</tbody>
+</table>
+<h2 id="primera-ejecución-o-aplicación">Primera ejecución o aplicación</h2>
+<p>El constructor de <code>MainViewModel</code> comprueba si existen los dos modelos, <code>models\whisper\ggml-turbo.bin</code> y <code>models\llm\Qwen3-4B-Q4_K_M.gguf</code>:</p>
+<ul>
+<li>Si existen, marca <code>FirstRunSetupCompleted</code>, selecciona la primera aplicación y muestra <code>AppView</code>.</li>
+<li>Si no, crea <code>FirstRunViewModel</code> y muestra <code>FirstRun</code>. Al completarse, abre <code>Config</code>.</li>
+</ul>
+<p>Si la verificación de arranque borra un modelo dañado, se vuelve a <code>FirstRun</code>, salvo que haya una grabación en curso o procesándose.</p>
+<h2 id="cierre">Cierre</h2>
+<p>Hay cuatro formas de que termine la aplicación. Ninguna borra audio sin procesar.</p>
+<table>
+<thead>
+<tr>
+<th>Situación</th>
+<th>Qué ocurre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>X de la ventana</strong></td>
+<td><code>Closing</code> se cancela y la ventana se oculta en la bandeja (<code>HideToTray</code>).</td>
+</tr>
+<tr>
+<td><strong>Salir</strong> desde la bandeja</td>
+<td><code>AppExitWorkflow.ConfirmExitAsync</code> decide (ver abajo). Si se genera un resumen, se pide confirmación porque se perdería.</td>
+</tr>
+<tr>
+<td><strong>Cierre de sesión o apagado de Windows</strong></td>
+<td><code>SessionEnding</code> permite el cierre y llama a <code>RecordingViewModel.PreserveInterruptedRecording(3 s)</code>: para la captura y conserva el audio sin procesar.</td>
+</tr>
+<tr>
+<td><strong>Error no controlado</strong></td>
+<td><code>CrashHandler</code> conserva la grabación (3 s), muestra el mensaje con la ruta del registro y cierra con código 1.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="appexitworkflow"><code>AppExitWorkflow</code></h3>
+<ol>
+<li>Espera, como mucho 10 s, a que termine de arrancar una grabación a medio iniciar.</li>
+<li><strong>Con una grabación en curso</strong>, pregunta Sí / No / Cancelar:
+<ul>
+<li><em>Sí</em>: muestra la ventana, para y procesa (<code>IRecordingHost.StopRecordingAsync</code>) y sale.</li>
+<li><em>No</em>: conserva el audio sin procesar (<code>PreserveInterruptedRecordingAsync</code>, 10 s como máximo) y sale.</li>
+<li><em>Cancelar</em>: no sale.</li>
+</ul>
+</li>
+<li><strong>Con una grabación procesándose</strong>, pregunta si esperar. Si se acepta, muestra la ventana y espera a que <code>IsBusy</code> pase a <code>false</code>.</li>
+<li>Mientras una salida está pendiente, se ignoran otras peticiones de salir.</li>
+</ol>
+<h3 id="apponexit"><code>App.OnExit</code></h3>
+<p>Libera el contenedor, que libera grabadores, vigilantes y temporizadores. Después escribe los ajustes que no se pudieron guardar (<code>FlushPendingWrite</code>) y suelta el mutex de instancia única.</p>
+<h2 id="crashhandler"><code>CrashHandler</code></h2>
+<table>
+<thead>
+<tr>
+<th>Evento</th>
+<th>Tratamiento</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DispatcherUnhandledException</code> (hilo de la interfaz)</td>
+<td>Lo marca como gestionado, lo registra, rescata la grabación, muestra <code>CrashBody</code>, <code>CrashBodyPreserved</code> o <code>CrashBodyLost</code> y cierra la aplicación.</td>
+</tr>
+<tr>
+<td><code>AppDomain.UnhandledException</code> (otro hilo)</td>
+<td>Lo registra, rescata la grabación en el hilo de la interfaz (con 2 s para que responda) y muestra el mismo mensaje. El proceso termina igualmente.</td>
+</tr>
+<tr>
+<td><code>UnobservedTaskException</code></td>
+<td>Solo lo registra y lo marca como observado.</td>
+</tr>
+</tbody>
+</table>
+<p>Un segundo error mientras se gestiona el primero solo se registra.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

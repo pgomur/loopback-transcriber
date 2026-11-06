@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Settings | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Settings | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/guide/settings.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="settings">Settings</h1>
+
+<h2 id="the-settings-screen">The settings screen</h2>
+<h3 id="general">General</h3>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>What it does</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Your name</strong></td>
+<td>Labels what you say as &quot;<em>Name (You)</em>&quot; instead of &quot;<em>You</em>&quot;. Up to 20 characters. Saved 0.7 s after you stop typing. If you leave it empty, &quot;<em>You</em>&quot; is used.</td>
+<td>The first name of your Windows account or, if it has none, your user name with a capital initial.</td>
+</tr>
+<tr>
+<td><strong>Application language</strong></td>
+<td>Language of the interface and of the summaries: Spanish, English, Portuguese, German or Russian. Applies immediately.</td>
+<td>The Windows language if it is one of those five, otherwise English.</td>
+</tr>
+<tr>
+<td><strong>Meeting language</strong></td>
+<td>The language being spoken, for your microphone and the participants: <strong>Detect automatically</strong> or one of the five languages.</td>
+<td>Follows the application language until you choose another one.</td>
+</tr>
+<tr>
+<td><strong>Translucent interface</strong></td>
+<td>Applies the Windows 11 Mica effect to the window background. Not applied on the first-run screen.</td>
+<td>Off</td>
+</tr>
+</tbody>
+</table>
+<div class="TIP">
+<h5>Tip</h5>
+<p>Setting a fixed meeting language gives better results than automatic detection if you always speak the same language. Use <strong>Detect automatically</strong> if it changes from one meeting to the next. How detection works is explained in <a href="../architecture/processing.html#language">Processing a recording</a>.</p>
+</div>
+<h3 id="ai-models">AI models</h3>
+<p>Two sections, <strong>Transcription</strong> and <strong>AI summary</strong>, show each model, its size on disk or that it is missing, and a button to download it: <strong>Download transcription model</strong> and <strong>Download summary model</strong>.</p>
+<ul>
+<li>If a model is already in the folder, its integrity is checked instead of downloading it again.</li>
+<li>The status refreshes on its own when files appear in or disappear from the models folder.</li>
+<li>Downloads cannot be paused here. If one is interrupted, for example by closing the application, the next download continues where it left off.</li>
+</ul>
+<h3 id="folders-and-saving">Folders and saving</h3>
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Models folder</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\models</code></td>
+</tr>
+<tr>
+<td>Transcripts folder</td>
+<td><code>%LocalAppData%\LoopbackTranscriber\transcripts</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Open</strong> shows it in Explorer and <strong>Change</strong> picks another one.</p>
+<div class="IMPORTANT">
+<h5>Important</h5>
+<p>Changing a folder <strong>does not move</strong> its contents. If you change the models folder, move the files yourself or download them again. If you change the transcripts folder, the history will only show what is in the new one. On uninstall, folders you changed are not deleted.</p>
+</div>
+<h3 id="about">About</h3>
+<p>A link to the author's GitHub profile, the legal notice (consent to record, local processing, and that summaries can contain errors) and <strong>Third-party software licenses</strong>, which opens <code>THIRD-PARTY-NOTICES.txt</code>.</p>
+<h2 id="the-settings-file">The settings file</h2>
+<p>All settings are stored in <code>%LocalAppData%\LoopbackTranscriber\settings.json</code>. The application writes it by itself and you do not need to edit it. It is described here for troubleshooting, and because three advanced settings only exist in this file.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ModelSize</code></td>
+<td>string</td>
+<td>Whisper model. Defaults to <code>turbo</code>, the only one with a pinned SHA256 checksum. Any other value (<code>tiny</code>, <code>base</code>, <code>small</code>, <code>medium</code>, <code>large</code>) only works if <code>ggml-&lt;value&gt;.bin</code> is already in <code>models\whisper</code>, and it is <strong>not verified</strong>. If it is not there, an error is raised. The first run and the startup verification always use <code>turbo</code>, and any change saved from <strong>Settings</strong> resets this value to <code>turbo</code>.</td>
+</tr>
+<tr>
+<td><code>ModelsFolder</code></td>
+<td>string</td>
+<td>Models folder.</td>
+</tr>
+<tr>
+<td><code>TranscriptsFolder</code></td>
+<td>string</td>
+<td>Transcripts folder.</td>
+</tr>
+<tr>
+<td><code>MeetingLanguage</code></td>
+<td>string</td>
+<td><code>&quot;&quot;</code> follows the application language, <code>auto</code> detects the language, and <code>es</code>, <code>en</code>, <code>pt</code>, <code>de</code> or <code>ru</code> fix one.</td>
+</tr>
+<tr>
+<td><code>UiLanguage</code></td>
+<td>string</td>
+<td><code>es</code>, <code>en</code>, <code>pt</code>, <code>de</code> or <code>ru</code>.</td>
+</tr>
+<tr>
+<td><code>TranslucentUi</code></td>
+<td>boolean</td>
+<td>Translucent interface.</td>
+</tr>
+<tr>
+<td><code>UserName</code></td>
+<td>string</td>
+<td>Your name in transcripts. In the labels, colons are replaced with spaces.</td>
+</tr>
+<tr>
+<td><code>UserNameInitialized</code></td>
+<td>boolean</td>
+<td>The Windows name has already been suggested. It is not suggested again even if you clear the name.</td>
+</tr>
+<tr>
+<td><code>TrayHintShown</code></td>
+<td>boolean</td>
+<td>The &quot;still running in the tray&quot; notification has already been shown.</td>
+</tr>
+<tr>
+<td><code>FirstRunSetupCompleted</code></td>
+<td>boolean</td>
+<td>The initial model download has been completed.</td>
+</tr>
+<tr>
+<td><code>CustomApps</code></td>
+<td>list</td>
+<td>Added applications: <code>Id</code> (<code>custom:&lt;lowercase process&gt;</code>), <code>DisplayName</code> and <code>ProcessName</code>.</td>
+</tr>
+<tr>
+<td><code>LiveTranslationLanguage</code></td>
+<td>string</td>
+<td>Target language of live translation.</td>
+</tr>
+<tr>
+<td><code>LiveWindowOpacity</code></td>
+<td>number</td>
+<td>Opacity of the floating window, from 0.3 to 1.</td>
+</tr>
+<tr>
+<td><code>LiveShowOriginal</code></td>
+<td>boolean</td>
+<td>Show the original below the translation.</td>
+</tr>
+<tr>
+<td><code>LiveShowMetrics</code></td>
+<td>boolean</td>
+<td>Show the technical data strip.</td>
+</tr>
+<tr>
+<td><code>LiveTextSize</code></td>
+<td>number</td>
+<td>Text size of the floating window, from 14 to 32.</td>
+</tr>
+<tr>
+<td><code>LiveAudioContext</code></td>
+<td>integer</td>
+<td><strong>Advanced.</strong> Whisper audio context size for live transcription. <code>0</code> uses the model's own. Smaller values reduce latency at the cost of accuracy.</td>
+</tr>
+<tr>
+<td><code>LiveFlashAttention</code></td>
+<td>boolean</td>
+<td><strong>Advanced.</strong> Turns on <em>flash attention</em> for live Whisper. If the model does not load with it, it is retried without it.</td>
+</tr>
+</tbody>
+</table>
+<p>If you edit the file by hand, do it with the application closed. The application only reads the file at startup and, on every settings change, rewrites all of it from what it holds in memory, so your changes would be lost.</p>
+<h3 id="what-happens-if-the-file-is-damaged">What happens if the file is damaged</h3>
+<ul>
+<li>If <code>settings.json</code> is not valid JSON, it is moved aside as <code>settings.json.corrupt-&lt;date&gt;</code>, the defaults are used and you are told: &quot;<em>The settings could not be read and have been reset to their defaults.</em>&quot;</li>
+<li>If it cannot be written (full disk, no permissions, antivirus), it is attempted three times. The changes are kept in memory, retried on the next change and on exit, and you are told once.</li>
+</ul>
+<p>Writing is atomic: a <code>settings.json.tmp</code> is written and then replaces the original. A power cut never leaves a half-written file.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

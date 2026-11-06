@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Aplicaciones | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aplicaciones | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/guide/applications.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aplicaciones">Aplicaciones</h1>
+
+<p>La pantalla <strong>Aplicaciones</strong> permite elegir qué programas, además de Teams, aparecen en la barra lateral para poder grabarlos.</p>
+<h2 id="añadir-una-aplicación">Añadir una aplicación</h2>
+<ol>
+<li>Abre la aplicación que quieres grabar y haz que <strong>reproduzca audio</strong>: entra en una llamada o reproduce un vídeo.</li>
+<li>En <strong>Aplicaciones</strong>, la sección <strong>Procesos detectados con audio</strong> muestra los procesos que tienen una sesión de audio en ese momento. Se actualiza sola cada 2 segundos mientras la pantalla está abierta, y también con <strong>Actualizar</strong>. Las aplicaciones que ya se vigilan no aparecen.</li>
+<li>Pulsa <strong>Añadir</strong>. La aplicación pasa a <strong>Añadidas para escuchar</strong> y aparece en la barra lateral.</li>
+</ol>
+<p>El nombre que se muestra es la descripción del ejecutable (por ejemplo, «Zoom Meetings») o, si no la tiene, el nombre del proceso. Ese nombre es también el de la carpeta de sus transcripciones.</p>
+<p>Las aplicaciones añadidas se guardan en los ajustes, con su nombre de proceso (por ejemplo <code>zoom</code> o <code>chrome</code>), y se vigilan igual que Teams.</p>
+<div class="TIP">
+<h5>Sugerencia</h5>
+<p>Para Google Meet u otras reuniones en el navegador, añade el navegador (Chrome, Edge…). Ten en cuenta que se graba <strong>todo</strong> el audio del navegador, no solo la pestaña de la reunión: cierra otras pestañas que reproduzcan sonido.</p>
+</div>
+<h2 id="quitar-una-aplicación">Quitar una aplicación</h2>
+<p>Pulsa <strong>Quitar</strong> en <strong>Añadidas para escuchar</strong>. Si la aplicación tiene transcripciones guardadas, no se puede quitar: elimínalas antes desde el historial. Teams viene de serie y no se puede quitar.</p>
+<h2 id="cómo-se-elige-el-proceso">Cómo se elige el proceso</h2>
+<p>Muchas aplicaciones tienen varios procesos con el mismo nombre (Teams, los navegadores). La aplicación:</p>
+<ol>
+<li>Busca los procesos con ese nombre y se queda con el proceso raíz del árbol, el que no tiene como padre a otro de ellos.</li>
+<li>Si alguno de esos procesos tiene una sesión de audio activa, prefiere ese.</li>
+<li>Graba ese proceso <strong>y todos sus procesos hijos</strong>, que es donde suelen estar el audio de las llamadas y las pestañas del navegador.</li>
+</ol>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

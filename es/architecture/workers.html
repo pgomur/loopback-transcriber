@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+      <title>Procesos auxiliares | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Procesos auxiliares | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/es/architecture/workers.md/#L1">
+      <meta name="loc:inThisArticle" content="En este art&#237;culo">
+      <meta name="loc:searchResultsCount" content="{count} resultados para &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No hay resultados para &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filtrar por t&#237;tulo">
+      <meta name="loc:nextArticle" content="Siguiente">
+      <meta name="loc:prevArticle" content="Anterior">
+      <meta name="loc:themeLight" content="Claro">
+      <meta name="loc:themeDark" content="Oscuro">
+      <meta name="loc:themeAuto" content="Autom&#225;tico">
+      <meta name="loc:changeTheme" content="Cambiar tema">
+      <meta name="loc:copy" content="Copiar">
+      <meta name="loc:downloadPdf" content="Descargar PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Buscar" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="procesos-auxiliares">Procesos auxiliares</h1>
+
+<p>Whisper.net y LLamaSharp reservan memoria nativa y de GPU que no siempre se devuelve al sistema al liberar el modelo. Para que la aplicación principal no crezca con cada uso, <strong>toda la inferencia se ejecuta en procesos hijos</strong>: el mismo ejecutable lanzado en modo <em>worker</em>.</p>
+<h2 id="línea-de-comandos">Línea de comandos</h2>
+<p><code>LoopbackTranscriber.exe --worker &lt;tipo&gt; &lt;ruta-trabajo&gt; &lt;ruta-resultado&gt; &lt;pid-padre&gt;</code></p>
+<table>
+<thead>
+<tr>
+<th>Argumento</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--worker</code></td>
+<td>Marca el proceso como auxiliar.</td>
+</tr>
+<tr>
+<td><code>&lt;tipo&gt;</code></td>
+<td><code>whisper</code>, <code>summary</code>, <code>whisper-live</code> o <code>translate-live</code>.</td>
+</tr>
+<tr>
+<td><code>&lt;ruta-trabajo&gt;</code></td>
+<td>El fichero JSON con el trabajo.</td>
+</tr>
+<tr>
+<td><code>&lt;ruta-resultado&gt;</code></td>
+<td>Donde el proceso escribe el resultado.</td>
+</tr>
+<tr>
+<td><code>&lt;pid-padre&gt;</code></td>
+<td>El PID de la aplicación, para el vigilante del padre.</td>
+</tr>
+</tbody>
+</table>
+<p><code>WorkerProcess.CreateStartInfo</code> la construye a partir de <code>Environment.ProcessPath</code>. Si la aplicación se ejecuta con <code>dotnet LoopbackTranscriber.dll</code>, por ejemplo desde el depurador, añade la ruta del ensamblado como primer argumento. El proceso se crea sin ventana y con la salida estándar y la de error redirigidas.</p>
+<p><code>Program.Main</code> reconoce la invocación con <code>WorkerHost.IsWorkerInvocation</code>: el segundo argumento debe ser <code>--worker</code> y debe haber al menos 5. En ese caso ejecuta <code>WorkerHost.Run</code> y termina <strong>sin crear <code>App</code></strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Modo</th>
+<th>Trabajo</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>whisper</code></td>
+<td>por lotes</td>
+<td><code>WhisperJob</code></td>
+<td><code>WhisperJobResult</code></td>
+</tr>
+<tr>
+<td><code>summary</code></td>
+<td>por lotes</td>
+<td><code>SummaryJob</code></td>
+<td><code>SummaryJobResult</code></td>
+</tr>
+<tr>
+<td><code>whisper-live</code></td>
+<td>persistente</td>
+<td><code>LiveWhisperConfig</code></td>
+<td>por stdout</td>
+</tr>
+<tr>
+<td><code>translate-live</code></td>
+<td>persistente</td>
+<td><code>LiveTranslatorConfig</code></td>
+<td>por stdout</td>
+</tr>
+</tbody>
+</table>
+<p>Los ficheros de trabajo se escriben en <code>%TEMP%\LoopbackTranscriber\worker\</code> con un GUID por nombre: <code>&lt;guid&gt;.job.json</code> y <code>&lt;guid&gt;.result.json</code>, o <code>&lt;guid&gt;.live.json</code> en los persistentes. Se borran al terminar.</p>
+<h2 id="vigilante-del-padre">Vigilante del padre</h2>
+<p>Si se pasa <code>&lt;pid-padre&gt;</code>, el <em>worker</em> arranca un hilo en segundo plano que espera a que termine ese proceso. Cuando termina, o si ya no existe, sale con <strong>código 2</strong>. Así ningún <em>worker</em> sobrevive a la aplicación, aunque esta muera de golpe.</p>
+<h2 id="modo-por-lotes-whisper-summary">Modo por lotes (<code>whisper</code>, <code>summary</code>)</h2>
+<pre><code class="lang-mermaid">sequenceDiagram
+    participant App as Aplicación&lt;br/&gt;WorkerProcess.RunAsync
+    participant F as Carpeta worker&lt;br/&gt;%TEMP%\LoopbackTranscriber\worker
+    participant W as Proceso auxiliar&lt;br/&gt;whisper o summary
+    App-&gt;&gt;F: Escribe &lt;guid&gt;.job.json
+    App-&gt;&gt;W: Inicia el proceso
+    W-&gt;&gt;F: Lee el trabajo
+    loop Mientras trabaja
+        W--&gt;&gt;App: stdout &quot;@@P 42.5&quot;
+    end
+    alt Termina bien
+        W-&gt;&gt;F: Escribe &lt;guid&gt;.result.json
+        W--&gt;&gt;App: Sale con código 0
+    else Falla
+        W-&gt;&gt;F: Escribe &lt;guid&gt;.result.json&lt;br/&gt;con Error, ErrorKey y ErrorArgs
+        W--&gt;&gt;App: Sale con código 1
+    else Se cierra sin resultado
+        W--&gt;&gt;App: Sale con cualquier código
+    end
+    Note over App: Espera hasta 5 s&lt;br/&gt;a que se vacíe la salida
+    alt Hay resultado
+        F-&gt;&gt;App: Lee &lt;guid&gt;.result.json
+    else No hay resultado
+        Note over App: ErrorBackgroundProcessEnded&lt;br/&gt;y últimas 40 líneas de stderr en app.log
+    end
+    App-&gt;&gt;F: Borra los dos ficheros
+</code></pre>
+<ul>
+<li><strong>Progreso</strong>: líneas <code>@@P &lt;número&gt;</code> en la salida estándar, con cultura invariante y hasta 3 decimales (<code>WorkerProtocol.FormatProgress</code> / <code>TryParseProgress</code>). Las demás líneas se ignoran.</li>
+<li><strong>Resultado</strong>: el <em>worker</em> escribe el JSON y sale con 0.</li>
+<li><strong>Error</strong>: si falla, escribe en el fichero de resultado un objeto con <code>Error</code> (el mensaje) y, si la excepción tenía una clave de localización, <code>ErrorKey</code> y <code>ErrorArgs</code>, y sale con 1. La aplicación lo convierte en una excepción con la misma clave (<code>UserError.FromWorker</code>), así que el usuario ve el mensaje traducido a su idioma.</li>
+<li><strong>Sin resultado</strong>: si el proceso termina sin escribir nada (porque se cuelga el controlador o falta el <em>runtime</em> de C++), se lanza <code>ErrorBackgroundProcessEnded</code> con el código de salida. Las últimas 40 líneas de stderr se escriben en <code>app.log</code> (<code>WorkerStderrTail</code>).</li>
+<li><strong>Cancelación</strong>: el <code>CancellationToken</code> mata el árbol de procesos.</li>
+<li>Cuando el proceso termina, se espera como mucho 5 s a que se vacíe su salida.</li>
+</ul>
+<h3 id="contratos-json">Contratos JSON</h3>
+<table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Campos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WhisperJob</code></td>
+<td><code>WavPath</code>, <code>ModelPath</code>, <code>Language</code>, <code>FallbackLanguage</code>, <code>ThreadCount</code>, <code>StrictNoSpeech</code>, <code>UseGpu</code></td>
+</tr>
+<tr>
+<td><code>WhisperJobResult</code></td>
+<td><code>Language</code>, <code>Segments</code> (cada uno con <code>StartTicks</code>, <code>EndTicks</code> y <code>Text</code>), <code>Error</code>, <code>ErrorKey</code>, <code>ErrorArgs</code></td>
+</tr>
+<tr>
+<td><code>SummaryJob</code></td>
+<td><code>TranscriptText</code>, <code>ModelPath</code>, <code>UiLanguage</code></td>
+</tr>
+<tr>
+<td><code>SummaryJobResult</code></td>
+<td><code>Title</code>, <code>Summary</code>, <code>Error</code>, <code>ErrorKey</code>, <code>ErrorArgs</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="modo-persistente-whisper-live-translate-live">Modo persistente (<code>whisper-live</code>, <code>translate-live</code>)</h2>
+<p><code>LiveWorkerClient</code> arranca el proceso con la entrada estándar redirigida en UTF-8 sin BOM y habla con él línea a línea:</p>
+<table>
+<thead>
+<tr>
+<th>Dirección</th>
+<th>Formato</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aplicación → <em>worker</em> (stdin)</td>
+<td>Una línea JSON por petición: <code>LiveWhisperRequest { Id, Audio }</code> (PCM base64) o <code>LiveTranslateRequest { Id, Text, Context, Target }</code>.</td>
+</tr>
+<tr>
+<td><em>Worker</em> → aplicación (stdout)</td>
+<td><code>@@L </code> seguido de un <code>LiveWorkerMessage</code> en JSON.</td>
+</tr>
+</tbody>
+</table>
+<p><code>LiveWorkerMessage</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ready</code></td>
+<td><code>true</code> en el primer mensaje, cuando el modelo está cargado.</td>
+</tr>
+<tr>
+<td><code>Id</code></td>
+<td>Petición a la que responde. <code>0</code> con <code>Error</code> indica un fallo al arrancar.</td>
+</tr>
+<tr>
+<td><code>Error</code></td>
+<td>Error de esa petición. El <em>worker</em> sigue funcionando.</td>
+</tr>
+<tr>
+<td><code>Ms</code></td>
+<td>Milisegundos de inferencia.</td>
+</tr>
+<tr>
+<td><code>Segments</code></td>
+<td>Segmentos transcritos (<code>whisper-live</code>).</td>
+</tr>
+<tr>
+<td><code>Text</code></td>
+<td>Texto traducido (<code>translate-live</code>).</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>El cliente espera <code>Ready</code> como mucho <strong>180 s</strong>.</li>
+<li>Cada petición tiene su <code>TaskCompletionSource</code> en un diccionario por <code>Id</code>. Las escrituras en stdin se serializan con un semáforo.</li>
+<li>Tiempo máximo por petición: 60 s para transcribir y 30 s para traducir.</li>
+<li>Si el proceso termina, fallan todas las peticiones pendientes con <code>ErrorBackgroundProcessEnded</code>. <code>LiveWorkerSupervisor</code> decide si reiniciarlo.</li>
+<li>Al liberar el cliente, cierra stdin, mata el árbol de procesos y borra el fichero de configuración.</li>
+</ul>
+<h2 id="errores-no-controlados-en-el-worker">Errores no controlados en el <em>worker</em></h2>
+<p><code>InstallUnhandledExceptionLogging</code> registra en <code>app.log</code> las excepciones no controladas y las tareas no observadas del <em>worker</em>, con su tipo entre corchetes (<code>WorkerHost[whisper]: …</code>). Cada línea del registro lleva el PID, lo que permite distinguir qué proceso la escribió.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · Licencia MIT
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

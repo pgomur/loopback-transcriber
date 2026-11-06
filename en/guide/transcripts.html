@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Transcripts and summaries | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Transcripts and summaries | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/guide/transcripts.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="transcripts-and-summaries">Transcripts and summaries</h1>
+
+<h2 id="where-they-are">Where they are</h2>
+<ul>
+<li><strong>Transcripts</strong> (sidebar): every saved transcript, from any application.</li>
+<li><strong>History</strong>, in each application's view: only that application's transcripts.</li>
+</ul>
+<p>Each item shows the title (the summary's title if there is one, otherwise the application name), the date and audio duration (<code>dd/MM HH:mm · m:ss</code>, or <code>h:mm:ss</code> from one hour on) and a 100-character excerpt. The excerpt comes from the summary if it exists and otherwise from the beginning of the transcript. If there is neither, it shows &quot;<em>(Empty transcript)</em>&quot;. The list refreshes on its own when the transcripts folder changes, including when you copy or delete files by hand.</p>
+<p><strong>Open folder</strong> opens the transcripts folder in Explorer.</p>
+<div class="NOTE">
+<h5>Note</h5>
+<p>An application's <strong>History</strong> shows the recordings whose folder carries exactly its name. If the application name contains characters that are not allowed in a file name (<code>\ / : * ? &quot; &lt; &gt; |</code>), its recordings are saved with those characters replaced by <code>_</code> and only show up in <strong>Transcripts</strong>.</p>
+</div>
+<h2 id="searching">Searching</h2>
+<p>Both lists have a <strong>Search transcripts and summaries</strong> box. It searches the title, the application name, the date (<code>dd/MM/yyyy HH:mm</code> and <code>yyyy-MM-dd</code>), the summary and the full text of the transcript.</p>
+<ul>
+<li>Case- and accent-insensitive: <code>resume</code> finds &quot;Résumé&quot;.</li>
+<li>Several words: <strong>all</strong> of them must appear, anywhere.</li>
+<li>In quotes, an exact phrase: <code>&quot;next week&quot;</code>.</li>
+<li>The search starts 300 ms after you stop typing. If nothing matches, the list says &quot;<em>No results</em>&quot;.</li>
+</ul>
+<h2 id="filtering">Filtering</h2>
+<p>The <strong>Filter</strong> button opens a panel to narrow the list:</p>
+<ul>
+<li><strong>From</strong> / <strong>To</strong>: dates included.</li>
+<li><strong>Minimum duration (minutes)</strong>: leaves out shorter recordings. Recordings without saved audio are left out too while this filter is set.</li>
+</ul>
+<p>Filters apply immediately. <strong>Apply</strong> closes the panel and <strong>Clear filters</strong> removes them all. While a filter is active, the <strong>Filter</strong> button is highlighted. Each list (<strong>Transcripts</strong> and each application's <strong>History</strong>) has its own filters and its own search.</p>
+<h2 id="the-viewer">The viewer</h2>
+<p>When you open a transcript, the viewer has two tabs:</p>
+<ul>
+<li><strong>Transcript</strong>: the text as a conversation. Each paragraph shows who is speaking (<strong>Participants</strong>, <strong>You</strong> or <em>your name (You)</em>). As in a chat, your turns are on the right and the participants' on the left.</li>
+<li><strong>AI summary</strong>: the summary, if there is one.</li>
+</ul>
+<p><strong>Clear viewer</strong> closes it. If the recording only has audio, the viewer says so instead of showing text.</p>
+<h3 id="generating-a-summary">Generating a summary</h3>
+<p>In the <strong>AI summary</strong> tab, click <strong>Summarize</strong>. Progress is shown as a percentage. The summary is written in the <strong>application language</strong>, even if the meeting was in another one, and contains:</p>
+<ul>
+<li><strong>Title</strong>: eight words at most.</li>
+<li><strong>Purpose</strong>: what the conversation is about and why it took place.</li>
+<li><strong>Key points</strong>: between 5 and 12, with concrete details.</li>
+<li><strong>Topics</strong>: only if several subjects were discussed, or one in a lot of detail.</li>
+<li><strong>Goals</strong>: what someone wants to achieve or commits to doing.</li>
+<li><strong>Next steps</strong>: meetings, dates and follow-ups that were agreed.</li>
+</ul>
+<p>Sections with no content are left out. Once generated, the summary's title replaces the application name in the list. <strong>Regenerate</strong> replaces the summary with a new one.</p>
+<p>Section titles are always shown in the current application language, each with its icon. The content stays in the language it was generated in.</p>
+<div class="NOTE">
+<h5>Note</h5>
+<p>Summaries cannot be generated while recording or while a recording is being processed. If you close the application while one is being generated, you are asked to confirm, because that summary would be lost.</p>
+</div>
+<p>If the summary model is missing, the viewer says &quot;<em>The summary model is missing. Download it in Settings to generate summaries.</em>&quot;. A recording that only has audio cannot be summarized.</p>
+<p>AI summaries can contain errors: review them before using them.</p>
+<h3 id="transcribing-again">Transcribing again</h3>
+<p><strong>Transcribe again</strong> processes the saved audio again with the current settings (language, your name) and replaces the text. It asks for confirmation first. Use it, for example, after changing the meeting language.</p>
+<ul>
+<li>It is only in the viewer of each application's <strong>History</strong>, not in <strong>Transcripts</strong>.</li>
+<li>It is only available if the recording has its audio (<code>.wav</code>), and not while recording or while another recording is being processed.</li>
+<li>The summary is <strong>not</strong> changed. You can regenerate it afterwards.</li>
+<li>The file's header line is kept.</li>
+</ul>
+<h2 id="deleting">Deleting</h2>
+<p>Tick the boxes of the transcripts you want to delete and click <strong>Delete</strong>. You are asked to confirm. The whole folder of each recording is deleted: text, audio and summary. If it was the last one for that application, the application folder is deleted as well. This cannot be undone.</p>
+<p>A transcript cannot be deleted while its summary is being generated.</p>
+<h2 id="files-of-each-recording">Files of each recording</h2>
+<p>Each saved recording is a folder inside the transcripts folder:</p>
+<pre><code>transcripts\
+  Teams\
+    Teams_20261018_093000\
+      Teams_20261018_093000.md               text (Markdown)
+      Teams_20261018_093000.wav              meeting audio
+      Teams_20261018_093000_mic.wav          your microphone, if it was recorded
+      Teams_20261018_093000.recording.json   microphone offset
+      Teams_20261018_093000.summary.json     summary, if one was generated
+</code></pre>
+<p>The format of each file is described in <a href="../architecture/data-on-disk.html">Data on disk</a>.</p>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

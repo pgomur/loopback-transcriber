@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Audio capture | LoopbackTranscriber </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Audio capture | LoopbackTranscriber ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/pgomur/loopback-transcriber/blob/main/docs/en/architecture/audio-capture.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/logo.svg" alt="LoopbackTranscriber">
+            LoopbackTranscriber
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="audio-capture">Audio capture</h1>
+
+<p><code>CaptureCoordinator</code> starts and stops three recorders, picks the main track when recording ends and writes the recovery file. Each recorder implements an interface (<code>IProcessCapture</code>, <code>IDeviceCapture</code>, <code>IMicCapture</code>), and the tests use doubles instead.</p>
+<h2 id="the-three-recorders">The three recorders</h2>
+<table>
+<thead>
+<tr>
+<th>Recorder</th>
+<th>API</th>
+<th>WAV format</th>
+<th>Temporary file</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ProcessLoopbackRecorder</code></td>
+<td>WASAPI <em>process loopback</em> (own COM interop in <code>Interop/</code>)</td>
+<td>16-bit PCM, 44.1 kHz, stereo (<code>AUTOCONVERTPCM</code>)</td>
+<td><code>recording_&lt;date&gt;.wav</code></td>
+</tr>
+<tr>
+<td><code>DeviceLoopbackRecorder</code></td>
+<td>NAudio <code>WasapiLoopbackCapture</code> on the default output, <em>Console</em> and <em>Communications</em> roles (not duplicated when they are the same device)</td>
+<td>The device's native format</td>
+<td><code>recording_&lt;date&gt;_console.wav</code>, <code>recording_&lt;date&gt;_communications.wav</code></td>
+</tr>
+<tr>
+<td><code>MicrophoneRecorder</code></td>
+<td>NAudio <code>WasapiCapture</code> on the default input (<em>Multimedia</em> role)</td>
+<td>The device's native format</td>
+<td><code>recording_&lt;date&gt;_mic.wav</code></td>
+</tr>
+</tbody>
+</table>
+<p>They all write to <code>%TEMP%\LoopbackTranscriber\</code>, with <code>&lt;date&gt;</code> = <code>yyyyMMdd_HHmmss</code>.</p>
+<h3 id="process-loopback">Process loopback</h3>
+<p><code>Wasapi.ActivateProcessLoopbackAsync(pid, includeProcessTree)</code> activates a virtual <code>IAudioClient</code> with <code>AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK</code> and the <code>INCLUDE_TARGET_PROCESS_TREE</code> mode. This API exists from Windows 10 build 20348 onwards.</p>
+<ul>
+<li>The client is initialized in shared mode with <code>LOOPBACK | EVENTCALLBACK | AUTOCONVERTPCM | SRC_DEFAULT_QUALITY</code>.</li>
+<li>A dedicated thread (<code>LoopbackTranscriber-Capture</code>) waits for the sample event and writes each packet to the WAV.</li>
+<li>Besides being written to disk, each block is published on the <code>AudioCaptured</code> event, which feeds <a href="live-translation.html">live translation</a>. Only this recorder publishes it: <strong>the live session only hears the application</strong>.</li>
+<li>The WAV is opened with <code>FileShare.ReadWrite | FileShare.Delete</code> and a placeholder header. The real sizes are written when recording stops. If the application dies before then, the header stays at zero and <a href="reliability.html">orphan recovery</a> repairs it.</li>
+<li>When stopping, it waits 5 s for the thread. If it does not finish, it stops the <code>IAudioClient</code> and waits another 5 s. If it still does not finish, it <strong>abandons</strong> the session: it fixes the header with what was written so far and returns the file. A hung driver never blocks the application.</li>
+<li>If the capture ended with an error but there is data, the audio is kept and a warning is logged. With no data, <code>ErrorAudioCapture</code> is thrown.</li>
+</ul>
+<h3 id="which-process-is-recorded">Which process is recorded</h3>
+<p><code>TargetProcessWatcher</code> checks the watched applications (<code>TargetApp.ProcessNames</code>) every 1.5 s. For each one:</p>
+<ol>
+<li><code>Process.GetProcessesByName</code> with each candidate name, for example <code>ms-teams</code> and then <code>Teams</code>.</li>
+<li><code>ProcessTree.FindRootProcessId</code> keeps the root process among those found.</li>
+<li><code>AudioSessionFinder.FindActiveProcessId</code> looks among the active audio sessions for one belonging to those processes. If there is one, that PID is used.</li>
+</ol>
+<p>The <strong>Applications</strong> screen uses <code>AudioSessionFinder.ListRunningApps()</code> to list processes that have an audio session.</p>
+<h3 id="time-gaps-capturetimeline">Time gaps: <code>CaptureTimeline</code></h3>
+<p>WASAPI delivers no packets when nothing is playing. Written as-is, the WAV would get shorter and the tracks would drift apart. <code>CaptureTimeline</code> compares each packet's timestamp (QPC) with the samples already written:</p>
+<ul>
+<li>If more than <strong>250 ms</strong> are missing, it fills the gap with silence (<code>WriteSilence</code>) before the packet.</li>
+<li>It keeps <code>FirstSampleTimestamp</code>, the instant of the first sample, which is used to align the microphone.</li>
+<li>Packets flagged <code>AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR</code> are not used to measure gaps. NAudio devices, which provide no timestamp, use the arrival time minus the packet duration.</li>
+</ul>
+<h2 id="start-startasync">Start (<code>StartAsync</code>)</h2>
+<ol>
+<li>Generates <code>baseName = recording_&lt;date&gt;</code> and marks it as <strong>owned</strong>, so orphan recovery does not touch it while recording.</li>
+<li>Starts the process capture. If that fails, recording does not start and the error reaches the user.</li>
+<li>Writes <code>recording_&lt;date&gt;.session.json</code> with the application and the time. If it cannot, it warns with <code>WarningRecoveryFileNotWritten</code>.</li>
+<li>Starts the device capture. If that fails, it is logged and recording continues without it.</li>
+<li>Starts the microphone. If that fails, it warns with <code>WarningMicNotRecorded</code>.</li>
+<li>Rewrites the <code>.session.json</code> with the start time of each track.</li>
+</ol>
+<h2 id="stop-stopasync">Stop (<code>StopAsync</code>)</h2>
+<p>Stops the three captures: the process first, then the device and the microphone, each on the thread pool. A failure in one does not prevent stopping the others. The microphone waits at most 3 s for <code>RecordingStopped</code>, and so does each device channel. Then:</p>
+<h3 id="choosing-the-main-track">Choosing the main track</h3>
+<pre><code class="lang-mermaid">flowchart LR
+    A([On stop]) --&gt; B{&quot;Does the process track&lt;br/&gt;have a peak ≥ 0.01?&quot;}
+    B --&gt;|yes| P[Process track]
+    B --&gt;|no| C{&quot;Does any output track&lt;br/&gt;have a peak ≥ 0.01?&quot;}
+    C --&gt;|yes| D[&quot;Output track with&lt;br/&gt;the highest peak&quot;]
+    C --&gt;|no| E[&quot;Process track,&lt;br/&gt;even if silent&quot;]
+    class P,D ok
+    class E fail
+</code></pre>
+<p>The threshold is <code>CaptureCoordinator.DeviceSignalThreshold = 0.01</code>, on a 0-to-1 scale. If the microphone track does not exceed that same threshold, <code>MicrophoneRecorder</code> deletes it when stopping.</p>
+<h3 id="microphone-offset">Microphone offset</h3>
+<p>The microphone track starts at a different instant from the main one. The offset (<code>MicStartOffset</code>) is computed:</p>
+<ol>
+<li>from the first-sample timestamps of each track (<code>FirstSampleTimestamp</code>), if both exist;</li>
+<li>otherwise, from the difference between the start times of each capture.</li>
+</ol>
+<p>The result is a <code>StoppedRecording</code>: main track, microphone, offset, all paths, the stop error if any, the <code>baseName</code> and the warnings.</p>
+<h2 id="after-processing">After processing</h2>
+<ul>
+<li><strong>On success</strong>, <code>DeleteOriginals</code> deletes all the temporary WAVs and the <code>.session.json</code>, and releases the <code>baseName</code>.</li>
+<li><strong>On failure</strong>, <code>PreserveFailed</code> moves the main track and the microphone to <code>FailedRecordingStore</code>. If even that is not possible, the originals stay in the temporary folder and recovery will find them on the next start.</li>
+<li>Every time <code>DeleteOriginals</code> runs, it also calls <code>DeleteStaleRecordings</code>, which deletes the <code>recording_*.16k.wav</code> files (derived files for Whisper) older than 7 days left in the temporary folder.</li>
+</ul>
+
+</article>
+
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          LoopbackTranscriber · MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
