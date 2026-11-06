@@ -29,6 +29,8 @@ try {
         Invoke-Checked "docfx build ($language)" { dotnet docfx build (Join-Path $docs "$language\docfx.json") }
     }
 
+    Get-ChildItem $site -Recurse -Filter '*.map' | Remove-Item -Force
+
     Copy-Item (Join-Path $docs 'index.html') $site
 
     if ($Serve) {

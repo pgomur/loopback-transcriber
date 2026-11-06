@@ -42,8 +42,9 @@ Open <http://localhost:8080>. The script:
 
 1. restores DocFX at the version pinned in `.config\dotnet-tools.json` (`dotnet tool restore`);
 2. **`docfx build`** of `es\` and `en\`: each one generates `docs\_site\es\` and `docs\_site\en\` with the `modern` template, search and its language (`_lang`);
-3. copies `index.html` into `docs\_site\`;
-4. with `-Serve`, serves `docs\_site\`.
+3. deletes the JavaScript debugging maps (`*.map`) the template copies: they take about 37 MB, the site does not use them, and they made the GitHub Pages deployment exceed its time limit;
+4. copies `index.html` into `docs\_site\`;
+5. with `-Serve`, serves `docs\_site\`.
 
 It does not build or analyze the code: it only needs the .NET SDK to run DocFX.
 

@@ -42,8 +42,9 @@ Abre <http://localhost:8080>. El script:
 
 1. restaura DocFX en la versión fijada en `.config\dotnet-tools.json` (`dotnet tool restore`);
 2. **`docfx build`** de `es\` y de `en\`: cada uno genera `docs\_site\es\` y `docs\_site\en\` con la plantilla `modern`, búsqueda y su idioma (`_lang`);
-3. copia `index.html` a `docs\_site\`;
-4. con `-Serve`, sirve `docs\_site\`.
+3. borra los mapas de depuración de JavaScript (`*.map`) que copia la plantilla: ocupan unos 37 MB, la web no los usa y hacían que la publicación en GitHub Pages superara el tiempo máximo;
+4. copia `index.html` a `docs\_site\`;
+5. con `-Serve`, sirve `docs\_site\`.
 
 No compila ni analiza el código: solo necesita el SDK de .NET para ejecutar DocFX.
 
