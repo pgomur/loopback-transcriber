@@ -1,0 +1,14 @@
+- name: Primeros pasos
+  href: getting-started.md
+- name: Grabar una reunión
+  href: recording.md
+- name: Transcripciones y resúmenes
+  href: transcripts.md
+- name: Traducción en vivo
+  href: live-translation.md
+- name: Aplicaciones
+  href: applications.md
+- name: Configuración
+  href: settings.md
+- name: Solución de problemas
+  href: troubleshooting.md
