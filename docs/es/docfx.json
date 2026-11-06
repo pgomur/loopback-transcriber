@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**/*.{md,yml}"
+        ],
+        "exclude": [
+          "obj/**"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "src": "../images",
+        "files": [
+          "**"
+        ],
+        "dest": "images"
+      }
+    ],
+    "output": "../_site/es",
+    "template": [
+      "default",
+      "modern",
+      "../template",
+      "../template-es"
+    ],
+    "globalMetadata": {
+      "_appName": "LoopbackTranscriber",
+      "_appTitle": "LoopbackTranscriber",
+      "_appFooter": "LoopbackTranscriber · Licencia MIT",
+      "_lang": "es",
+      "_enableSearch": true,
+      "_disableContribution": true,
+      "_appLogoPath": "images/logo.svg",
+      "_appFaviconPath": "images/favicon.ico"
+    }
+  }
+}

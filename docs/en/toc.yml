@@ -1,0 +1,6 @@
+- name: User guide
+  href: guide/
+- name: Architecture
+  href: architecture/
+- name: Development
+  href: development/
