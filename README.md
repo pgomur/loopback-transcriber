@@ -38,7 +38,7 @@ Everything runs on your computer. The internet is only used to download the two 
   <tr>
     <td width="50%" valign="top">
       <b>Per-application recording</b><br>
-      Only the audio of the chosen program, plus your microphone on a separate track. If the application track turns out silent, the default audio output is used instead.
+      Only the audio of the chosen program, plus your microphone on a separate track. If the application track turns out silent, the loudest default audio output is used instead.
     </td>
     <td width="50%" valign="top">
       <b>Any application</b><br>
@@ -52,7 +52,7 @@ Everything runs on your computer. The internet is only used to download the two 
     </td>
     <td valign="top">
       <b>Who is speaking</b><br>
-      Your microphone is transcribed separately and aligned with the meeting. Each paragraph is labelled <b>Participants</b> or <b>You</b>, with your name in front if you set one.
+      Your microphone is transcribed separately and aligned with the meeting. Each paragraph is labelled <b>Participants</b> or <b>You</b>; if you have a name set (by default, your Windows first name), it reads <i>Alex (You)</i>.
     </td>
   </tr>
   <tr>
@@ -68,7 +68,7 @@ Everything runs on your computer. The internet is only used to download the two 
   <tr>
     <td valign="top">
       <b>Live translation</b><br>
-      A floating window with what the participants say and its translation into Spanish, English, Portuguese, German or Russian.
+      A floating window with what the participants say and its translation into Spanish, English, Portuguese, German or Russian. Without the summary model, it only transcribes.
     </td>
     <td valign="top">
       <b>Nothing is lost</b><br>
@@ -81,9 +81,9 @@ The interface, the meeting language and the translation are available in **Spani
 
 ## How it works
 
-1. **Capture.** The application is recorded with Windows *process loopback*, so only its audio is captured. The default audio output and the microphone are recorded at the same time on separate tracks.
+1. **Capture.** The application is recorded with Windows *process loopback*, so only its audio (and that of its child processes) is captured. The default audio outputs (general and communications) and the microphone are recorded at the same time on separate tracks.
 2. **Preparation.** The tracks are converted to 16 kHz mono, and a noise gate silences the microphone between your words.
-3. **Transcription.** Whisper transcribes both tracks in a separate worker process, which exits when done to free the native and GPU memory.
+3. **Transcription.** Whisper transcribes the meeting and your microphone, each in its own worker process: in parallel, or one after the other when the language is detected automatically. Each process exits when done to free the native and GPU memory.
 4. **Composition.** Your microphone is aligned with the meeting, sentences picked up by both tracks (speakers into the mic, or your voice played back by the application) are kept only once, and each paragraph gets its speaker label.
 5. **Summary.** On demand, Qwen3-4B summarizes the transcript, also in its own worker process.
 
@@ -130,7 +130,8 @@ Audio, transcripts and summaries never leave your computer. The application only
 ├── models\            Whisper and Qwen3-4B (configurable)
 ├── transcripts\       One folder per application and per recording (configurable)
 ├── failed\            Unprocessed recordings, kept to be retried
-└── logs\app.log
+├── logs\app.log
+└── live-metrics.log   Live translation timings
 ```
 
 Each recording is a folder `transcripts\<App>\<App>_<yyyyMMdd_HHmmss>\`:
@@ -195,8 +196,8 @@ ISCC.exe installer\LoopbackTranscriber.iss
 |---|---|
 | Version | Defined only in `Directory.Build.props`; the installer reads it from the published executable |
 | Quality | .NET analyzers at `latest-recommended`, and warnings treated as errors |
-| Localization | Every build checks that all interface texts exist in every language |
-| Tests | xUnit, split into `Unit` and `Integration`: `dotnet test --filter Category=Unit` |
+| Localization | Every build checks the interface texts: an unknown key or a missing translation is an error |
+| Tests | xUnit, split into `Unit` and `Integration`: `dotnet test LoopbackTranscriber.slnx --filter Category=Unit` |
 | Documentation | DocFX site: `docs\build.ps1` builds it, `docs\publish.ps1 -Push` publishes it |
 
 More in [Building and publishing](https://pgomur.github.io/loopback-transcriber/en/development/building.html), [Tests](https://pgomur.github.io/loopback-transcriber/en/development/tests.html) and [Installer](https://pgomur.github.io/loopback-transcriber/en/development/installer.html).
@@ -206,7 +207,10 @@ More in [Building and publishing](https://pgomur.github.io/loopback-transcriber/
 ```text
 loopback-transcriber/
 ├── LoopbackTranscriber/          The application (WPF, net10.0-windows)
-│   ├── Views/                    XAML and code-behind
+│   ├── Program.cs, App.xaml      Entry point and startup
+│   ├── AppServices.cs            Service container
+│   ├── MainWindow.xaml           Main window
+│   ├── Views/                    Screens, tray menu and floating window
 │   ├── Converters/, Styles/      Binding converters and shared styles
 │   ├── ViewModels/               State and commands of each screen
 │   ├── Services/                 Capture, processing, summary, live session…
