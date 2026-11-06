@@ -1,0 +1,24 @@
+- name: Visión general
+  href: overview.md
+- name: Arranque y cierre
+  href: startup.md
+- name: ViewModels y mensajería
+  href: viewmodels.md
+- name: Captura de audio
+  href: audio-capture.md
+- name: Procesado de una grabación
+  href: processing.md
+- name: Resumen
+  href: summary.md
+- name: Traducción en vivo
+  href: live-translation.md
+- name: Procesos auxiliares
+  href: workers.md
+- name: Modelos e integridad
+  href: models.md
+- name: Fiabilidad
+  href: reliability.md
+- name: Localización
+  href: localization.md
+- name: Datos en disco
+  href: data-on-disk.md
