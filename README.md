@@ -20,9 +20,7 @@
   </a>
 </p>
 
-<a href="https://pgomur.github.io/loopback-transcriber/en/"><b>Documentation</b></a>
-&nbsp;·&nbsp;
-<a href="https://pgomur.github.io/loopback-transcriber/es/"><b>Documentación en español</b></a>
+<a href="https://pgomur.github.io/loopback-transcriber/"><b>Documentation · English & Español</b></a>
 
 <a href="#features">Features</a>
 &nbsp;•&nbsp;
@@ -37,8 +35,6 @@
 <a href="#building-from-source">Building from source</a>
 &nbsp;•&nbsp;
 <a href="#project-structure">Project structure</a>
-&nbsp;•&nbsp;
-<a href="#documentation">Documentation</a>
 &nbsp;•&nbsp;
 <a href="#credits">Credits</a>
 
@@ -136,7 +132,7 @@ Only one instance can run at a time: opening it again shows the window of the on
 3. **Get the transcript.** Press **Stop recording**. Whisper transcribes it and, if your microphone was recorded, separates **Participants** from **You**. It is saved in the history.
 4. **Summarize.** In the **AI summary** tab, press **Summarize**.
 
-Optionally, open **live translation** to follow the meeting translated while you record. Full walkthrough in the [user guide](https://pgomur.github.io/loopback-transcriber/en/guide/getting-started.html).
+Optionally, open **live translation** to follow the meeting translated while you record. Full walkthrough in the [user guide](https://pgomur.github.io/loopback-transcriber/en/guide/getting-started.html), and common problems in [Troubleshooting](https://pgomur.github.io/loopback-transcriber/en/guide/troubleshooting.html).
 
 ## Privacy and data
 
@@ -239,15 +235,6 @@ loopback-transcriber/
 ├── Directory.Build.props         Version and analyzers
 └── LoopbackTranscriber.slnx      Solution
 ```
-
-## Documentation
-
-| Section | English | Español |
-|---|---|---|
-| User guide | [Getting started](https://pgomur.github.io/loopback-transcriber/en/guide/getting-started.html) | [Primeros pasos](https://pgomur.github.io/loopback-transcriber/es/guide/getting-started.html) |
-| Troubleshooting | [Troubleshooting](https://pgomur.github.io/loopback-transcriber/en/guide/troubleshooting.html) | [Solución de problemas](https://pgomur.github.io/loopback-transcriber/es/guide/troubleshooting.html) |
-| Architecture | [Overview](https://pgomur.github.io/loopback-transcriber/en/architecture/overview.html) | [Visión general](https://pgomur.github.io/loopback-transcriber/es/architecture/overview.html) |
-| Development | [Building and publishing](https://pgomur.github.io/loopback-transcriber/en/development/building.html) | [Compilar y publicar](https://pgomur.github.io/loopback-transcriber/es/development/building.html) |
 
 ## Credits
 
