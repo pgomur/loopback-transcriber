@@ -33,8 +33,7 @@ LoopbackTranscriber is a Windows desktop application. It records the audio of **
 Everything runs on your computer. The internet is only used to download the two models.
 
 <p align="center">
-  <img src="docs/readme/summary.png" alt="AI summary of a meeting in LoopbackTranscriber" width="49%">
-  <img src="docs/readme/transcript.png" alt="Transcript of a meeting with Participants and You labels" width="49%">
+  <img src="docs/readme/summary.png" alt="AI summary of a meeting in LoopbackTranscriber" width="100%">
 </p>
 
 ## Features
@@ -91,6 +90,10 @@ The interface, the meeting language and the translation are available in **Spani
 3. **Transcription.** Whisper transcribes the meeting and your microphone, each in its own worker process: in parallel, or one after the other when the language is detected automatically. Each process exits when done to free the native and GPU memory.
 4. **Composition.** Your microphone is aligned with the meeting, sentences picked up by both tracks (speakers into the mic, or your voice played back by the application) are kept only once, and each paragraph gets its speaker label.
 5. **Summary.** On demand, Qwen3-4B summarizes the transcript, also in its own worker process.
+
+<p align="center">
+  <img src="docs/readme/transcript.png" alt="Transcript of a meeting with Participants and You labels" width="100%">
+</p>
 
 ## Getting started
 
