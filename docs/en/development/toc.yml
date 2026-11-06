@@ -1,0 +1,8 @@
+- name: Building and publishing
+  href: building.md
+- name: Tests
+  href: tests.md
+- name: Installer
+  href: installer.md
+- name: Documentation
+  href: documentation.md
