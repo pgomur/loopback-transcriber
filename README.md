@@ -58,7 +58,7 @@ Everything runs on your computer. The internet is only used to download the two 
     </td>
     <td valign="top">
       <b>Who is speaking</b><br>
-      Your microphone is transcribed separately and aligned with the meeting. Each paragraph is labelled <b>Participants</b> or <b>You</b>; if you have a name set (by default, your Windows first name), it reads <i>Alex (You)</i>.
+      Your microphone is transcribed separately and aligned with the meeting. Each paragraph is labelled <b>Participants</b> or <b>You</b>; if you have a name set (by default, your Windows first name), it reads <i>pgomur (You)</i>.
     </td>
   </tr>
   <tr>
@@ -128,6 +128,8 @@ Only one instance can run at a time: opening it again shows the window of the on
 3. **Get the transcript.** Press **Stop recording**. Whisper transcribes it and, if your microphone was recorded, separates **Participants** from **You**. It is saved in the history.
 4. **Summarize.** In the **AI summary** tab, press **Summarize**.
 
+The window's **X** does not close the application: it keeps running in the tray, so a recording can continue. To exit, right-click the tray icon and choose **Exit**.
+
 Optionally, open **live translation** to follow the meeting translated while you record. Full walkthrough in the [user guide](https://pgomur.github.io/loopback-transcriber/en/guide/getting-started.html), and common problems in [Troubleshooting](https://pgomur.github.io/loopback-transcriber/en/guide/troubleshooting.html).
 
 ## Privacy and data
@@ -153,6 +155,8 @@ Each recording is a folder `transcripts\<App>\<App>_<yyyyMMdd_HHmmss>\`:
 | `<base>_mic.wav` | Your microphone track | If the microphone was recorded |
 | `<base>.recording.json` | The microphone offset | If there is a `_mic.wav` |
 | `<base>.summary.json` | The summary | If one was generated |
+
+When uninstalling, the wizard asks whether to also delete `%LocalAppData%\LoopbackTranscriber` (the default answer is **No**). Models or transcripts folders moved elsewhere in **Settings** are not touched.
 
 > [!IMPORTANT]
 > Only record and transcribe with the consent of the people taking part. You are responsible for informing them and for complying with the law in your country.
