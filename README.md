@@ -20,7 +20,9 @@
   </a>
 </p>
 
-<a href="https://pgomur.github.io/loopback-transcriber/"><b>Documentation · English & Español</b></a>
+<a href="https://pgomur.github.io/loopback-transcriber/">
+  <img src="https://img.shields.io/badge/Documentation-English%20%C2%B7%20Espa%C3%B1ol-6A2BD9?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0yIDRoNmE0IDQgMCAwIDEgNCA0djEzYTMgMyAwIDAgMC0zLTNIMnoiLz48cGF0aCBkPSJNMjIgNGgtNmE0IDQgMCAwIDAtNCA0djEzYTMgMyAwIDAgMSAzLTNoN3oiLz48L3N2Zz4=" alt="Documentation in English and Spanish" />
+</a>
 
 <a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#getting-started">Getting started</a> · <a href="#privacy-and-data">Privacy</a> · <a href="#architecture">Architecture</a> · <a href="#building-from-source">Building</a> · <a href="#project-structure">Structure</a> · <a href="#credits">Credits</a>
 
